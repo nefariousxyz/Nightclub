@@ -51,7 +51,7 @@
                 versionBadge.style.cssText = `
                     position: fixed;
                     bottom: 10px;
-                    left: 10px;
+                    right: 10px;
                     background: rgba(0, 0, 0, 0.6);
                     backdrop-filter: blur(10px);
                     -webkit-backdrop-filter: blur(10px);
