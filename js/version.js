@@ -216,18 +216,8 @@
             if (countdown <= 0) {
                 clearInterval(timer);
                 if (CONFIG.enableAutoRefresh) {
-                    // Try to save (non-blocking), then reload
-                    try {
-                        if (window.game && window.cloudSave && typeof firebase !== 'undefined' && firebase.apps?.length) {
-                            const saveData = window.game.getSaveData();
-                            window.cloudSave.saveGame(saveData, true).catch(() => {});
-                            const user = firebase.auth()?.currentUser;
-                            if (user) {
-                                firebase.database().ref(`saves/${user.uid}`).set(saveData).catch(() => {});
-                            }
-                        }
-                    } catch(e) {}
-                    setTimeout(() => window.location.reload(true), 500);
+                    // Just reload - game auto-saves periodically anyway
+                    window.location.reload(true);
                 }
             }
         }, 1000);
@@ -235,21 +225,8 @@
         // Button handlers
         document.getElementById('update-now-btn').onclick = () => {
             clearInterval(timer);
-            // Try to save (non-blocking), then reload after short delay
-            try {
-                if (window.game && window.cloudSave && typeof firebase !== 'undefined' && firebase.apps?.length) {
-                    const saveData = window.game.getSaveData();
-                    console.log('💾 Quick save before update...');
-                    // Fire and forget - don't await
-                    window.cloudSave.saveGame(saveData, true).catch(() => {});
-                    const user = firebase.auth()?.currentUser;
-                    if (user) {
-                        firebase.database().ref(`saves/${user.uid}`).set(saveData).catch(() => {});
-                    }
-                }
-            } catch(e) {}
-            // Reload after brief delay to let save start
-            setTimeout(() => window.location.reload(true), 500);
+            // Just reload - don't try to save (causes cyclic object errors)
+            window.location.reload(true);
         };
 
         document.getElementById('update-later-btn').onclick = () => {
