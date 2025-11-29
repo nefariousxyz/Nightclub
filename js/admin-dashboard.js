@@ -132,6 +132,7 @@ class AdminDashboard {
             case 'shop': this.renderShopManager(content); break;
             case 'logs': this.renderLogs(content); break;
             case 'coupons': this.renderCoupons(content); break;
+            case 'reports': this.renderReports(content); break;
             default: content.innerHTML = '<div class="text-center text-slate-500 mt-20">Module loading...</div>';
         }
     }
@@ -5005,6 +5006,273 @@ class AdminDashboard {
             overlay.querySelector('#form-confirm').onclick = () => { cleanup(); resolve(true); };
             overlay.onclick = (e) => { if (e.target === overlay) { cleanup(); resolve(false); } };
         });
+    }
+    // ============================
+    // GAME REPORTS MODULE
+    // ============================
+    
+    async renderReports(el) {
+        this.reports = [];
+        el.innerHTML = `
+            <div class="space-y-6">
+                <!-- Stats -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div class="glass rounded-2xl border border-white/5 p-4">
+                        <div class="flex items-center gap-3">
+                            <div class="p-3 rounded-xl bg-orange-500/20"><i class="ph-fill ph-flag text-orange-400 text-xl"></i></div>
+                            <div><div class="text-2xl font-bold text-white" id="reports-total">0</div><div class="text-xs text-slate-400">Total Reports</div></div>
+                        </div>
+                    </div>
+                    <div class="glass rounded-2xl border border-white/5 p-4">
+                        <div class="flex items-center gap-3">
+                            <div class="p-3 rounded-xl bg-yellow-500/20"><i class="ph-fill ph-clock text-yellow-400 text-xl"></i></div>
+                            <div><div class="text-2xl font-bold text-white" id="reports-pending">0</div><div class="text-xs text-slate-400">Pending</div></div>
+                        </div>
+                    </div>
+                    <div class="glass rounded-2xl border border-white/5 p-4">
+                        <div class="flex items-center gap-3">
+                            <div class="p-3 rounded-xl bg-blue-500/20"><i class="ph-fill ph-eye text-blue-400 text-xl"></i></div>
+                            <div><div class="text-2xl font-bold text-white" id="reports-reviewed">0</div><div class="text-xs text-slate-400">Reviewed</div></div>
+                        </div>
+                    </div>
+                    <div class="glass rounded-2xl border border-white/5 p-4">
+                        <div class="flex items-center gap-3">
+                            <div class="p-3 rounded-xl bg-green-500/20"><i class="ph-fill ph-check-circle text-green-400 text-xl"></i></div>
+                            <div><div class="text-2xl font-bold text-white" id="reports-resolved">0</div><div class="text-xs text-slate-400">Resolved</div></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Filters -->
+                <div class="glass rounded-2xl border border-white/5 p-4">
+                    <div class="flex flex-wrap gap-3 items-center">
+                        <select id="reports-filter-type" onchange="admin.filterReports()" class="bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-white text-sm">
+                            <option value="all">All Types</option>
+                            <option value="bug">🐛 Bug Report</option>
+                            <option value="feature">💡 Feature Request</option>
+                            <option value="feedback">💬 Feedback</option>
+                            <option value="player">🚫 Player Report</option>
+                            <option value="other">📝 Other</option>
+                        </select>
+                        <select id="reports-filter-status" onchange="admin.filterReports()" class="bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-white text-sm">
+                            <option value="all">All Status</option>
+                            <option value="pending">Pending</option>
+                            <option value="reviewed">Reviewed</option>
+                            <option value="resolved">Resolved</option>
+                        </select>
+                        <button onclick="admin.loadReports()" class="ml-auto px-4 py-2 rounded-lg bg-slate-700 text-white hover:bg-slate-600 flex items-center gap-2">
+                            <i class="ph-bold ph-arrows-clockwise"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Reports List -->
+                <div class="glass rounded-2xl border border-white/5 overflow-hidden">
+                    <div class="p-4 border-b border-white/5 bg-slate-900/50">
+                        <h3 class="font-bold text-white flex items-center gap-2"><i class="ph-fill ph-list text-orange-400"></i> All Reports</h3>
+                    </div>
+                    <div id="reports-list" class="divide-y divide-white/5 max-h-[60vh] overflow-y-auto">
+                        <div class="p-8 text-center text-slate-500">Loading reports...</div>
+                    </div>
+                </div>
+            </div>
+        `;
+        this.loadReports();
+    }
+    
+    async loadReports() {
+        try {
+            const snapshot = await this.db.ref('gameReports').orderByChild('timestamp').once('value');
+            const data = snapshot.val() || {};
+            
+            this.reports = Object.entries(data).map(([id, r]) => ({ id, ...r })).reverse();
+            
+            // Update stats
+            const pending = this.reports.filter(r => r.status === 'pending').length;
+            const reviewed = this.reports.filter(r => r.status === 'reviewed').length;
+            const resolved = this.reports.filter(r => r.status === 'resolved').length;
+            
+            document.getElementById('reports-total').textContent = this.reports.length;
+            document.getElementById('reports-pending').textContent = pending;
+            document.getElementById('reports-reviewed').textContent = reviewed;
+            document.getElementById('reports-resolved').textContent = resolved;
+            
+            this.filterReports();
+        } catch(e) { 
+            console.error('Failed to load reports:', e); 
+            document.getElementById('reports-list').innerHTML = '<div class="p-8 text-center text-red-400">Failed to load reports</div>';
+        }
+    }
+    
+    filterReports() {
+        const typeFilter = document.getElementById('reports-filter-type')?.value || 'all';
+        const statusFilter = document.getElementById('reports-filter-status')?.value || 'all';
+        
+        let filtered = this.reports;
+        if (typeFilter !== 'all') filtered = filtered.filter(r => r.type === typeFilter);
+        if (statusFilter !== 'all') filtered = filtered.filter(r => r.status === statusFilter);
+        
+        this.renderReportsList(filtered);
+    }
+    
+    renderReportsList(reports) {
+        const el = document.getElementById('reports-list');
+        if (!el) return;
+        
+        if (reports.length === 0) {
+            el.innerHTML = '<div class="p-8 text-center text-slate-500">No reports found</div>';
+            return;
+        }
+        
+        const typeIcons = {
+            bug: '🐛',
+            feature: '💡',
+            feedback: '💬',
+            player: '🚫',
+            other: '📝'
+        };
+        
+        const statusColors = {
+            pending: 'bg-yellow-500/20 text-yellow-400',
+            reviewed: 'bg-blue-500/20 text-blue-400',
+            resolved: 'bg-green-500/20 text-green-400'
+        };
+        
+        el.innerHTML = reports.map(r => `
+            <div class="p-4 hover:bg-white/5 transition-colors">
+                <div class="flex items-start gap-4">
+                    <div class="text-2xl">${typeIcons[r.type] || '📝'}</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="font-bold text-white">${this.escapeHtml(r.subject)}</span>
+                            <span class="px-2 py-0.5 rounded text-xs ${statusColors[r.status] || statusColors.pending}">${r.status}</span>
+                        </div>
+                        <p class="text-sm text-slate-400 mb-2 line-clamp-2">${this.escapeHtml(r.description)}</p>
+                        <div class="flex flex-wrap gap-3 text-xs text-slate-500">
+                            <span><i class="ph-fill ph-user"></i> ${this.escapeHtml(r.userName || 'Unknown')}</span>
+                            <span><i class="ph-fill ph-buildings"></i> ${this.escapeHtml(r.clubName || 'N/A')}</span>
+                            <span><i class="ph-fill ph-clock"></i> ${r.timestamp ? new Date(r.timestamp).toLocaleString() : 'Unknown'}</span>
+                            <span><i class="ph-fill ph-code"></i> ${r.gameVersion || 'N/A'}</span>
+                        </div>
+                        ${r.adminNotes ? `<div class="mt-2 p-2 rounded bg-indigo-500/10 text-sm text-indigo-300"><i class="ph-fill ph-note"></i> ${this.escapeHtml(r.adminNotes)}</div>` : ''}
+                    </div>
+                    <div class="flex flex-col gap-2">
+                        <button onclick="admin.viewReport('${r.id}')" class="p-2 rounded-lg bg-slate-700 text-slate-300 hover:bg-slate-600" title="View Details">
+                            <i class="ph-bold ph-eye"></i>
+                        </button>
+                        <button onclick="admin.updateReportStatus('${r.id}')" class="p-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-500" title="Update Status">
+                            <i class="ph-bold ph-pencil"></i>
+                        </button>
+                        <button onclick="admin.deleteReport('${r.id}')" class="p-2 rounded-lg bg-red-600/50 text-red-300 hover:bg-red-600" title="Delete">
+                            <i class="ph-bold ph-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    async viewReport(id) {
+        const report = this.reports.find(r => r.id === id);
+        if (!report) return;
+        
+        const typeLabels = {
+            bug: '🐛 Bug Report',
+            feature: '💡 Feature Request',
+            feedback: '💬 General Feedback',
+            player: '🚫 Player Report',
+            other: '📝 Other'
+        };
+        
+        const html = `
+            <div class="space-y-4">
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div><span class="text-slate-400">Type:</span> <span class="text-white">${typeLabels[report.type] || report.type}</span></div>
+                    <div><span class="text-slate-400">Status:</span> <span class="text-white">${report.status}</span></div>
+                    <div><span class="text-slate-400">User:</span> <span class="text-white">${this.escapeHtml(report.userName)}</span></div>
+                    <div><span class="text-slate-400">Email:</span> <span class="text-white">${report.userEmail || 'N/A'}</span></div>
+                    <div><span class="text-slate-400">Club:</span> <span class="text-white">${this.escapeHtml(report.clubName)}</span></div>
+                    <div><span class="text-slate-400">Version:</span> <span class="text-white">${report.gameVersion}</span></div>
+                    <div class="col-span-2"><span class="text-slate-400">Platform:</span> <span class="text-white">${report.platform}</span></div>
+                    <div class="col-span-2"><span class="text-slate-400">Submitted:</span> <span class="text-white">${new Date(report.timestamp).toLocaleString()}</span></div>
+                </div>
+                <div class="border-t border-white/10 pt-4">
+                    <div class="text-slate-400 text-sm mb-2">Subject:</div>
+                    <div class="text-white font-medium">${this.escapeHtml(report.subject)}</div>
+                </div>
+                <div class="border-t border-white/10 pt-4">
+                    <div class="text-slate-400 text-sm mb-2">Description:</div>
+                    <div class="text-white whitespace-pre-wrap bg-slate-800/50 p-3 rounded-lg">${this.escapeHtml(report.description)}</div>
+                </div>
+                ${report.adminNotes ? `
+                <div class="border-t border-white/10 pt-4">
+                    <div class="text-slate-400 text-sm mb-2">Admin Notes:</div>
+                    <div class="text-indigo-300 bg-indigo-500/10 p-3 rounded-lg">${this.escapeHtml(report.adminNotes)}</div>
+                </div>
+                ` : ''}
+            </div>
+        `;
+        
+        await this.showFormModal('Report Details', html, 'Close', 'info');
+    }
+    
+    async updateReportStatus(id) {
+        const report = this.reports.find(r => r.id === id);
+        if (!report) return;
+        
+        const html = `
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm text-slate-400 mb-2">Status</label>
+                    <select id="report-new-status" class="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-white">
+                        <option value="pending" ${report.status === 'pending' ? 'selected' : ''}>Pending</option>
+                        <option value="reviewed" ${report.status === 'reviewed' ? 'selected' : ''}>Reviewed</option>
+                        <option value="resolved" ${report.status === 'resolved' ? 'selected' : ''}>Resolved</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm text-slate-400 mb-2">Admin Notes</label>
+                    <textarea id="report-admin-notes" rows="3" class="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-white resize-none" placeholder="Add notes about this report...">${report.adminNotes || ''}</textarea>
+                </div>
+            </div>
+        `;
+        
+        const confirmed = await this.showFormModal('Update Report', html, 'Save', 'primary');
+        if (!confirmed) return;
+        
+        const newStatus = document.getElementById('report-new-status').value;
+        const adminNotes = document.getElementById('report-admin-notes').value.trim();
+        
+        try {
+            await this.db.ref(`gameReports/${id}`).update({
+                status: newStatus,
+                adminNotes: adminNotes || null,
+                updatedAt: firebase.database.ServerValue.TIMESTAMP
+            });
+            
+            this.showToast('Report updated', 'success');
+            this.loadReports();
+        } catch(e) {
+            console.error('Failed to update report:', e);
+            this.showToast('Failed to update report', 'error');
+        }
+    }
+    
+    async deleteReport(id) {
+        const confirmed = await this.showFormModal('Delete Report', 
+            '<p class="text-slate-400">Are you sure you want to delete this report? This cannot be undone.</p>',
+            'Delete', 'danger');
+        
+        if (!confirmed) return;
+        
+        try {
+            await this.db.ref(`gameReports/${id}`).remove();
+            this.showToast('Report deleted', 'success');
+            this.loadReports();
+        } catch(e) {
+            console.error('Failed to delete report:', e);
+            this.showToast('Failed to delete report', 'error');
+        }
     }
 }
 

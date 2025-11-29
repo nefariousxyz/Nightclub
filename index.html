@@ -913,6 +913,11 @@
                 </button>
             </div>
             
+            <!-- Report Button -->
+            <button class="glass-panel px-2 py-2 rounded-xl hover:bg-white/10 transition-colors" onclick="openReportModal()" title="Submit a Report">
+                <i class="ph-fill ph-flag text-orange-400 text-lg"></i>
+            </button>
+            
             <!-- Right: Guests -->
             <div class="glass-panel px-3 py-2 rounded-xl flex items-center gap-2">
                 <div class="flex -space-x-2">
@@ -1465,6 +1470,58 @@
             </div>
             <div class="p-5" id="stats-content">
                 <!-- Populated by JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Report/Feedback Modal -->
+    <div id="report-modal" class="modal-overlay hidden fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex items-center justify-center p-4" onclick="if(event.target===this) closeReportModal()">
+        <div class="glass-panel rounded-3xl w-full max-w-lg overflow-hidden font-display shadow-2xl border border-white/10">
+            <div class="flex items-center justify-between p-5 border-b border-white/10 bg-gradient-to-r from-orange-600/20 to-red-600/20">
+                <h2 class="text-2xl font-bold text-white flex items-center gap-3">
+                    <i class="ph-fill ph-flag text-orange-400"></i>
+                    SUBMIT A REPORT
+                </h2>
+                <button class="w-10 h-10 rounded-xl bg-white/10 hover:bg-red-500/50 flex items-center justify-center text-white transition-colors" onclick="closeReportModal()" title="Close">
+                    <i class="ph-bold ph-x text-xl"></i>
+                </button>
+            </div>
+            <div class="p-5 space-y-4">
+                <p class="text-gray-400 text-sm">Help us improve Hypeclub City! Report bugs, suggest features, or share feedback.</p>
+                
+                <!-- Report Type -->
+                <div>
+                    <label class="block text-sm font-medium text-white mb-2">Report Type</label>
+                    <select id="report-type" class="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50">
+                        <option value="bug">🐛 Bug Report</option>
+                        <option value="feature">💡 Feature Request</option>
+                        <option value="feedback">💬 General Feedback</option>
+                        <option value="player">🚫 Report a Player</option>
+                        <option value="other">📝 Other</option>
+                    </select>
+                </div>
+                
+                <!-- Subject -->
+                <div>
+                    <label class="block text-sm font-medium text-white mb-2">Subject</label>
+                    <input type="text" id="report-subject" placeholder="Brief description..." 
+                           class="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500/50">
+                </div>
+                
+                <!-- Description -->
+                <div>
+                    <label class="block text-sm font-medium text-white mb-2">Description</label>
+                    <textarea id="report-description" rows="4" placeholder="Please provide details..."
+                              class="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500/50 resize-none"></textarea>
+                </div>
+                
+                <!-- Submit Button -->
+                <button onclick="submitReport()" class="w-full py-3 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
+                    <i class="ph-fill ph-paper-plane-tilt"></i>
+                    Submit Report
+                </button>
+                
+                <p class="text-xs text-gray-500 text-center">Your report will be reviewed by our team. Thank you for helping improve the game!</p>
             </div>
         </div>
     </div>
@@ -2726,6 +2783,69 @@
         // Check if currently visiting
         window.isVisitingFriend = function() {
             return isVisitingClub;
+        };
+        
+        // ================== REPORT/FEEDBACK SYSTEM ==================
+        
+        window.openReportModal = function() {
+            document.getElementById('report-modal').classList.remove('hidden');
+            // Clear form
+            document.getElementById('report-type').value = 'bug';
+            document.getElementById('report-subject').value = '';
+            document.getElementById('report-description').value = '';
+        };
+        
+        window.closeReportModal = function() {
+            document.getElementById('report-modal').classList.add('hidden');
+        };
+        
+        window.submitReport = async function() {
+            const type = document.getElementById('report-type').value;
+            const subject = document.getElementById('report-subject').value.trim();
+            const description = document.getElementById('report-description').value.trim();
+            
+            if (!subject) {
+                ui.notify('Please enter a subject', 'error');
+                return;
+            }
+            
+            if (!description) {
+                ui.notify('Please enter a description', 'error');
+                return;
+            }
+            
+            const user = window.authSystem?.user;
+            if (!user) {
+                ui.notify('You must be logged in to submit a report', 'error');
+                return;
+            }
+            
+            try {
+                // Save to Firebase
+                const reportData = {
+                    type: type,
+                    subject: subject,
+                    description: description,
+                    userId: user.uid,
+                    userName: user.displayName || user.email || 'Unknown',
+                    userEmail: user.email || null,
+                    clubName: window.game?.clubName || 'Unknown',
+                    gameVersion: 'v1.1.6',
+                    platform: navigator.platform || 'Unknown',
+                    userAgent: navigator.userAgent,
+                    timestamp: firebase.database.ServerValue.TIMESTAMP,
+                    status: 'pending', // pending, reviewed, resolved
+                    adminNotes: null
+                };
+                
+                await firebase.database().ref('gameReports').push(reportData);
+                
+                ui.notify('Report submitted successfully! Thank you for your feedback.', 'success');
+                closeReportModal();
+            } catch (e) {
+                console.error('Failed to submit report:', e);
+                ui.notify('Failed to submit report. Please try again.', 'error');
+            }
         };
         
         // ================== FACEBOOK-STYLE PROFILE SYSTEM ==================

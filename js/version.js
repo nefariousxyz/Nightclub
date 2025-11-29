@@ -16,8 +16,8 @@
     const VERSION = {
         major: 1,
         minor: 1,
-        patch: 5,
-        build: '20251129f',  // YYYYMMDD format - UPDATE THIS ON EACH PUSH
+        patch: 6,
+        build: '20251129g',  // YYYYMMDD format - UPDATE THIS ON EACH PUSH
         timestamp: Date.now()
     };
 
