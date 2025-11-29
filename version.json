@@ -1,9 +1,9 @@
 {
     "major": 1,
     "minor": 1,
-    "patch": 10,
-    "build": "20251129k",
-    "version": "v1.1.10",
+    "patch": 11,
+    "build": "20251129l",
+    "version": "v1.1.11",
     "releaseDate": "2025-11-29",
     "changelog": [
         "Fixed: Game now saves before version update refresh",

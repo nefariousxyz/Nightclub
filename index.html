@@ -102,6 +102,31 @@
         .scrollbar-hide::-webkit-scrollbar {
             display: none;
         }
+        
+        /* Modal responsiveness */
+        .modal-overlay {
+            z-index: 9000 !important;
+        }
+        .modal-overlay .glass-panel,
+        .modal-overlay .modal-content {
+            max-height: 85vh;
+            max-height: 85dvh;
+            overflow-y: auto;
+        }
+        @media (max-width: 640px) {
+            .modal-overlay {
+                padding: 8px !important;
+            }
+            .modal-overlay .glass-panel,
+            .modal-overlay .modal-content {
+                max-height: 90vh;
+                max-height: 90dvh;
+                border-radius: 16px !important;
+            }
+            .modal-overlay .glass-panel > div:first-child {
+                padding: 12px 16px !important;
+            }
+        }
         .glass-panel-light {
             background: rgba(40, 40, 70, 0.6);
             -webkit-backdrop-filter: blur(15px);

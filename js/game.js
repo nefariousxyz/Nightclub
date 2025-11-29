@@ -1326,6 +1326,12 @@ class GameState {
             console.warn('Audio not ready');
         }
         
+        // Close all other modals first to prevent overlapping
+        document.querySelectorAll('.modal-overlay').forEach(m => {
+            m.classList.add('hidden');
+            m.classList.remove('active');
+        });
+        
         let modalId;
         switch(type) {
             case 'shop': modalId = 'shop-modal'; break;
