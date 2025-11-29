@@ -2165,6 +2165,16 @@ class GameState {
         if (guestsDisplay) guestsDisplay.innerText = `${this.visitors.length}/${this.maxVisitors}`;
         if (guestCount) guestCount.innerText = this.visitors.length;
         if (maxGuests) maxGuests.innerText = this.maxVisitors;
+        
+        // Mobile displays (sync with desktop)
+        const hypeDisplayMobile = document.getElementById('hype-display-mobile');
+        const stockDisplayMobile = document.getElementById('stock-display-mobile');
+        const guestCountMobile = document.getElementById('guest-count-mobile');
+        const maxGuestsMobile = document.getElementById('max-guests-mobile');
+        if (hypeDisplayMobile) hypeDisplayMobile.innerText = Math.floor(this.hype);
+        if (stockDisplayMobile) stockDisplayMobile.innerText = `${Math.max(0, this.barStock)}%`;
+        if (guestCountMobile) guestCountMobile.innerText = this.visitors.length;
+        if (maxGuestsMobile) maxGuestsMobile.innerText = this.maxVisitors;
         if (levelDisplay) levelDisplay.innerText = this.level;
         
         // Diamonds display (uses coins-display element)
