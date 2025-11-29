@@ -216,44 +216,40 @@
             if (countdown <= 0) {
                 clearInterval(timer);
                 if (CONFIG.enableAutoRefresh) {
-                    // Save before auto-refresh
-                    (async () => {
-                        try {
-                            if (window.game && window.cloudSave && typeof firebase !== 'undefined' && firebase.apps?.length) {
-                                const saveData = window.game.getSaveData();
-                                await window.cloudSave.saveGame(saveData, true);
-                                const user = firebase.auth()?.currentUser;
-                                if (user) {
-                                    await firebase.database().ref(`saves/${user.uid}`).set(saveData);
-                                }
+                    // Try to save (non-blocking), then reload
+                    try {
+                        if (window.game && window.cloudSave && typeof firebase !== 'undefined' && firebase.apps?.length) {
+                            const saveData = window.game.getSaveData();
+                            window.cloudSave.saveGame(saveData, true).catch(() => {});
+                            const user = firebase.auth()?.currentUser;
+                            if (user) {
+                                firebase.database().ref(`saves/${user.uid}`).set(saveData).catch(() => {});
                             }
-                        } catch(e) { console.warn('Save before refresh failed:', e); }
-                        window.location.reload(true);
-                    })();
+                        }
+                    } catch(e) {}
+                    setTimeout(() => window.location.reload(true), 500);
                 }
             }
         }, 1000);
 
         // Button handlers
-        document.getElementById('update-now-btn').onclick = async () => {
+        document.getElementById('update-now-btn').onclick = () => {
             clearInterval(timer);
-            // Save game before reloading
+            // Try to save (non-blocking), then reload after short delay
             try {
                 if (window.game && window.cloudSave && typeof firebase !== 'undefined' && firebase.apps?.length) {
                     const saveData = window.game.getSaveData();
-                    console.log('💾 Saving before update...', saveData.cash, saveData.diamonds);
-                    await window.cloudSave.saveGame(saveData, true);
-                    // Also save to Realtime DB
+                    console.log('💾 Quick save before update...');
+                    // Fire and forget - don't await
+                    window.cloudSave.saveGame(saveData, true).catch(() => {});
                     const user = firebase.auth()?.currentUser;
                     if (user) {
-                        await firebase.database().ref(`saves/${user.uid}`).set(saveData);
+                        firebase.database().ref(`saves/${user.uid}`).set(saveData).catch(() => {});
                     }
-                    console.log('💾 Save complete, reloading...');
                 }
-            } catch(e) {
-                console.warn('Save before update failed:', e);
-            }
-            window.location.reload(true);
+            } catch(e) {}
+            // Reload after brief delay to let save start
+            setTimeout(() => window.location.reload(true), 500);
         };
 
         document.getElementById('update-later-btn').onclick = () => {
