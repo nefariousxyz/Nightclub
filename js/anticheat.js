@@ -805,8 +805,15 @@ class AntiCheat {
             return;
         }
         
-        // Skip debugger/frame rate issues - these are often false positives
-        const ignoredTypes = ['DEBUGGER_DETECTED', 'FRAME_RATE_ANOMALY'];
+        // Skip non-critical violations - these are often false positives
+        const ignoredTypes = [
+            'DEBUGGER_DETECTED', 
+            'FRAME_RATE_ANOMALY',
+            'VALUE_DESYNC',        // Often triggered by gift codes/admin rewards
+            'CASH_MANIPULATION',   // Often triggered by gift codes
+            'DIAMOND_MANIPULATION', // Often triggered by gift codes
+            'HEARTBEAT_CASH_ANOMALY' // Can be triggered by legitimate large earnings
+        ];
         if (ignoredTypes.includes(type)) {
             console.log(`🛡️ Skipped non-critical violation: ${type}`);
             return;
