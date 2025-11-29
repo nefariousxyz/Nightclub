@@ -12,7 +12,8 @@ import { timeSystem } from './timeSystem.js';
 import { statisticsSystem } from './statistics.js';
 
 // Furniture Catalog - comprehensive list of all purchasable items
-export const FURNITURE_CATALOG = {
+// This will be updated from Firebase if available
+export let FURNITURE_CATALOG = {
     // === FLOOR TILES (Cash) ===
     tile_wood: { name: 'Wooden Floor', icon: '🪵', cost: 50, currency: 'cash', category: 'floors', desc: 'Classic wood flooring' },
     tile_marble: { name: 'Marble Floor', icon: '⬜', cost: 100, currency: 'cash', category: 'floors', desc: 'Elegant marble tiles' },
@@ -147,9 +148,37 @@ class GameState {
         this.createFloatingText = null;
     }
 
+    // Load shop catalog from Firebase
+    async loadShopCatalog() {
+        try {
+            if (typeof firebase !== 'undefined' && firebase.database) {
+                const snapshot = await firebase.database().ref('shop/catalog').once('value');
+                const catalog = snapshot.val();
+                
+                if (catalog) {
+                    // Merge Firebase catalog with default (Firebase takes precedence)
+                    // Filter out disabled items
+                    const enabledCatalog = {};
+                    for (const [key, item] of Object.entries(catalog)) {
+                        if (item.enabled !== false) {
+                            enabledCatalog[key] = item;
+                        }
+                    }
+                    FURNITURE_CATALOG = enabledCatalog;
+                    console.log('📦 Shop catalog loaded from Firebase:', Object.keys(FURNITURE_CATALOG).length, 'items');
+                }
+            }
+        } catch (e) {
+            console.warn('Could not load shop catalog from Firebase, using defaults:', e.message);
+        }
+    }
+
     // Initialize from save or fresh start
     async init() {
         console.log('=== GAME INIT START ===');
+        
+        // Load shop catalog from Firebase first
+        await this.loadShopCatalog();
         
         // Check for visit mode from URL
         const urlParams = new URLSearchParams(window.location.search);

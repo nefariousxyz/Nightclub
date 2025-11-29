@@ -16,8 +16,8 @@
     const VERSION = {
         major: 1,
         minor: 0,
-        patch: 0,
-        build: '20241129',  // YYYYMMDD format - UPDATE THIS ON EACH PUSH
+        patch: 1,
+        build: '20241129b',  // YYYYMMDD format - UPDATE THIS ON EACH PUSH
         timestamp: Date.now()
     };
 
@@ -50,7 +50,7 @@
                 versionBadge.id = 'version-badge';
                 versionBadge.style.cssText = `
                     position: fixed;
-                    bottom: 10px;
+                    bottom: 80px;
                     right: 10px;
                     background: rgba(0, 0, 0, 0.6);
                     backdrop-filter: blur(10px);

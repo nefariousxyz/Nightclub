@@ -123,6 +123,7 @@ class AdminDashboard {
             case 'broadcast': this.renderBroadcast(content); break;
             case 'economy': this.renderEconomy(content); break;
             case 'anticheat': this.renderAnticheat(content); break;
+            case 'shop': this.renderShopManager(content); break;
             default: content.innerHTML = '<div class="text-center text-slate-500 mt-20">Module loading...</div>';
         }
     }
@@ -3079,6 +3080,591 @@ class AdminDashboard {
         const hours = Math.floor(seconds / 3600);
         const mins = Math.floor((seconds % 3600) / 60);
         return `${hours}h ${mins}m`;
+    }
+    
+    // ==========================================
+    // SHOP MANAGER
+    // ==========================================
+    
+    // Default furniture catalog (fallback)
+    getDefaultCatalog() {
+        return {
+            tile_wood: { name: 'Wooden Floor', icon: '🪵', cost: 50, currency: 'cash', category: 'floors', desc: 'Classic wood flooring', enabled: true },
+            tile_marble: { name: 'Marble Floor', icon: '⬜', cost: 100, currency: 'cash', category: 'floors', desc: 'Elegant marble tiles', enabled: true },
+            tile_checker: { name: 'Checker Floor', icon: '🏁', cost: 75, currency: 'cash', category: 'floors', desc: 'Black & white checker', enabled: true },
+            tile_carpet: { name: 'Red Carpet', icon: '🟥', cost: 80, currency: 'cash', category: 'floors', desc: 'VIP red carpet', enabled: true },
+            tile_concrete: { name: 'Concrete Floor', icon: '⬛', cost: 40, currency: 'cash', category: 'floors', desc: 'Industrial style', enabled: true },
+            tile_disco: { name: 'Disco Tile', icon: '🪩', cost: 150, currency: 'cash', category: 'floors', desc: 'Light-up disco floor', enabled: true },
+            tile_gold: { name: 'Golden Floor', icon: '🟨', cost: 2, currency: 'diamonds', category: 'floors', desc: 'Luxurious gold tiles', premium: true, enabled: true },
+            tile_neon: { name: 'Neon Floor', icon: '💜', cost: 3, currency: 'diamonds', category: 'floors', desc: 'Glowing neon tiles', premium: true, enabled: true },
+            table: { name: 'Cocktail Table', icon: '🪑', cost: 100, currency: 'cash', category: 'furniture', desc: 'Small table for drinks', enabled: true },
+            booth: { name: 'VIP Booth', icon: '🛋️', cost: 500, currency: 'cash', category: 'furniture', desc: 'Cozy VIP seating', unlockLevel: 2, enabled: true },
+            bar: { name: 'Bar Counter', icon: '🍸', cost: 800, currency: 'cash', category: 'furniture', desc: 'Serve drinks here', unlockLevel: 2, enabled: true },
+            speaker: { name: 'Speaker', icon: '🔊', cost: 200, currency: 'cash', category: 'furniture', desc: 'Pumps up the music', enabled: true },
+            plant: { name: 'Potted Plant', icon: '🌿', cost: 75, currency: 'cash', category: 'furniture', desc: 'Add some greenery', enabled: true },
+            pooltable: { name: 'Pool Table', icon: '🎱', cost: 600, currency: 'cash', category: 'furniture', desc: 'Entertainment zone', unlockLevel: 3, enabled: true },
+            dancefloor: { name: 'Dance Floor', icon: '💃', cost: 1000, currency: 'cash', category: 'entertainment', desc: 'LED dance floor', unlockLevel: 1, enabled: true },
+            dj: { name: 'DJ Booth', icon: '🎧', cost: 1500, currency: 'cash', category: 'entertainment', desc: 'Drop the beat!', unlockLevel: 2, enabled: true },
+            stage: { name: 'Stage', icon: '🎤', cost: 2000, currency: 'cash', category: 'entertainment', desc: 'Performance stage', unlockLevel: 4, enabled: true },
+            discoball: { name: 'Disco Ball', icon: '🪩', cost: 300, currency: 'cash', category: 'lights', desc: 'Classic disco vibes', enabled: true },
+            laser: { name: 'Moving Head Laser', icon: '✨', cost: 750, currency: 'cash', category: 'lights', desc: 'Beam light show', unlockLevel: 3, enabled: true },
+            statue: { name: 'Statue', icon: '🗿', cost: 350, currency: 'cash', category: 'decor', desc: 'Artistic decoration', enabled: true },
+            fountain: { name: 'Fountain', icon: '⛲', cost: 700, currency: 'cash', category: 'decor', desc: 'Water feature', unlockLevel: 3, enabled: true },
+            sofa: { name: 'Sofa', icon: '🛋️', cost: 200, currency: 'cash', category: 'seating', desc: 'Comfortable sofa', enabled: true },
+            barstool: { name: 'Bar Stool', icon: '🪑', cost: 50, currency: 'cash', category: 'seating', desc: 'Bar seating', enabled: true },
+            viparea: { name: 'VIP Area', icon: '👑', cost: 5, currency: 'diamonds', category: 'premium', desc: 'Exclusive VIP section', premium: true, enabled: true },
+            aquarium: { name: 'Aquarium', icon: '🐠', cost: 8, currency: 'diamonds', category: 'premium', desc: 'Giant fish tank', premium: true, enabled: true },
+            helicopter: { name: 'Helipad', icon: '🚁', cost: 15, currency: 'diamonds', category: 'premium', desc: 'Rooftop helipad!', premium: true, enabled: true },
+        };
+    }
+    
+    async renderShopManager(content) {
+        content.innerHTML = `
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h2 class="text-2xl font-bold text-white flex items-center gap-3">
+                        <i class="ph-fill ph-storefront text-emerald-400"></i> Shop Manager
+                    </h2>
+                    <p class="text-slate-400 text-sm mt-1">Manage furniture items, prices, and visibility</p>
+                </div>
+                <button onclick="admin.addNewItem()" class="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white font-medium transition-all flex items-center gap-2">
+                    <i class="ph-bold ph-plus"></i> Add New Item
+                </button>
+            </div>
+            
+            <!-- Category Filter -->
+            <div class="flex flex-wrap gap-2 mb-6">
+                <button onclick="admin.filterShopItems('all')" class="shop-filter-btn active px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm transition-all" data-filter="all">
+                    All Items
+                </button>
+                <button onclick="admin.filterShopItems('floors')" class="shop-filter-btn px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 text-sm transition-all" data-filter="floors">
+                    🪵 Floors
+                </button>
+                <button onclick="admin.filterShopItems('furniture')" class="shop-filter-btn px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 text-sm transition-all" data-filter="furniture">
+                    🪑 Furniture
+                </button>
+                <button onclick="admin.filterShopItems('entertainment')" class="shop-filter-btn px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 text-sm transition-all" data-filter="entertainment">
+                    💃 Entertainment
+                </button>
+                <button onclick="admin.filterShopItems('lights')" class="shop-filter-btn px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 text-sm transition-all" data-filter="lights">
+                    💡 Lights
+                </button>
+                <button onclick="admin.filterShopItems('decor')" class="shop-filter-btn px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 text-sm transition-all" data-filter="decor">
+                    🗿 Decor
+                </button>
+                <button onclick="admin.filterShopItems('seating')" class="shop-filter-btn px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 text-sm transition-all" data-filter="seating">
+                    🛋️ Seating
+                </button>
+                <button onclick="admin.filterShopItems('premium')" class="shop-filter-btn px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 text-sm transition-all" data-filter="premium">
+                    💎 Premium
+                </button>
+            </div>
+            
+            <!-- Stats -->
+            <div class="grid grid-cols-4 gap-4 mb-6">
+                <div class="glass rounded-xl p-4 border border-white/5">
+                    <div class="text-2xl font-bold text-white" id="shop-total-items">--</div>
+                    <div class="text-xs text-slate-400">Total Items</div>
+                </div>
+                <div class="glass rounded-xl p-4 border border-white/5">
+                    <div class="text-2xl font-bold text-emerald-400" id="shop-enabled-items">--</div>
+                    <div class="text-xs text-slate-400">Enabled</div>
+                </div>
+                <div class="glass rounded-xl p-4 border border-white/5">
+                    <div class="text-2xl font-bold text-red-400" id="shop-disabled-items">--</div>
+                    <div class="text-xs text-slate-400">Disabled</div>
+                </div>
+                <div class="glass rounded-xl p-4 border border-white/5">
+                    <div class="text-2xl font-bold text-purple-400" id="shop-premium-items">--</div>
+                    <div class="text-xs text-slate-400">Premium</div>
+                </div>
+            </div>
+            
+            <!-- Items Grid -->
+            <div class="glass rounded-2xl border border-white/5 overflow-hidden">
+                <div class="p-4 border-b border-white/5 bg-white/5">
+                    <div class="flex items-center gap-4">
+                        <input type="text" id="shop-search" placeholder="Search items..." 
+                            class="flex-1 px-4 py-2 rounded-lg bg-slate-800 border border-white/10 text-white text-sm focus:border-emerald-500 focus:outline-none"
+                            oninput="admin.searchShopItems(this.value)">
+                        <button onclick="admin.syncCatalogToFirebase()" class="px-4 py-2 rounded-lg bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-all text-sm">
+                            <i class="ph-bold ph-cloud-arrow-up mr-2"></i>Sync to Cloud
+                        </button>
+                    </div>
+                </div>
+                <div id="shop-items-list" class="divide-y divide-white/5 max-h-[600px] overflow-y-auto">
+                    <div class="p-8 text-center text-slate-500">Loading items...</div>
+                </div>
+            </div>
+        `;
+        
+        this.currentShopFilter = 'all';
+        this.shopSearchQuery = '';
+        await this.loadShopItems();
+    }
+    
+    async loadShopItems() {
+        try {
+            // Try to load from Firebase first
+            const snapshot = await this.db.ref('shop/catalog').once('value');
+            let catalog = snapshot.val();
+            
+            // If no catalog in Firebase, use default
+            if (!catalog) {
+                catalog = this.getDefaultCatalog();
+                // Save default to Firebase
+                await this.db.ref('shop/catalog').set(catalog);
+            }
+            
+            this.shopCatalog = catalog;
+            this.renderShopItems();
+            this.updateShopStats();
+            
+        } catch(e) {
+            console.error('Failed to load shop items:', e);
+            this.shopCatalog = this.getDefaultCatalog();
+            this.renderShopItems();
+        }
+    }
+    
+    updateShopStats() {
+        const items = Object.values(this.shopCatalog || {});
+        const total = items.length;
+        const enabled = items.filter(i => i.enabled !== false).length;
+        const disabled = items.filter(i => i.enabled === false).length;
+        const premium = items.filter(i => i.premium === true).length;
+        
+        document.getElementById('shop-total-items').textContent = total;
+        document.getElementById('shop-enabled-items').textContent = enabled;
+        document.getElementById('shop-disabled-items').textContent = disabled;
+        document.getElementById('shop-premium-items').textContent = premium;
+    }
+    
+    renderShopItems() {
+        const listEl = document.getElementById('shop-items-list');
+        if (!listEl || !this.shopCatalog) return;
+        
+        let items = Object.entries(this.shopCatalog);
+        
+        // Apply category filter
+        if (this.currentShopFilter !== 'all') {
+            if (this.currentShopFilter === 'premium') {
+                items = items.filter(([k, v]) => v.premium === true);
+            } else {
+                items = items.filter(([k, v]) => v.category === this.currentShopFilter);
+            }
+        }
+        
+        // Apply search filter
+        if (this.shopSearchQuery) {
+            const query = this.shopSearchQuery.toLowerCase();
+            items = items.filter(([k, v]) => 
+                v.name.toLowerCase().includes(query) || 
+                k.toLowerCase().includes(query) ||
+                (v.desc && v.desc.toLowerCase().includes(query))
+            );
+        }
+        
+        if (items.length === 0) {
+            listEl.innerHTML = '<div class="p-8 text-center text-slate-500">No items found</div>';
+            return;
+        }
+        
+        listEl.innerHTML = items.map(([key, item]) => {
+            const isEnabled = item.enabled !== false;
+            const currencyIcon = item.currency === 'diamonds' ? '💎' : '💵';
+            const categoryColors = {
+                'floors': 'bg-amber-500/20 text-amber-400',
+                'furniture': 'bg-blue-500/20 text-blue-400',
+                'entertainment': 'bg-pink-500/20 text-pink-400',
+                'lights': 'bg-yellow-500/20 text-yellow-400',
+                'decor': 'bg-emerald-500/20 text-emerald-400',
+                'seating': 'bg-purple-500/20 text-purple-400',
+                'premium': 'bg-purple-500/20 text-purple-400'
+            };
+            const catColor = categoryColors[item.category] || 'bg-slate-500/20 text-slate-400';
+            
+            return `
+                <div class="p-4 hover:bg-white/5 transition-all ${!isEnabled ? 'opacity-50' : ''}">
+                    <div class="flex items-center gap-4">
+                        <!-- Icon & Info -->
+                        <div class="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center text-2xl">
+                            ${item.icon || '📦'}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2">
+                                <span class="font-medium text-white">${this.esc(item.name)}</span>
+                                <span class="text-[10px] px-2 py-0.5 rounded ${catColor}">${item.category}</span>
+                                ${item.premium ? '<span class="text-[10px] px-2 py-0.5 rounded bg-purple-500/20 text-purple-400">PREMIUM</span>' : ''}
+                                ${item.unlockLevel ? `<span class="text-[10px] px-2 py-0.5 rounded bg-slate-500/20 text-slate-400">Lv.${item.unlockLevel}</span>` : ''}
+                            </div>
+                            <div class="text-xs text-slate-500 mt-0.5">${this.esc(item.desc || 'No description')}</div>
+                            <div class="text-[10px] text-slate-600 mt-0.5">ID: ${key}</div>
+                        </div>
+                        
+                        <!-- Price -->
+                        <div class="text-right">
+                            <div class="text-lg font-bold ${item.currency === 'diamonds' ? 'text-purple-400' : 'text-emerald-400'}">
+                                ${currencyIcon} ${item.cost}
+                            </div>
+                            <div class="text-[10px] text-slate-500">${item.currency}</div>
+                        </div>
+                        
+                        <!-- Actions -->
+                        <div class="flex items-center gap-2">
+                            <button onclick="admin.toggleItemEnabled('${key}')" 
+                                class="p-2 rounded-lg ${isEnabled ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'} hover:opacity-80 transition-all"
+                                title="${isEnabled ? 'Disable' : 'Enable'}">
+                                <i class="ph-bold ${isEnabled ? 'ph-eye' : 'ph-eye-slash'}"></i>
+                            </button>
+                            <button onclick="admin.editShopItem('${key}')" 
+                                class="p-2 rounded-lg bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-all"
+                                title="Edit">
+                                <i class="ph-bold ph-pencil"></i>
+                            </button>
+                            <button onclick="admin.deleteShopItem('${key}')" 
+                                class="p-2 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-all"
+                                title="Delete">
+                                <i class="ph-bold ph-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+    
+    filterShopItems(filter) {
+        this.currentShopFilter = filter;
+        
+        // Update active button styling
+        document.querySelectorAll('.shop-filter-btn').forEach(btn => {
+            if (btn.dataset.filter === filter) {
+                btn.classList.add('active', 'bg-white/10', 'text-white');
+                btn.classList.remove('bg-white/5', 'text-slate-400');
+            } else {
+                btn.classList.remove('active', 'bg-white/10', 'text-white');
+                btn.classList.add('bg-white/5', 'text-slate-400');
+            }
+        });
+        
+        this.renderShopItems();
+    }
+    
+    searchShopItems(query) {
+        this.shopSearchQuery = query;
+        this.renderShopItems();
+    }
+    
+    async toggleItemEnabled(itemKey) {
+        if (!this.shopCatalog[itemKey]) return;
+        
+        const currentState = this.shopCatalog[itemKey].enabled !== false;
+        this.shopCatalog[itemKey].enabled = !currentState;
+        
+        try {
+            await this.db.ref(`shop/catalog/${itemKey}/enabled`).set(!currentState);
+            this.renderShopItems();
+            this.updateShopStats();
+            this.toast(`${this.shopCatalog[itemKey].name} ${!currentState ? 'enabled' : 'disabled'}`, 'success');
+        } catch(e) {
+            this.toast('Failed to update item: ' + e.message, 'error');
+        }
+    }
+    
+    async editShopItem(itemKey) {
+        const item = this.shopCatalog[itemKey];
+        if (!item) return;
+        
+        const html = `
+            <div class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">Name</label>
+                        <input type="text" id="edit-name" value="${this.esc(item.name)}" 
+                            class="w-full px-3 py-2 rounded-lg bg-slate-800 border border-white/10 text-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">Icon (emoji)</label>
+                        <input type="text" id="edit-icon" value="${item.icon || ''}" 
+                            class="w-full px-3 py-2 rounded-lg bg-slate-800 border border-white/10 text-white">
+                    </div>
+                </div>
+                <div class="grid grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">Price</label>
+                        <input type="number" id="edit-cost" value="${item.cost}" 
+                            class="w-full px-3 py-2 rounded-lg bg-slate-800 border border-white/10 text-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">Currency</label>
+                        <select id="edit-currency" class="w-full px-3 py-2 rounded-lg bg-slate-800 border border-white/10 text-white">
+                            <option value="cash" ${item.currency === 'cash' ? 'selected' : ''}>Cash 💵</option>
+                            <option value="diamonds" ${item.currency === 'diamonds' ? 'selected' : ''}>Diamonds 💎</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">Unlock Level</label>
+                        <input type="number" id="edit-level" value="${item.unlockLevel || 0}" min="0" max="50"
+                            class="w-full px-3 py-2 rounded-lg bg-slate-800 border border-white/10 text-white">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm text-slate-400 mb-1">Category</label>
+                    <select id="edit-category" class="w-full px-3 py-2 rounded-lg bg-slate-800 border border-white/10 text-white">
+                        <option value="floors" ${item.category === 'floors' ? 'selected' : ''}>Floors</option>
+                        <option value="furniture" ${item.category === 'furniture' ? 'selected' : ''}>Furniture</option>
+                        <option value="entertainment" ${item.category === 'entertainment' ? 'selected' : ''}>Entertainment</option>
+                        <option value="lights" ${item.category === 'lights' ? 'selected' : ''}>Lights</option>
+                        <option value="decor" ${item.category === 'decor' ? 'selected' : ''}>Decor</option>
+                        <option value="seating" ${item.category === 'seating' ? 'selected' : ''}>Seating</option>
+                        <option value="premium" ${item.category === 'premium' ? 'selected' : ''}>Premium</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm text-slate-400 mb-1">Description</label>
+                    <input type="text" id="edit-desc" value="${this.esc(item.desc || '')}" 
+                        class="w-full px-3 py-2 rounded-lg bg-slate-800 border border-white/10 text-white">
+                </div>
+                <div class="flex items-center gap-4">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="edit-premium" ${item.premium ? 'checked' : ''} class="w-4 h-4">
+                        <span class="text-sm text-slate-300">Premium Item</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="edit-enabled" ${item.enabled !== false ? 'checked' : ''} class="w-4 h-4">
+                        <span class="text-sm text-slate-300">Enabled in Shop</span>
+                    </label>
+                </div>
+            </div>
+        `;
+        
+        const confirmed = await this.showFormModal({
+            title: `Edit: ${item.name}`,
+            html: html,
+            confirmText: 'Save Changes',
+            type: 'info'
+        });
+        
+        if (!confirmed) return;
+        
+        // Get values
+        const updatedItem = {
+            name: document.getElementById('edit-name').value.trim(),
+            icon: document.getElementById('edit-icon').value.trim(),
+            cost: parseInt(document.getElementById('edit-cost').value) || 0,
+            currency: document.getElementById('edit-currency').value,
+            category: document.getElementById('edit-category').value,
+            desc: document.getElementById('edit-desc').value.trim(),
+            premium: document.getElementById('edit-premium').checked,
+            enabled: document.getElementById('edit-enabled').checked,
+            unlockLevel: parseInt(document.getElementById('edit-level').value) || 0
+        };
+        
+        if (updatedItem.unlockLevel === 0) delete updatedItem.unlockLevel;
+        
+        try {
+            await this.db.ref(`shop/catalog/${itemKey}`).set(updatedItem);
+            this.shopCatalog[itemKey] = updatedItem;
+            this.renderShopItems();
+            this.updateShopStats();
+            this.toast('Item updated successfully!', 'success');
+        } catch(e) {
+            this.toast('Failed to update: ' + e.message, 'error');
+        }
+    }
+    
+    async addNewItem() {
+        const html = `
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm text-slate-400 mb-1">Item ID (unique, no spaces)</label>
+                    <input type="text" id="new-id" placeholder="e.g. gold_chair" 
+                        class="w-full px-3 py-2 rounded-lg bg-slate-800 border border-white/10 text-white">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">Name</label>
+                        <input type="text" id="new-name" placeholder="Golden Chair" 
+                            class="w-full px-3 py-2 rounded-lg bg-slate-800 border border-white/10 text-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">Icon (emoji)</label>
+                        <input type="text" id="new-icon" placeholder="🪑" 
+                            class="w-full px-3 py-2 rounded-lg bg-slate-800 border border-white/10 text-white">
+                    </div>
+                </div>
+                <div class="grid grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">Price</label>
+                        <input type="number" id="new-cost" value="100" 
+                            class="w-full px-3 py-2 rounded-lg bg-slate-800 border border-white/10 text-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">Currency</label>
+                        <select id="new-currency" class="w-full px-3 py-2 rounded-lg bg-slate-800 border border-white/10 text-white">
+                            <option value="cash">Cash 💵</option>
+                            <option value="diamonds">Diamonds 💎</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">Unlock Level</label>
+                        <input type="number" id="new-level" value="0" min="0" max="50"
+                            class="w-full px-3 py-2 rounded-lg bg-slate-800 border border-white/10 text-white">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm text-slate-400 mb-1">Category</label>
+                    <select id="new-category" class="w-full px-3 py-2 rounded-lg bg-slate-800 border border-white/10 text-white">
+                        <option value="furniture">Furniture</option>
+                        <option value="floors">Floors</option>
+                        <option value="entertainment">Entertainment</option>
+                        <option value="lights">Lights</option>
+                        <option value="decor">Decor</option>
+                        <option value="seating">Seating</option>
+                        <option value="premium">Premium</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm text-slate-400 mb-1">Description</label>
+                    <input type="text" id="new-desc" placeholder="A beautiful item" 
+                        class="w-full px-3 py-2 rounded-lg bg-slate-800 border border-white/10 text-white">
+                </div>
+                <div class="flex items-center gap-4">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="new-premium" class="w-4 h-4">
+                        <span class="text-sm text-slate-300">Premium Item</span>
+                    </label>
+                </div>
+                <div class="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs">
+                    ⚠️ Note: New items need matching 3D models in furniture.js to display in-game.
+                </div>
+            </div>
+        `;
+        
+        const confirmed = await this.showFormModal({
+            title: 'Add New Shop Item',
+            html: html,
+            confirmText: 'Add Item',
+            type: 'success'
+        });
+        
+        if (!confirmed) return;
+        
+        const itemId = document.getElementById('new-id').value.trim().toLowerCase().replace(/\s+/g, '_');
+        if (!itemId) {
+            this.toast('Item ID is required', 'error');
+            return;
+        }
+        
+        if (this.shopCatalog[itemId]) {
+            this.toast('Item ID already exists', 'error');
+            return;
+        }
+        
+        const newItem = {
+            name: document.getElementById('new-name').value.trim() || 'New Item',
+            icon: document.getElementById('new-icon').value.trim() || '📦',
+            cost: parseInt(document.getElementById('new-cost').value) || 100,
+            currency: document.getElementById('new-currency').value,
+            category: document.getElementById('new-category').value,
+            desc: document.getElementById('new-desc').value.trim() || 'A new item',
+            premium: document.getElementById('new-premium').checked,
+            enabled: true,
+            unlockLevel: parseInt(document.getElementById('new-level').value) || 0
+        };
+        
+        if (newItem.unlockLevel === 0) delete newItem.unlockLevel;
+        
+        try {
+            await this.db.ref(`shop/catalog/${itemId}`).set(newItem);
+            this.shopCatalog[itemId] = newItem;
+            this.renderShopItems();
+            this.updateShopStats();
+            this.toast('Item added successfully!', 'success');
+        } catch(e) {
+            this.toast('Failed to add item: ' + e.message, 'error');
+        }
+    }
+    
+    async deleteShopItem(itemKey) {
+        const item = this.shopCatalog[itemKey];
+        if (!item) return;
+        
+        const confirmed = await this.showConfirmModal({
+            title: 'Delete Item',
+            message: `Are you sure you want to delete "${item.name}"? This cannot be undone.`,
+            confirmText: 'Delete',
+            type: 'danger'
+        });
+        
+        if (!confirmed) return;
+        
+        try {
+            await this.db.ref(`shop/catalog/${itemKey}`).remove();
+            delete this.shopCatalog[itemKey];
+            this.renderShopItems();
+            this.updateShopStats();
+            this.toast('Item deleted', 'success');
+        } catch(e) {
+            this.toast('Failed to delete: ' + e.message, 'error');
+        }
+    }
+    
+    async syncCatalogToFirebase() {
+        const confirmed = await this.showConfirmModal({
+            title: 'Sync Catalog',
+            message: 'This will sync the current shop catalog to Firebase, making it available to all game clients. Continue?',
+            confirmText: 'Sync Now',
+            type: 'info'
+        });
+        
+        if (!confirmed) return;
+        
+        try {
+            await this.db.ref('shop/catalog').set(this.shopCatalog);
+            await this.db.ref('shop/lastUpdated').set(firebase.database.ServerValue.TIMESTAMP);
+            this.toast('Catalog synced to cloud!', 'success');
+        } catch(e) {
+            this.toast('Sync failed: ' + e.message, 'error');
+        }
+    }
+    
+    // Form modal for editing
+    showFormModal({ title, html, confirmText = 'Confirm', type = 'info' }) {
+        return new Promise(resolve => {
+            const colors = {
+                info: 'bg-blue-500',
+                success: 'bg-emerald-500',
+                danger: 'bg-red-500'
+            };
+            
+            const overlay = document.createElement('div');
+            overlay.className = 'fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50';
+            overlay.style.animation = 'fadeIn 0.2s ease';
+            overlay.innerHTML = `
+                <div class="bg-slate-900 rounded-2xl border border-white/10 w-full max-w-lg mx-4 overflow-hidden shadow-2xl" style="animation: scaleIn 0.2s ease">
+                    <div class="p-6 border-b border-white/10">
+                        <h3 class="text-xl font-bold text-white">${title}</h3>
+                    </div>
+                    <div class="p-6">${html}</div>
+                    <div class="p-4 border-t border-white/10 flex justify-end gap-3">
+                        <button id="form-cancel" class="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white transition-all">Cancel</button>
+                        <button id="form-confirm" class="px-4 py-2 rounded-lg ${colors[type]} hover:opacity-90 text-white font-medium transition-all">${confirmText}</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+            
+            const cleanup = () => {
+                overlay.style.animation = 'fadeOut 0.2s ease forwards';
+                setTimeout(() => overlay.remove(), 200);
+            };
+            
+            overlay.querySelector('#form-cancel').onclick = () => { cleanup(); resolve(false); };
+            overlay.querySelector('#form-confirm').onclick = () => { cleanup(); resolve(true); };
+            overlay.onclick = (e) => { if (e.target === overlay) { cleanup(); resolve(false); } };
+        });
     }
 }
 

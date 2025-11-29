@@ -1,11 +1,12 @@
 {
     "major": 1,
     "minor": 0,
-    "patch": 0,
-    "build": "20241129",
-    "version": "v1.0.0",
+    "patch": 1,
+    "build": "20241129b",
+    "version": "v1.0.1",
     "releaseDate": "2024-11-29",
     "changelog": [
+        "Fixed version badge position",
         "Initial release with protection system",
         "Anti-cheat system implemented",
         "Domain locking enabled"

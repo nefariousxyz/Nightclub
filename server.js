@@ -334,7 +334,173 @@ app.use((err, req, res, next) => {
     res.status(500).json({ success: false, error: 'Internal server error' });
 });
 
+// ==========================================
+// DISCORD WEBHOOK INTEGRATION
+// ==========================================
+const DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/1444255570763841626/BaF_Rncq0y3is0Je9V4VMOG59hR4TbHvQCJ9Evmv-2qP_ICpSjieCVLbukfyFL2fdSmu';
+
+// Track last deployed version to avoid duplicate notifications
+let lastDeployedVersion = null;
+
+async function sendDiscordDeployNotification() {
+    try {
+        // Read version.json
+        const versionPath = path.join(__dirname, 'version.json');
+        if (!fs.existsSync(versionPath)) {
+            console.log('⚠️ version.json not found, skipping Discord notification');
+            return;
+        }
+
+        const versionData = JSON.parse(fs.readFileSync(versionPath, 'utf8'));
+        
+        // Check if this is the same version (avoid duplicate notifications on restart)
+        if (lastDeployedVersion === versionData.build) {
+            console.log('ℹ️ Same version, skipping Discord notification');
+            return;
+        }
+        
+        lastDeployedVersion = versionData.build;
+
+        const embed = {
+            title: '🚀 Hypeclub Update Deployed!',
+            description: `A new version of **Hypeclub** has been pushed to production.`,
+            color: 0x8B5CF6,
+            fields: [
+                {
+                    name: '📦 Version',
+                    value: `\`${versionData.version || 'v' + versionData.major + '.' + versionData.minor + '.' + versionData.patch}\``,
+                    inline: true
+                },
+                {
+                    name: '🔧 Build',
+                    value: `\`${versionData.build}\``,
+                    inline: true
+                },
+                {
+                    name: '📅 Release Date',
+                    value: versionData.releaseDate || new Date().toISOString().split('T')[0],
+                    inline: true
+                },
+                {
+                    name: '🌐 Environment',
+                    value: process.env.NODE_ENV === 'production' ? 'Production' : 'Development',
+                    inline: true
+                },
+                {
+                    name: '🔗 Live URL',
+                    value: '[hypeclub.city](https://hypeclub.city)',
+                    inline: true
+                },
+                {
+                    name: '⏰ Deployed At',
+                    value: `<t:${Math.floor(Date.now() / 1000)}:F>`,
+                    inline: true
+                }
+            ],
+            thumbnail: {
+                url: 'https://cdn-icons-png.flaticon.com/512/3418/3418886.png'
+            },
+            footer: {
+                text: 'Hypeclub Auto-Deploy System',
+                icon_url: 'https://cdn-icons-png.flaticon.com/512/2111/2111370.png'
+            },
+            timestamp: new Date().toISOString()
+        };
+
+        // Add changelog if present
+        if (versionData.changelog && versionData.changelog.length > 0) {
+            embed.fields.push({
+                name: '📝 Changelog',
+                value: versionData.changelog.map(item => `• ${item}`).join('\n').substring(0, 1024),
+                inline: false
+            });
+        }
+
+        const payload = {
+            username: 'Hypeclub Deploy Bot',
+            avatar_url: 'https://cdn-icons-png.flaticon.com/512/3418/3418886.png',
+            embeds: [embed]
+        };
+
+        const response = await fetch(DISCORD_WEBHOOK_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (response.ok) {
+            console.log('✅ Discord deploy notification sent!');
+        } else {
+            console.error('❌ Discord webhook failed:', response.status);
+        }
+    } catch (error) {
+        console.error('❌ Discord webhook error:', error.message);
+    }
+}
+
+// API endpoint to manually trigger deploy notification
+app.post('/api/notify-deploy', async (req, res) => {
+    // Simple auth check (you can make this more secure)
+    const authKey = req.headers['x-deploy-key'];
+    if (authKey !== 'hypeclub-deploy-2024') {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    await sendDiscordDeployNotification();
+    res.json({ success: true, message: 'Deploy notification sent' });
+});
+
+// API endpoint to send custom alerts
+app.post('/api/discord-alert', async (req, res) => {
+    const { title, message, type, details } = req.body;
+    
+    const colors = {
+        warning: 0xFFA500,
+        error: 0xEF4444,
+        info: 0x3B82F6,
+        success: 0x22C55E
+    };
+
+    const icons = {
+        warning: '⚠️',
+        error: '🚨',
+        info: 'ℹ️',
+        success: '✅'
+    };
+
+    const embed = {
+        title: `${icons[type] || '📢'} ${title || 'Alert'}`,
+        description: message || 'An alert was triggered',
+        color: colors[type] || colors.info,
+        fields: details ? Object.entries(details).map(([key, value]) => ({
+            name: key,
+            value: String(value).substring(0, 1024),
+            inline: true
+        })) : [],
+        footer: { text: 'Hypeclub Alert System' },
+        timestamp: new Date().toISOString()
+    };
+
+    try {
+        const response = await fetch(DISCORD_WEBHOOK_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                username: 'Hypeclub Alert Bot',
+                embeds: [embed]
+            })
+        });
+
+        res.json({ success: response.ok });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`🎵 Nightclub server running on http://localhost:${PORT}`);
     console.log(`📁 Uploads directory: ${uploadsDir}`);
+    
+    // Send deploy notification on server start
+    sendDiscordDeployNotification();
 });
