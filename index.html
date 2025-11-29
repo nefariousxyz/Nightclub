@@ -201,8 +201,56 @@
         });
     </script>
 
+    <!-- Session Check Loading Screen -->
+    <div id="session-loader" style="
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, #0a0a1a 0%, #1a0a2e 50%, #0a1a2e 100%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 99999;
+        transition: opacity 0.5s ease;
+    ">
+        <img src="assets/logo.png" alt="Hypeclub City" style="height: 80px; margin-bottom: 24px; animation: pulse 2s infinite;">
+        <div style="
+            width: 200px;
+            height: 4px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 16px;
+        ">
+            <div id="session-progress" style="
+                width: 0%;
+                height: 100%;
+                background: linear-gradient(90deg, #ff0066, #ff6b9d);
+                border-radius: 4px;
+                animation: loading 1.5s ease-in-out infinite;
+            "></div>
+        </div>
+        <p style="color: rgba(255,255,255,0.6); font-size: 14px; font-family: 'Inter', sans-serif;">
+            Checking session...
+        </p>
+        <style>
+            @keyframes loading {
+                0% { width: 0%; margin-left: 0; }
+                50% { width: 60%; margin-left: 20%; }
+                100% { width: 0%; margin-left: 100%; }
+            }
+            @keyframes pulse {
+                0%, 100% { opacity: 1; transform: scale(1); }
+                50% { opacity: 0.8; transform: scale(0.98); }
+            }
+        </style>
+    </div>
+
     <!-- Landing Page -->
-    <div id="login-gate" class="landing-page">
+    <div id="login-gate" class="landing-page hidden" style="display: none;">
         <!-- Background Orbs -->
         <div class="bg-orbs">
             <div class="orb orb-1"></div>

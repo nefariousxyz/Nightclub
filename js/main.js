@@ -78,13 +78,33 @@ async function initializeGame() {
     }
 }
 
-// Initialize when DOM is ready
-document.addEventListener('DOMContentLoaded', async () => {
-    // Show login gate immediately
+// Hide session loader and show appropriate screen
+function hideSessionLoader(showLoginGate = true) {
+    const sessionLoader = document.getElementById('session-loader');
     const loginGate = document.getElementById('login-gate');
-    if (loginGate) {
+    
+    if (sessionLoader) {
+        sessionLoader.style.opacity = '0';
+        setTimeout(() => {
+            sessionLoader.style.display = 'none';
+        }, 500);
+    }
+    
+    if (showLoginGate && loginGate) {
         loginGate.classList.remove('hidden');
         loginGate.style.display = 'flex';
+    }
+}
+
+// Initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', async () => {
+    const loginGate = document.getElementById('login-gate');
+    const sessionLoader = document.getElementById('session-loader');
+    
+    // Keep login gate hidden initially - session loader is visible
+    if (loginGate) {
+        loginGate.classList.add('hidden');
+        loginGate.style.display = 'none';
     }
     
     try {
@@ -100,8 +120,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Check if already logged in
         if (authSystem.user) {
             console.log('User already logged in:', authSystem.user.email);
+            // User is logged in - hide loader without showing login gate
+            hideSessionLoader(false);
             await initializeGame();
             startGameAfterLogin();
+        } else {
+            // Not logged in - show login gate
+            hideSessionLoader(true);
         }
         
         // Listen for auth changes
@@ -126,7 +151,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     } catch (err) {
         console.error('Firebase init error:', err);
-        // Show error on login gate
+        // Hide session loader and show login gate with error
+        hideSessionLoader(true);
         const errorEl = document.querySelector('.gate-error');
         if (errorEl) {
             errorEl.textContent = 'Connection error. Please refresh.';
@@ -134,6 +160,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 });
+
+// Expose hideSessionLoader globally for inline scripts
+window.hideSessionLoader = hideSessionLoader;
 
 // Music is now handled by YouTube DJ system
 // Old audio system disabled - using YouTube instead
