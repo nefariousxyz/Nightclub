@@ -93,6 +93,15 @@
             backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
+        
+        /* Hide scrollbar for dock on mobile */
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
         .glass-panel-light {
             background: rgba(40, 40, 70, 0.6);
             -webkit-backdrop-filter: blur(15px);
@@ -830,104 +839,109 @@
         
         
         <!-- ═══════════════════ BOTTOM HUD ═══════════════════ -->
-        <div class="fixed bottom-2 left-2 right-2 pointer-events-auto flex items-end justify-between">
-            <!-- Left: Stats -->
-            <div class="flex gap-1">
-                <div class="glass-panel p-2 rounded-xl flex flex-col items-center w-14" id="stock-box">
-                    <i class="ph-fill ph-martini text-orange-400 text-lg"></i>
-                    <span class="text-sm font-bold text-white" id="stock-display">100%</span>
+        <div class="fixed bottom-2 left-2 right-2 pointer-events-auto z-30">
+            <!-- Left: Stats (absolute positioned) -->
+            <div class="absolute left-0 bottom-0 flex gap-1">
+                <div class="glass-panel p-1.5 sm:p-2 rounded-xl flex flex-col items-center w-10 sm:w-14" id="stock-box">
+                    <i class="ph-fill ph-martini text-orange-400 text-sm sm:text-lg"></i>
+                    <span class="text-xs sm:text-sm font-bold text-white" id="stock-display">100%</span>
                 </div>
-                <div class="glass-panel p-2 rounded-xl flex flex-col items-center w-14">
-                    <i class="ph-fill ph-fire text-red-500 text-lg"></i>
-                    <span class="text-sm font-bold text-white" id="hype-display">0</span>
+                <div class="glass-panel p-1.5 sm:p-2 rounded-xl flex flex-col items-center w-10 sm:w-14">
+                    <i class="ph-fill ph-fire text-red-500 text-sm sm:text-lg"></i>
+                    <span class="text-xs sm:text-sm font-bold text-white" id="hype-display">0</span>
                 </div>
             </div>
             
-            <!-- Center Dock -->
-            <div class="glass-panel rounded-2xl p-2 px-2 flex items-end gap-0">
-                
-                <button class="flex flex-col items-center group px-2 hover:-translate-y-1 transition-all" onclick="game.openModal('shop')">
-                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shadow-md">
-                        <i class="ph-fill ph-shopping-cart text-xl text-white"></i>
-                    </div>
-                    <span class="text-[8px] font-bold opacity-70 mt-0.5">SHOP</span>
-                </button>
+            <!-- Center Dock (truly centered) -->
+            <div class="flex justify-center">
+                <div class="glass-panel rounded-2xl p-1.5 sm:p-2 flex items-end gap-0 overflow-x-auto max-w-[calc(100vw-180px)] sm:max-w-none scrollbar-hide">
+                    
+                    <button class="dock-btn flex flex-col items-center group px-1 sm:px-2 hover:-translate-y-1 transition-all flex-shrink-0" onclick="game.openModal('shop')">
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shadow-md">
+                            <i class="ph-fill ph-shopping-cart text-base sm:text-xl text-white"></i>
+                        </div>
+                        <span class="text-[7px] sm:text-[8px] font-bold opacity-70 mt-0.5">SHOP</span>
+                    </button>
 
-                <button class="flex flex-col items-center group px-2 hover:-translate-y-1 transition-all" onclick="game.openModal('upgrade')">
-                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center shadow-md">
-                        <i class="ph-fill ph-arrow-fat-up text-xl text-white"></i>
-                    </div>
-                    <span class="text-[8px] font-bold opacity-70 mt-0.5">UPGRADE</span>
-                </button>
+                    <button class="dock-btn flex flex-col items-center group px-1 sm:px-2 hover:-translate-y-1 transition-all flex-shrink-0" onclick="game.openModal('upgrade')">
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center shadow-md">
+                            <i class="ph-fill ph-arrow-fat-up text-base sm:text-xl text-white"></i>
+                        </div>
+                        <span class="text-[7px] sm:text-[8px] font-bold opacity-70 mt-0.5">UPGRADE</span>
+                    </button>
 
-                <!-- Restock -->
-                <div class="relative -top-2 px-1">
-                    <button id="restock-btn" title="Restock Bar" class="w-12 h-12 rounded-xl bg-gradient-to-b from-amber-400 via-orange-500 to-red-600 flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-all animate-party" onclick="game.restockBar()">
-                        <i class="ph-fill ph-beer-bottle text-2xl text-white"></i>
+                    <!-- Restock -->
+                    <div class="relative -top-1 sm:-top-2 px-0.5 sm:px-1 flex-shrink-0">
+                        <button id="restock-btn" title="Restock Bar" class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-b from-amber-400 via-orange-500 to-red-600 flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-all animate-party" onclick="game.restockBar()">
+                            <i class="ph-fill ph-beer-bottle text-xl sm:text-2xl text-white"></i>
+                        </button>
+                    </div>
+
+                    <button class="dock-btn flex flex-col items-center group px-1 sm:px-2 hover:-translate-y-1 transition-all flex-shrink-0" onclick="game.openModal('staff')">
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-md">
+                            <i class="ph-fill ph-users-three text-base sm:text-xl text-white"></i>
+                        </div>
+                        <span class="text-[7px] sm:text-[8px] font-bold opacity-70 mt-0.5">STAFF</span>
+                    </button>
+
+                    <button class="dock-btn flex flex-col items-center group px-1 sm:px-2 hover:-translate-y-1 transition-all flex-shrink-0" onclick="game.openModal('dj')">
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center shadow-md">
+                            <i class="ph-fill ph-music-notes text-base sm:text-xl text-white"></i>
+                        </div>
+                        <span class="text-[7px] sm:text-[8px] font-bold opacity-70 mt-0.5">DJ</span>
+                    </button>
+
+                    <button id="daily-dock-btn" class="dock-btn flex flex-col items-center group px-1 sm:px-2 hover:-translate-y-1 transition-all relative flex-shrink-0" onclick="game.openModal('challenges'); refreshChallenges();">
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-yellow-500 to-orange-600 flex items-center justify-center shadow-md">
+                            <i class="ph-fill ph-gift text-base sm:text-xl text-white"></i>
+                        </div>
+                        <span class="text-[7px] sm:text-[8px] font-bold opacity-70 mt-0.5">DAILY</span>
+                        <span class="daily-reward-badge hidden absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold min-w-[16px] h-4 rounded-full flex items-center justify-center px-1" id="daily-dock-badge">!</span>
+                    </button>
+
+                    <button id="chat-dock-btn" class="dock-btn flex flex-col items-center group px-1 sm:px-2 hover:-translate-y-1 transition-all relative flex-shrink-0" onclick="chatSystem.toggleChat()">
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-md">
+                            <i class="ph-fill ph-chat-circle-dots text-base sm:text-xl text-white"></i>
+                        </div>
+                        <span class="text-[7px] sm:text-[8px] font-bold opacity-70 mt-0.5">CHAT</span>
+                        <span class="chat-dock-badge hidden absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold min-w-[16px] h-4 rounded-full flex items-center justify-center px-1" id="chat-dock-badge">0</span>
+                    </button>
+
+                    <button id="friends-dock-btn" class="dock-btn flex flex-col items-center group px-1 sm:px-2 hover:-translate-y-1 transition-all relative flex-shrink-0" onclick="toggleFriends()">
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center shadow-md">
+                            <i class="ph-fill ph-users-three text-base sm:text-xl text-white"></i>
+                        </div>
+                        <span class="text-[7px] sm:text-[8px] font-bold opacity-70 mt-0.5">FRIENDS</span>
+                        <span class="friends-dock-badge hidden absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold min-w-[16px] h-4 rounded-full flex items-center justify-center px-1" id="friends-dock-badge">0</span>
+                    </button>
+
+                    <button id="world-dock-btn" class="dock-btn flex flex-col items-center group px-1 sm:px-2 hover:-translate-y-1 transition-all relative flex-shrink-0" onclick="goToWorld()" title="Enter Social World">
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-md">
+                            <i class="ph-fill ph-globe-hemisphere-west text-base sm:text-xl text-white"></i>
+                        </div>
+                        <span class="text-[7px] sm:text-[8px] font-bold opacity-70 mt-0.5">WORLD</span>
                     </button>
                 </div>
-
-                <button class="flex flex-col items-center group px-2 hover:-translate-y-1 transition-all" onclick="game.openModal('staff')">
-                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-md">
-                        <i class="ph-fill ph-users-three text-xl text-white"></i>
-                    </div>
-                    <span class="text-[8px] font-bold opacity-70 mt-0.5">STAFF</span>
-                </button>
-
-                <button class="flex flex-col items-center group px-2 hover:-translate-y-1 transition-all" onclick="game.openModal('dj')">
-                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center shadow-md">
-                        <i class="ph-fill ph-music-notes text-xl text-white"></i>
-                    </div>
-                    <span class="text-[8px] font-bold opacity-70 mt-0.5">DJ</span>
-                </button>
-
-                <button id="daily-dock-btn" class="flex flex-col items-center group px-2 hover:-translate-y-1 transition-all relative" onclick="game.openModal('challenges'); refreshChallenges();">
-                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-yellow-500 to-orange-600 flex items-center justify-center shadow-md">
-                        <i class="ph-fill ph-gift text-xl text-white"></i>
-                    </div>
-                    <span class="text-[8px] font-bold opacity-70 mt-0.5">DAILY</span>
-                    <span class="daily-reward-badge hidden absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold min-w-[16px] h-4 rounded-full flex items-center justify-center px-1" id="daily-dock-badge">!</span>
-                </button>
-
-                <button id="chat-dock-btn" class="flex flex-col items-center group px-2 hover:-translate-y-1 transition-all relative" onclick="chatSystem.toggleChat()">
-                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-md">
-                        <i class="ph-fill ph-chat-circle-dots text-xl text-white"></i>
-                    </div>
-                    <span class="text-[8px] font-bold opacity-70 mt-0.5">CHAT</span>
-                    <span class="chat-dock-badge hidden absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold min-w-[16px] h-4 rounded-full flex items-center justify-center px-1" id="chat-dock-badge">0</span>
-                </button>
-
-                <button id="friends-dock-btn" class="flex flex-col items-center group px-2 hover:-translate-y-1 transition-all relative" onclick="toggleFriends()">
-                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center shadow-md">
-                        <i class="ph-fill ph-users-three text-xl text-white"></i>
-                    </div>
-                    <span class="text-[8px] font-bold opacity-70 mt-0.5">FRIENDS</span>
-                    <span class="friends-dock-badge hidden absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold min-w-[16px] h-4 rounded-full flex items-center justify-center px-1" id="friends-dock-badge">0</span>
-                </button>
-
-                <button id="world-dock-btn" class="flex flex-col items-center group px-2 hover:-translate-y-1 transition-all relative" onclick="goToWorld()" title="Enter Social World">
-                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-md">
-                        <i class="ph-fill ph-globe-hemisphere-west text-xl text-white"></i>
-                    </div>
-                    <span class="text-[8px] font-bold opacity-70 mt-0.5">WORLD</span>
-                </button>
             </div>
             
-            <!-- Report Button -->
-            <button class="glass-panel px-2 py-2 rounded-xl hover:bg-white/10 transition-colors" onclick="openReportModal()" title="Submit a Report">
-                <i class="ph-fill ph-flag text-orange-400 text-lg"></i>
-            </button>
-            
-            <!-- Right: Guests -->
-            <div class="glass-panel px-3 py-2 rounded-xl flex items-center gap-2">
-                <div class="flex -space-x-2">
-                    <div class="w-6 h-6 rounded-full bg-blue-500 border border-black"></div>
-                    <div class="w-6 h-6 rounded-full bg-purple-500 border border-black"></div>
-                    <div class="w-6 h-6 rounded-full bg-green-500 border border-black flex items-center justify-center text-[10px] font-bold">+</div>
-                </div>
-                <div class="flex flex-col leading-none">
-                    <span class="text-[9px] text-gray-400">GUESTS</span>
-                    <span class="text-sm font-bold"><span id="guest-count">0</span>/<span id="max-guests" class="text-gray-400">20</span></span>
+            <!-- Right: Report + Guests (absolute positioned) -->
+            <div class="absolute right-0 bottom-0 flex items-center gap-1">
+                <!-- Report Button -->
+                <button class="glass-panel p-1.5 sm:p-2 rounded-xl hover:bg-white/10 transition-colors" onclick="openReportModal()" title="Submit a Report">
+                    <i class="ph-fill ph-flag text-orange-400 text-sm sm:text-lg"></i>
+                </button>
+                
+                <!-- Guests -->
+                <div class="glass-panel px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl flex items-center gap-1.5 sm:gap-2">
+                    <div class="flex -space-x-1.5 sm:-space-x-2">
+                        <div class="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-blue-500 border border-black"></div>
+                        <div class="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-purple-500 border border-black"></div>
+                        <div class="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-green-500 border border-black flex items-center justify-center text-[8px] sm:text-[10px] font-bold">+</div>
+                    </div>
+                    <div class="flex flex-col leading-none">
+                        <span class="text-[8px] sm:text-[9px] text-gray-400">GUESTS</span>
+                        <span class="text-xs sm:text-sm font-bold"><span id="guest-count">0</span>/<span id="max-guests" class="text-gray-400">20</span></span>
+                    </div>
                 </div>
             </div>
         </div>
