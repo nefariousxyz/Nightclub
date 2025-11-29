@@ -11,6 +11,7 @@ uploads/covers/*
 # Environment
 .env
 .env.local
+.env.production
 
 # Logs
 *.log
@@ -19,3 +20,18 @@ npm-debug.log*
 # OS files
 .DS_Store
 Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Build artifacts
+dist/
+build/
+.cache/
+
+# Sensitive configs (if any)
+firebase-admin-key.json
+serviceAccountKey.json

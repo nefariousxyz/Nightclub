@@ -122,6 +122,7 @@ class AdminDashboard {
             case 'chat': this.renderChat(content); break;
             case 'broadcast': this.renderBroadcast(content); break;
             case 'economy': this.renderEconomy(content); break;
+            case 'anticheat': this.renderAnticheat(content); break;
             default: content.innerHTML = '<div class="text-center text-slate-500 mt-20">Module loading...</div>';
         }
     }
@@ -2081,6 +2082,697 @@ class AdminDashboard {
         this.loadEconomyTransactions();
     }
     
+    // ANTI-CHEAT MODULE
+    async renderAnticheat(el) {
+        el.innerHTML = `
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Stats Overview -->
+                <div class="lg:col-span-3 grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="glass p-4 rounded-xl border border-white/5">
+                        <div class="flex items-center gap-2 mb-2">
+                            <i class="ph-fill ph-warning text-red-400"></i>
+                            <span class="text-xs text-slate-400">Total Violations</span>
+                        </div>
+                        <div class="text-2xl font-bold text-white" id="ac-violations">--</div>
+                    </div>
+                    <div class="glass p-4 rounded-xl border border-white/5">
+                        <div class="flex items-center gap-2 mb-2">
+                            <i class="ph-fill ph-gavel text-orange-400"></i>
+                            <span class="text-xs text-slate-400">Punishments</span>
+                        </div>
+                        <div class="text-2xl font-bold text-white" id="ac-punishments">--</div>
+                    </div>
+                    <div class="glass p-4 rounded-xl border border-white/5">
+                        <div class="flex items-center gap-2 mb-2">
+                            <i class="ph-fill ph-users text-amber-400"></i>
+                            <span class="text-xs text-slate-400">Unique Cheaters</span>
+                        </div>
+                        <div class="text-2xl font-bold text-white" id="ac-cheaters">--</div>
+                    </div>
+                    <div class="glass p-4 rounded-xl border border-white/5">
+                        <div class="flex items-center gap-2 mb-2">
+                            <i class="ph-fill ph-clock text-blue-400"></i>
+                            <span class="text-xs text-slate-400">Last 24h</span>
+                        </div>
+                        <div class="text-2xl font-bold text-white" id="ac-recent">--</div>
+                    </div>
+                </div>
+                
+                <!-- Violations List -->
+                <div class="lg:col-span-2 space-y-6">
+                    <div class="glass rounded-2xl border border-white/5 p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="font-bold text-white flex items-center gap-2">
+                                <i class="ph-fill ph-list-bullets text-red-400"></i> Recent Violations
+                            </h3>
+                            <button onclick="admin.clearAllViolations()" class="text-xs px-3 py-1 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all">
+                                <i class="ph-bold ph-trash mr-1"></i> Clear All
+                            </button>
+                        </div>
+                        <div id="ac-violations-list" class="space-y-2 max-h-[500px] overflow-y-auto">
+                            <div class="text-center text-slate-500 py-8">Loading violations...</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Sidebar -->
+                <div class="space-y-6">
+                    <!-- Punishments -->
+                    <div class="glass rounded-2xl border border-white/5 p-6">
+                        <h3 class="font-bold text-white mb-4 flex items-center gap-2">
+                            <i class="ph-fill ph-gavel text-orange-400"></i> Recent Punishments
+                        </h3>
+                        <div id="ac-punishments-list" class="space-y-2 max-h-[200px] overflow-y-auto">
+                            <div class="text-center text-slate-500 text-sm py-4">Loading...</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Top Offenders -->
+                    <div class="glass rounded-2xl border border-white/5 p-6">
+                        <h3 class="font-bold text-white mb-4 flex items-center gap-2">
+                            <i class="ph-fill ph-skull text-red-400"></i> Top Offenders
+                        </h3>
+                        <div id="ac-offenders-list" class="space-y-2">
+                            <div class="text-center text-slate-500 text-sm py-4">Loading...</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Quick Actions -->
+                    <div class="glass rounded-2xl border border-red-500/20 p-6 bg-red-500/5">
+                        <h3 class="font-bold text-red-400 mb-4 flex items-center gap-2">
+                            <i class="ph-fill ph-shield-slash text-red-400"></i> Actions
+                        </h3>
+                        <div class="space-y-2">
+                            <button onclick="admin.clearAllViolations()" class="w-full p-3 rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 text-sm transition-all">
+                                <i class="ph-bold ph-trash mr-2"></i> Clear All Violations
+                            </button>
+                            <button onclick="admin.clearAllPunishments()" class="w-full p-3 rounded-lg bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/20 text-orange-400 text-sm transition-all">
+                                <i class="ph-bold ph-eraser mr-2"></i> Clear Punishment History
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Active Bans -->
+                    <div class="glass rounded-2xl border border-white/5 p-6">
+                        <h3 class="font-bold text-white mb-4 flex items-center gap-2">
+                            <i class="ph-fill ph-prohibit text-red-400"></i> Active Bans
+                        </h3>
+                        <div id="ac-bans-list" class="space-y-2 max-h-[300px] overflow-y-auto">
+                            <div class="text-center text-slate-500 text-sm py-4">Loading...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+        
+        this.loadAnticheatStats();
+        this.loadViolations();
+        this.loadPunishments();
+        this.loadTopOffenders();
+        this.loadActiveBans();
+    }
+    
+    async loadActiveBans() {
+        const listEl = document.getElementById('ac-bans-list');
+        if (!listEl) return;
+        
+        try {
+            const [ipSnap, deviceSnap] = await Promise.all([
+                this.db.ref('bans/ips').once('value'),
+                this.db.ref('bans/devices').once('value')
+            ]);
+            
+            const bans = [];
+            
+            // IP bans
+            if (ipSnap.exists()) {
+                ipSnap.forEach(child => {
+                    const ban = child.val();
+                    bans.push({
+                        id: child.key,
+                        type: 'ip',
+                        value: ban.ip || child.key.replace(/_/g, '.'),
+                        ...ban
+                    });
+                });
+            }
+            
+            // Device bans
+            if (deviceSnap.exists()) {
+                deviceSnap.forEach(child => {
+                    const ban = child.val();
+                    bans.push({
+                        id: child.key,
+                        type: 'device',
+                        value: ban.fingerprint || child.key,
+                        ...ban
+                    });
+                });
+            }
+            
+            if (bans.length === 0) {
+                listEl.innerHTML = '<div class="text-center text-slate-500 text-sm py-4">No active bans</div>';
+                return;
+            }
+            
+            // Sort by ban date
+            bans.sort((a, b) => (b.bannedAt || 0) - (a.bannedAt || 0));
+            
+            listEl.innerHTML = bans.map(ban => {
+                const time = ban.bannedAt ? new Date(ban.bannedAt).toLocaleDateString() : 'Unknown';
+                const isIP = ban.type === 'ip';
+                const icon = isIP ? 'ph-globe' : 'ph-fingerprint';
+                const color = isIP ? 'text-blue-400 bg-blue-500/10' : 'text-purple-400 bg-purple-500/10';
+                const displayValue = isIP ? ban.value : (ban.value || '').substring(0, 12) + '...';
+                
+                return `
+                    <div class="p-2 rounded-lg bg-slate-800/50 border border-white/5">
+                        <div class="flex items-center gap-2">
+                            <div class="w-6 h-6 rounded-full ${color} flex items-center justify-center">
+                                <i class="ph-fill ${icon} text-xs"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="text-xs font-mono text-white truncate">${this.esc(displayValue)}</div>
+                                <div class="text-[10px] text-slate-500">${isIP ? 'IP Ban' : 'Device Ban'} • ${time}</div>
+                            </div>
+                            <button onclick="admin.unban('${ban.type}', '${ban.id}')" class="text-[10px] px-2 py-1 rounded bg-green-500/10 text-green-400 hover:bg-green-500/20">
+                                Unban
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+        } catch(e) {
+            console.error('Failed to load bans:', e);
+            listEl.innerHTML = '<div class="text-center text-red-400 text-sm py-4">Failed to load bans</div>';
+        }
+    }
+    
+    async unban(type, id) {
+        const confirmed = await this.showConfirmModal({
+            title: 'Remove Ban',
+            message: `Are you sure you want to remove this ${type} ban?`,
+            confirmText: 'Unban',
+            type: 'warning'
+        });
+        
+        if (!confirmed) return;
+        
+        try {
+            await this.db.ref(`bans/${type}s/${id}`).remove();
+            this.toast(`${type.toUpperCase()} ban removed`, 'success');
+            this.loadActiveBans();
+        } catch(e) {
+            this.toast('Failed to remove ban: ' + e.message, 'error');
+        }
+    }
+    
+    async loadAnticheatStats() {
+        try {
+            const violationsSnap = await this.db.ref('anticheat/violations').once('value');
+            const punishmentsSnap = await this.db.ref('anticheat/punishments').once('value');
+            
+            const violations = violationsSnap.val() || {};
+            const punishments = punishmentsSnap.val() || {};
+            
+            const violationCount = Object.keys(violations).length;
+            const punishmentCount = Object.keys(punishments).length;
+            
+            // Count unique cheaters
+            const cheaters = new Set();
+            Object.values(violations).forEach(v => cheaters.add(v.odeum));
+            
+            // Count last 24h
+            const oneDayAgo = Date.now() - (24 * 60 * 60 * 1000);
+            const recentCount = Object.values(violations).filter(v => v.timestamp > oneDayAgo).length;
+            
+            document.getElementById('ac-violations').textContent = violationCount;
+            document.getElementById('ac-punishments').textContent = punishmentCount;
+            document.getElementById('ac-cheaters').textContent = cheaters.size;
+            document.getElementById('ac-recent').textContent = recentCount;
+            
+        } catch(e) {
+            console.error('Failed to load anticheat stats:', e);
+        }
+    }
+    
+    async loadViolations() {
+        const listEl = document.getElementById('ac-violations-list');
+        if (!listEl) return;
+        
+        try {
+            const snap = await this.db.ref('anticheat/violations').orderByChild('timestamp').limitToLast(50).once('value');
+            
+            if (!snap.exists()) {
+                listEl.innerHTML = '<div class="text-center text-slate-500 text-sm py-8">🎉 No violations detected!</div>';
+                return;
+            }
+            
+            const violations = [];
+            snap.forEach(child => {
+                violations.push({ id: child.key, ...child.val() });
+            });
+            violations.reverse();
+            
+            const typeColors = {
+                'CASH_MANIPULATION': 'text-red-400 bg-red-500/10',
+                'DIAMOND_MANIPULATION': 'text-purple-400 bg-purple-500/10',
+                'LEVEL_MANIPULATION': 'text-yellow-400 bg-yellow-500/10',
+                'NEGATIVE_VALUES': 'text-orange-400 bg-orange-500/10',
+                'CODE_TAMPERING': 'text-red-400 bg-red-500/10',
+                'EVAL_CHEAT': 'text-red-400 bg-red-500/10',
+                'DEVTOOLS_OPEN': 'text-blue-400 bg-blue-500/10',
+                'LARGE_CASH_ADD': 'text-amber-400 bg-amber-500/10',
+                'DIRECT_MODIFICATION': 'text-red-400 bg-red-500/10',
+                // External cheat detection
+                'SPEED_HACK': 'text-red-500 bg-red-600/20',
+                'TIMER_MANIPULATION': 'text-red-500 bg-red-600/20',
+                'FRAME_RATE_ANOMALY': 'text-pink-400 bg-pink-500/10',
+                'MEMORY_SCANNER': 'text-red-500 bg-red-600/20',
+                'CHEAT_FLAG_SET': 'text-red-500 bg-red-600/20',
+                'GOD_MODE_DETECTED': 'text-red-500 bg-red-600/20',
+                'INFINITE_MONEY_FLAG': 'text-red-500 bg-red-600/20',
+                'DECOY_MODIFIED': 'text-orange-400 bg-orange-500/10',
+                'HEARTBEAT_CASH_ANOMALY': 'text-amber-400 bg-amber-500/10',
+                'VALUE_DESYNC': 'text-red-400 bg-red-500/10',
+                'SUSPICIOUS_VALUE': 'text-yellow-400 bg-yellow-500/10',
+                'VALUE_OSCILLATION': 'text-orange-400 bg-orange-500/10',
+                'AUTOCLICKER': 'text-cyan-400 bg-cyan-500/10',
+                'BOT_CLICKING': 'text-cyan-400 bg-cyan-500/10',
+                'NAN_VALUES': 'text-red-400 bg-red-500/10',
+                'LEVEL_XP_MISMATCH': 'text-yellow-400 bg-yellow-500/10'
+            };
+            
+            listEl.innerHTML = violations.map(v => {
+                const time = v.timestamp ? new Date(v.timestamp).toLocaleString() : 'Unknown';
+                const colors = typeColors[v.type] || 'text-slate-400 bg-slate-500/10';
+                const ipSafe = (v.ipAddress || 'Unknown').replace(/\./g, '_');
+                const fpSafe = (v.deviceFingerprint || '').replace(/[.#$\/\[\]]/g, '_');
+                
+                // Extract game state and activity
+                const gs = v.gameState || {};
+                const act = v.activity || {};
+                const sess = v.session || {};
+                
+                return `
+                    <div class="p-3 rounded-lg bg-slate-800/50 border border-white/5 hover:border-red-500/30 transition-all">
+                        <div class="flex items-start gap-3">
+                            <div class="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0">
+                                <i class="ph-fill ph-warning text-red-400"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <span class="text-sm font-medium text-white">${this.esc(v.displayName || 'Unknown')}</span>
+                                    <span class="text-[10px] px-2 py-0.5 rounded ${colors}">${v.type}</span>
+                                    ${act.devToolsOpen ? '<span class="text-[10px] px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-400">🔧 DevTools</span>' : ''}
+                                    ${act.consoleAccessed ? '<span class="text-[10px] px-2 py-0.5 rounded bg-orange-500/20 text-orange-400">💻 Console</span>' : ''}
+                                </div>
+                                <div class="text-xs text-slate-400 mt-1">${this.esc(v.details || '')}</div>
+                                <div class="text-[10px] text-slate-500 mt-1">📧 ${this.esc(v.email || 'No email')}</div>
+                                
+                                <!-- Device Info -->
+                                <div class="mt-2 p-2 rounded bg-slate-900/50 border border-white/5">
+                                    <div class="text-[9px] text-slate-500 mb-1 font-bold uppercase">Device Information</div>
+                                    <div class="grid grid-cols-2 gap-2 text-[10px]">
+                                        <div class="flex items-center gap-1">
+                                            <i class="ph-bold ph-globe text-blue-400"></i>
+                                            <span class="text-slate-400">IP:</span>
+                                            <span class="text-white font-mono">${this.esc(v.ipAddress || 'Unknown')}</span>
+                                        </div>
+                                        <div class="flex items-center gap-1">
+                                            <i class="ph-bold ph-fingerprint text-purple-400"></i>
+                                            <span class="text-slate-400">Device:</span>
+                                            <span class="text-white font-mono text-[9px]">${this.esc((v.deviceFingerprint || 'Unknown').substring(0, 15))}</span>
+                                        </div>
+                                        <div class="flex items-center gap-1">
+                                            <i class="ph-bold ph-monitor text-green-400"></i>
+                                            <span class="text-slate-400">Screen:</span>
+                                            <span class="text-white">${this.esc(v.screenResolution || 'Unknown')}</span>
+                                        </div>
+                                        <div class="flex items-center gap-1">
+                                            <i class="ph-bold ph-desktop text-amber-400"></i>
+                                            <span class="text-slate-400">Platform:</span>
+                                            <span class="text-white">${this.esc(v.platform || 'Unknown')}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Game State at Violation -->
+                                <div class="mt-2 p-2 rounded bg-emerald-900/20 border border-emerald-500/10">
+                                    <div class="text-[9px] text-emerald-400 mb-1 font-bold uppercase">Game State at Violation</div>
+                                    <div class="grid grid-cols-4 gap-2 text-[10px]">
+                                        <div class="text-center">
+                                            <div class="text-white font-bold">$${this.formatNumber(gs.cash || v.cash || 0)}</div>
+                                            <div class="text-slate-500">Cash</div>
+                                        </div>
+                                        <div class="text-center">
+                                            <div class="text-white font-bold">💎 ${gs.diamonds || v.diamonds || 0}</div>
+                                            <div class="text-slate-500">Diamonds</div>
+                                        </div>
+                                        <div class="text-center">
+                                            <div class="text-white font-bold">Lv ${gs.level || v.level || 1}</div>
+                                            <div class="text-slate-500">Level</div>
+                                        </div>
+                                        <div class="text-center">
+                                            <div class="text-white font-bold">T${gs.clubTier || 1}</div>
+                                            <div class="text-slate-500">Club Tier</div>
+                                        </div>
+                                    </div>
+                                    <div class="grid grid-cols-3 gap-2 text-[10px] mt-2">
+                                        <div class="text-center">
+                                            <div class="text-slate-300">${gs.visitors || 0}/${gs.maxVisitors || 0}</div>
+                                            <div class="text-slate-500">Visitors</div>
+                                        </div>
+                                        <div class="text-center">
+                                            <div class="text-slate-300">${gs.hype || 0}%</div>
+                                            <div class="text-slate-500">Hype</div>
+                                        </div>
+                                        <div class="text-center">
+                                            <div class="text-slate-300">$${this.formatNumber(gs.totalEarnings || 0)}</div>
+                                            <div class="text-slate-500">Total Earned</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Activity Context -->
+                                <div class="mt-2 p-2 rounded bg-purple-900/20 border border-purple-500/10">
+                                    <div class="text-[9px] text-purple-400 mb-1 font-bold uppercase">Activity When Triggered</div>
+                                    <div class="grid grid-cols-2 gap-2 text-[10px]">
+                                        <div class="flex items-center gap-1">
+                                            <span class="text-slate-400">Mode:</span>
+                                            <span class="text-white">${act.gameMode || 'play'} ${act.visitMode ? '(visiting)' : ''}</span>
+                                        </div>
+                                        <div class="flex items-center gap-1">
+                                            <span class="text-slate-400">In Shop:</span>
+                                            <span class="text-white">${act.inShop ? 'Yes' : 'No'}</span>
+                                        </div>
+                                        <div class="flex items-center gap-1">
+                                            <span class="text-slate-400">Cash Δ:</span>
+                                            <span class="${(act.cashDelta || 0) > 0 ? 'text-green-400' : 'text-red-400'}">${act.cashDelta > 0 ? '+' : ''}$${this.formatNumber(act.cashDelta || 0)}</span>
+                                        </div>
+                                        <div class="flex items-center gap-1">
+                                            <span class="text-slate-400">Time since check:</span>
+                                            <span class="text-white">${act.timeSinceLastCheck || 'Unknown'}</span>
+                                        </div>
+                                        <div class="flex items-center gap-1">
+                                            <span class="text-slate-400">Session Violations:</span>
+                                            <span class="text-red-400 font-bold">${act.violationsThisSession || 1}</span>
+                                        </div>
+                                        <div class="flex items-center gap-1">
+                                            <span class="text-slate-400">Open Modals:</span>
+                                            <span class="text-white">${(act.openModals || []).length > 0 ? act.openModals.join(', ') : 'None'}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Session Info -->
+                                <div class="mt-2 p-2 rounded bg-blue-900/20 border border-blue-500/10">
+                                    <div class="text-[9px] text-blue-400 mb-1 font-bold uppercase">Session Info</div>
+                                    <div class="grid grid-cols-2 gap-2 text-[10px]">
+                                        <div class="flex items-center gap-1">
+                                            <span class="text-slate-400">Duration:</span>
+                                            <span class="text-white">${this.formatDuration(sess.sessionDuration || 0)}</span>
+                                        </div>
+                                        <div class="flex items-center gap-1">
+                                            <span class="text-slate-400">Tab Active:</span>
+                                            <span class="${sess.tabVisible ? 'text-green-400' : 'text-red-400'}">${sess.tabVisible ? 'Yes' : 'No'}</span>
+                                        </div>
+                                        <div class="flex items-center gap-1">
+                                            <span class="text-slate-400">Connection:</span>
+                                            <span class="text-white">${sess.connectionType || 'Unknown'}</span>
+                                        </div>
+                                        <div class="flex items-center gap-1">
+                                            <span class="text-slate-400">Window Focus:</span>
+                                            <span class="${sess.windowFocused ? 'text-green-400' : 'text-red-400'}">${sess.windowFocused ? 'Yes' : 'No'}</span>
+                                        </div>
+                                    </div>
+                                    ${sess.referrer && sess.referrer !== 'Direct' ? `<div class="text-[10px] text-slate-400 mt-1">Referrer: ${this.esc(sess.referrer.substring(0, 50))}</div>` : ''}
+                                </div>
+                                
+                                <div class="flex items-center gap-4 mt-2 text-[10px] text-slate-500">
+                                    <span><i class="ph-bold ph-clock mr-1"></i>${time}</span>
+                                </div>
+                                
+                                <!-- Ban Actions -->
+                                <div class="flex items-center gap-2 mt-2">
+                                    <button onclick="admin.banByIP('${ipSafe}', '${this.esc(v.ipAddress || '')}')" class="text-[10px] px-2 py-1 rounded bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all">
+                                        <i class="ph-bold ph-prohibit mr-1"></i>Ban IP
+                                    </button>
+                                    <button onclick="admin.banByDevice('${fpSafe}', '${this.esc(v.deviceFingerprint || '')}')" class="text-[10px] px-2 py-1 rounded bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 transition-all">
+                                        <i class="ph-bold ph-fingerprint mr-1"></i>Ban Device
+                                    </button>
+                                    <button onclick="admin.banUser('${v.odeum}')" class="text-[10px] px-2 py-1 rounded bg-orange-500/10 text-orange-400 hover:bg-orange-500/20 transition-all">
+                                        <i class="ph-bold ph-user-minus mr-1"></i>Ban Account
+                                    </button>
+                                </div>
+                            </div>
+                            <button onclick="admin.deleteViolation('${v.id}')" class="text-slate-500 hover:text-red-400 transition-colors">
+                                <i class="ph-bold ph-x"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+        } catch(e) {
+            console.error('Failed to load violations:', e);
+            listEl.innerHTML = '<div class="text-center text-red-400 text-sm py-4">Failed to load violations</div>';
+        }
+    }
+    
+    async loadPunishments() {
+        const listEl = document.getElementById('ac-punishments-list');
+        if (!listEl) return;
+        
+        try {
+            const snap = await this.db.ref('anticheat/punishments').orderByChild('timestamp').limitToLast(10).once('value');
+            
+            if (!snap.exists()) {
+                listEl.innerHTML = '<div class="text-center text-slate-500 text-sm py-4">No punishments yet</div>';
+                return;
+            }
+            
+            const punishments = [];
+            snap.forEach(child => {
+                punishments.push({ id: child.key, ...child.val() });
+            });
+            punishments.reverse();
+            
+            listEl.innerHTML = punishments.map(p => {
+                const time = p.timestamp ? new Date(p.timestamp).toLocaleString() : 'Unknown';
+                return `
+                    <div class="p-2 rounded-lg bg-orange-500/10 border border-orange-500/20">
+                        <div class="flex items-center gap-2">
+                            <i class="ph-fill ph-gavel text-orange-400"></i>
+                            <span class="text-sm font-medium text-white">${this.esc(p.displayName || 'Unknown')}</span>
+                        </div>
+                        <div class="text-[10px] text-slate-400 mt-1">${p.violations} violations • ${time}</div>
+                    </div>
+                `;
+            }).join('');
+            
+        } catch(e) {
+            console.error('Failed to load punishments:', e);
+        }
+    }
+    
+    async loadTopOffenders() {
+        const listEl = document.getElementById('ac-offenders-list');
+        if (!listEl) return;
+        
+        try {
+            const snap = await this.db.ref('anticheat/violations').once('value');
+            
+            if (!snap.exists()) {
+                listEl.innerHTML = '<div class="text-center text-slate-500 text-sm py-4">No offenders</div>';
+                return;
+            }
+            
+            // Count violations per user
+            const offenderCounts = {};
+            snap.forEach(child => {
+                const v = child.val();
+                const key = v.odeum || 'unknown';
+                if (!offenderCounts[key]) {
+                    offenderCounts[key] = { count: 0, name: v.displayName || 'Unknown' };
+                }
+                offenderCounts[key].count++;
+            });
+            
+            // Sort by count
+            const sorted = Object.entries(offenderCounts)
+                .sort((a, b) => b[1].count - a[1].count)
+                .slice(0, 5);
+            
+            if (sorted.length === 0) {
+                listEl.innerHTML = '<div class="text-center text-slate-500 text-sm py-4">No offenders</div>';
+                return;
+            }
+            
+            listEl.innerHTML = sorted.map(([uid, data], i) => {
+                const medals = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣'];
+                return `
+                    <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-800/50">
+                        <span class="text-lg">${medals[i]}</span>
+                        <div class="flex-1">
+                            <div class="text-sm font-medium text-white">${this.esc(data.name)}</div>
+                            <div class="text-[10px] text-slate-400">${data.count} violations</div>
+                        </div>
+                        <button onclick="admin.banUser('${uid}')" class="text-xs px-2 py-1 rounded bg-red-500/10 text-red-400 hover:bg-red-500/20">
+                            Ban
+                        </button>
+                    </div>
+                `;
+            }).join('');
+            
+        } catch(e) {
+            console.error('Failed to load top offenders:', e);
+        }
+    }
+    
+    async deleteViolation(id) {
+        try {
+            await this.db.ref(`anticheat/violations/${id}`).remove();
+            this.toast('Violation deleted', 'success');
+            this.loadViolations();
+            this.loadAnticheatStats();
+        } catch(e) {
+            this.toast('Failed to delete violation', 'error');
+        }
+    }
+    
+    async clearAllViolations() {
+        const confirmed = await this.showConfirmModal({
+            title: 'Clear All Violations',
+            message: 'This will delete all violation records. Are you sure?',
+            confirmText: 'Clear All',
+            type: 'warning',
+            requireInput: true,
+            inputPlaceholder: 'Type CLEAR',
+            inputMatch: 'CLEAR'
+        });
+        
+        if (!confirmed) return;
+        
+        try {
+            await this.db.ref('anticheat/violations').remove();
+            this.toast('All violations cleared', 'success');
+            this.loadViolations();
+            this.loadAnticheatStats();
+            this.loadTopOffenders();
+        } catch(e) {
+            this.toast('Failed to clear violations', 'error');
+        }
+    }
+    
+    async clearAllPunishments() {
+        const confirmed = await this.showConfirmModal({
+            title: 'Clear Punishment History',
+            message: 'This will delete all punishment records. Are you sure?',
+            confirmText: 'Clear History',
+            type: 'warning'
+        });
+        
+        if (!confirmed) return;
+        
+        try {
+            await this.db.ref('anticheat/punishments').remove();
+            this.toast('Punishment history cleared', 'success');
+            this.loadPunishments();
+            this.loadAnticheatStats();
+        } catch(e) {
+            this.toast('Failed to clear punishments', 'error');
+        }
+    }
+    
+    async banUser(uid) {
+        const confirmed = await this.showConfirmModal({
+            title: 'Ban User Account',
+            message: 'This will ban the user account from the game. They may still access with a new account.',
+            confirmText: 'Ban Account',
+            type: 'danger',
+            requireInput: true,
+            inputPlaceholder: 'Type BAN',
+            inputMatch: 'BAN'
+        });
+        
+        if (!confirmed) return;
+        
+        try {
+            // Add to banned users list
+            await this.db.ref(`banned/${uid}`).set({
+                bannedAt: firebase.database.ServerValue.TIMESTAMP,
+                bannedBy: this.user?.email || 'Admin',
+                reason: 'Anti-cheat violations'
+            });
+            
+            // Wipe their save
+            await this.firestore.collection('saves').doc(uid).delete();
+            
+            this.toast('User account banned and data wiped', 'success');
+            this.loadTopOffenders();
+            this.loadViolations();
+        } catch(e) {
+            this.toast('Failed to ban user: ' + e.message, 'error');
+        }
+    }
+    
+    async banByIP(ipKey, ipDisplay) {
+        const confirmed = await this.showConfirmModal({
+            title: '🌐 Ban IP Address',
+            message: `This will ban IP address: ${ipDisplay}\n\nAnyone connecting from this IP will be blocked from the game.`,
+            confirmText: 'Ban IP',
+            type: 'danger',
+            requireInput: true,
+            inputPlaceholder: 'Type BANIP',
+            inputMatch: 'BANIP'
+        });
+        
+        if (!confirmed) return;
+        
+        try {
+            await this.db.ref(`bans/ips/${ipKey}`).set({
+                ip: ipDisplay,
+                bannedAt: firebase.database.ServerValue.TIMESTAMP,
+                bannedBy: this.user?.email || 'Admin',
+                reason: 'Anti-cheat violations'
+            });
+            
+            this.toast(`🌐 IP ${ipDisplay} banned successfully`, 'success');
+            this.loadViolations();
+        } catch(e) {
+            this.toast('Failed to ban IP: ' + e.message, 'error');
+        }
+    }
+    
+    async banByDevice(fpKey, fpDisplay) {
+        const confirmed = await this.showConfirmModal({
+            title: '🔐 Ban Device',
+            message: `This will ban device: ${fpDisplay}\n\nThis device will be blocked from accessing the game, even with different accounts.`,
+            confirmText: 'Ban Device',
+            type: 'danger',
+            requireInput: true,
+            inputPlaceholder: 'Type BANDEV',
+            inputMatch: 'BANDEV'
+        });
+        
+        if (!confirmed) return;
+        
+        try {
+            await this.db.ref(`bans/devices/${fpKey}`).set({
+                fingerprint: fpDisplay,
+                bannedAt: firebase.database.ServerValue.TIMESTAMP,
+                bannedBy: this.user?.email || 'Admin',
+                reason: 'Anti-cheat violations'
+            });
+            
+            this.toast(`🔐 Device ${fpDisplay.substring(0, 15)}... banned successfully`, 'success');
+            this.loadViolations();
+        } catch(e) {
+            this.toast('Failed to ban device: ' + e.message, 'error');
+        }
+    }
+    
     // Nuclear option - Wipe ALL accounts (except admins)
     async wipeAllAccounts() {
         // First confirmation
@@ -2099,9 +2791,10 @@ class AdminDashboard {
             return;
         }
         
-        // Password confirmation with custom modal
+        // Password confirmation with custom modal (verified against Firebase)
         const password = await this.showPasswordModal();
-        if (password !== 'Mindfreakz123@@@@') {
+        const isValid = await this.verifyNuclearPassword(password);
+        if (!isValid) {
             this.toast('❌ Incorrect password - Operation cancelled', 'error');
             return;
         }
@@ -2294,6 +2987,29 @@ class AdminDashboard {
         }
     }
     
+    // Verify nuclear password against Firebase
+    async verifyNuclearPassword(password) {
+        try {
+            const snap = await this.db.ref('admin/nuclearPasswordHash').once('value');
+            const storedHash = snap.val();
+            
+            // If no hash stored yet, set it up (first time setup)
+            if (!storedHash) {
+                console.log('Setting up nuclear password in Firebase...');
+                const hash = btoa(password.split('').reverse().join('') + '_NIGHTCLUB_SECURE_2024');
+                await this.db.ref('admin/nuclearPasswordHash').set(hash);
+                return true;
+            }
+            
+            // Verify against stored hash
+            const inputHash = btoa(password.split('').reverse().join('') + '_NIGHTCLUB_SECURE_2024');
+            return storedHash === inputHash;
+        } catch (e) {
+            console.error('Password verification failed:', e);
+            return false;
+        }
+    }
+    
     // Password modal for nuclear wipe
     showPasswordModal() {
         return new Promise((resolve) => {
@@ -2355,6 +3071,15 @@ class AdminDashboard {
 
     esc(str) { return str ? str.toString().replace(/</g, "&lt;") : ''; }
     log(t, m) { console.log(t, m); }
+    
+    formatDuration(seconds) {
+        if (!seconds || seconds < 0) return '0s';
+        if (seconds < 60) return `${seconds}s`;
+        if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
+        const hours = Math.floor(seconds / 3600);
+        const mins = Math.floor((seconds % 3600) / 60);
+        return `${hours}h ${mins}m`;
+    }
 }
 
 const admin = new AdminDashboard();

@@ -1,0 +1,13 @@
+{
+    "major": 1,
+    "minor": 0,
+    "patch": 0,
+    "build": "20241129",
+    "version": "v1.0.0",
+    "releaseDate": "2024-11-29",
+    "changelog": [
+        "Initial release with protection system",
+        "Anti-cheat system implemented",
+        "Domain locking enabled"
+    ]
+}

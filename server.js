@@ -1,3 +1,12 @@
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * NIGHTCLUB GAME - SERVER
+ * ═══════════════════════════════════════════════════════════════════════════
+ * © 2024 Nightclub Game. All Rights Reserved.
+ * This software is protected by copyright law.
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
@@ -6,6 +15,101 @@ const crypto = require('crypto');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// ==========================================
+// SECURITY CONFIGURATION
+// ==========================================
+const ALLOWED_ORIGINS = [
+    'http://localhost',
+    'http://localhost:3000',
+    'http://127.0.0.1',
+    'http://127.0.0.1:3000',
+    'https://hypeclub.city',
+    'https://www.hypeclub.city',
+    // Add more allowed origins if needed
+];
+
+// Rate limiting storage
+const rateLimitStore = new Map();
+const RATE_LIMIT_WINDOW = 60000; // 1 minute
+const RATE_LIMIT_MAX = 100; // Max requests per window
+
+// ==========================================
+// SECURITY MIDDLEWARE
+// ==========================================
+
+// Rate limiting middleware
+app.use((req, res, next) => {
+    const ip = req.ip || req.connection.remoteAddress;
+    const now = Date.now();
+    
+    if (!rateLimitStore.has(ip)) {
+        rateLimitStore.set(ip, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
+    } else {
+        const record = rateLimitStore.get(ip);
+        if (now > record.resetTime) {
+            record.count = 1;
+            record.resetTime = now + RATE_LIMIT_WINDOW;
+        } else {
+            record.count++;
+            if (record.count > RATE_LIMIT_MAX) {
+                return res.status(429).json({ 
+                    error: 'Too many requests. Please slow down.',
+                    retryAfter: Math.ceil((record.resetTime - now) / 1000)
+                });
+            }
+        }
+    }
+    next();
+});
+
+// Clean up rate limit store periodically
+setInterval(() => {
+    const now = Date.now();
+    for (const [ip, record] of rateLimitStore.entries()) {
+        if (now > record.resetTime + RATE_LIMIT_WINDOW) {
+            rateLimitStore.delete(ip);
+        }
+    }
+}, 60000);
+
+// Security headers middleware
+app.use((req, res, next) => {
+    // Prevent clickjacking
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    // Prevent MIME sniffing
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    // XSS protection
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    // Referrer policy
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    // Content Security Policy
+    res.setHeader('Content-Security-Policy', "frame-ancestors 'self' https://hypeclub.city");
+    next();
+});
+
+// CORS middleware - RESTRICTED to allowed origins
+app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    
+    // Check if origin is in allowed list
+    if (origin && ALLOWED_ORIGINS.some(allowed => origin.startsWith(allowed))) {
+        res.header('Access-Control-Allow-Origin', origin);
+    } else if (!origin) {
+        // Allow requests without origin (same-origin, curl, etc.)
+        res.header('Access-Control-Allow-Origin', ALLOWED_ORIGINS[0]);
+    }
+    // If origin is not allowed, don't set the header (browser will block)
+    
+    res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    
+    if (req.method === 'OPTIONS') {
+        return res.sendStatus(200);
+    }
+    next();
+});
 
 // Ensure upload directories exist
 const uploadsDir = path.join(__dirname, 'uploads');
@@ -17,17 +121,6 @@ const postsDir = path.join(uploadsDir, 'posts');
     if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
     }
-});
-
-// CORS middleware
-app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-    if (req.method === 'OPTIONS') {
-        return res.sendStatus(200);
-    }
-    next();
 });
 
 // Body parsers
