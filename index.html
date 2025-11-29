@@ -2137,8 +2137,8 @@
                 `).join('');
             }
             
-            // Try Firebase first
-            if (typeof firebase !== 'undefined' && firebase.firestore) {
+            // Try Firebase first (only if initialized)
+            if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length > 0) {
                 const db = firebase.firestore();
                 
                 // Get players
@@ -2179,8 +2179,8 @@
             }
         }
         
-        // Load leaderboards when page loads
-        setTimeout(loadLandingLeaderboards, 500);
+        // Load leaderboards when page loads (wait for Firebase to initialize)
+        setTimeout(loadLandingLeaderboards, 3000);
         
         // Switch between login and register tabs
         window.switchGateTab = function(tab) {
