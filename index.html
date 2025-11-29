@@ -825,8 +825,8 @@
         <!-- ═══════════════════ NOTIFICATION AREA ═══════════════════ -->
         <div id="notification-area" class="fixed top-24 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2"></div>
         
-        <!-- ═══════════════════ LEFT SIDE PANEL ═══════════════════ -->
-        <div class="fixed left-3 top-1/2 -translate-y-1/2 z-40 flex flex-col gap-2" style="pointer-events: auto;">
+        <!-- ═══════════════════ LEFT SIDE PANEL (hidden on mobile) ═══════════════════ -->
+        <div class="hidden md:flex fixed left-3 top-1/2 -translate-y-1/2 z-40 flex-col gap-2" style="pointer-events: auto;">
             <button class="glass-panel rounded-xl p-3 icon-btn hover:bg-white/10" id="btn-mode" onclick="game.toggleMode()">
                 <i class="ph-fill ph-pencil-simple text-white text-xl"></i>
                 <span class="text-[10px] text-gray-400 block mt-1">EDIT</span>
@@ -935,6 +935,14 @@
                         </div>
                         <span class="text-[6px] sm:text-[8px] font-bold opacity-70 mt-0.5">WORLD</span>
                     </button>
+
+                    <!-- Mobile-only: Settings/More button -->
+                    <button class="dock-btn md:hidden flex flex-col items-center group px-1 hover:-translate-y-1 transition-all flex-shrink-0" onclick="game.openModal('settings')">
+                        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-gray-500 to-gray-700 flex items-center justify-center shadow-md">
+                            <i class="ph-fill ph-gear text-lg text-white"></i>
+                        </div>
+                        <span class="text-[6px] font-bold opacity-70 mt-0.5">MORE</span>
+                    </button>
                     
                     <!-- Mobile-only: Guests inline -->
                     <div class="flex sm:hidden items-center gap-1 px-1.5 border-l border-white/10 ml-1">
@@ -973,8 +981,8 @@
             </div>
         </div>
         
-        <!-- ═══════════════════ RIGHT SIDE: More Options ═══════════════════ -->
-        <div class="fixed right-3 top-1/2 -translate-y-1/2 z-40 flex flex-col gap-2" style="pointer-events: auto;">
+        <!-- ═══════════════════ RIGHT SIDE: More Options (hidden on mobile) ═══════════════════ -->
+        <div class="hidden md:flex fixed right-3 top-1/2 -translate-y-1/2 z-40 flex-col gap-2" style="pointer-events: auto;">
             <button class="glass-panel rounded-xl p-3 icon-btn hover:bg-white/10" onclick="game.openCelebrityModal()" title="Celebrities">
                 <i class="ph-fill ph-star text-yellow-400 text-xl"></i>
             </button>
