@@ -1,0 +1,108 @@
+
+/* ================== TUTORIAL SYSTEM ================== */
+.tutorial-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10000;
+    pointer-events: none; /* Allow clicks to pass through to spotlight target? No, usually we block */
+}
+
+/* The spotlight effect - this creates the dark overlay with a hole */
+.tutorial-spotlight {
+    position: absolute;
+    border-radius: 8px;
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.75), 0 0 20px rgba(255, 215, 0, 0.5);
+    transition: all 0.3s ease-out;
+    pointer-events: none; /* Let clicks pass through the hole */
+    z-index: 10001;
+    border: 2px solid var(--primary-gold);
+}
+
+.tutorial-card {
+    position: absolute;
+    background: rgba(20, 20, 35, 0.95);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 20px;
+    width: 320px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    z-index: 10002;
+    pointer-events: auto; /* Allow interacting with buttons */
+    color: white;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.tutorial-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 8px;
+}
+
+.tutorial-title {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    color: var(--primary-gold);
+    font-size: 1.1rem;
+}
+
+.tutorial-step-count {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.tutorial-content {
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 20px;
+}
+
+.tutorial-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.tutorial-btn {
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.tutorial-btn.primary {
+    background: linear-gradient(135deg, var(--button-blue), var(--button-purple));
+    color: white;
+    flex: 1;
+}
+
+.tutorial-btn.primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+}
+
+.tutorial-btn.secondary {
+    background: transparent;
+    color: rgba(255, 255, 255, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.tutorial-btn.secondary:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: white;
+}
+
+/* Arrow for the card (optional, complex to position dynamically) */
+/* .tutorial-card::after { ... } */

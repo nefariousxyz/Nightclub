@@ -1,0 +1,1153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Nightclub City: Ultimate Edition</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@600;800&display=swap');
+
+        body {
+            margin: 0; padding: 0; overflow: hidden;
+            background-color: #1a1025;
+            font-family: 'Nunito', sans-serif;
+            user-select: none; -webkit-user-select: none; touch-action: none;
+        }
+
+        #ui-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; display: flex; flex-direction: column; justify-content: space-between;
+        }
+
+        /* HUD */
+        .hud-top {
+            display: flex; justify-content: space-between; padding: 15px;
+            background: linear-gradient(180deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0) 100%);
+            pointer-events: none;
+        }
+
+        .stat-group { display: flex; gap: 10px; pointer-events: auto; }
+
+        .stat-box {
+            background: #1e1e1e; border: 2px solid #ffd700; padding: 8px 15px;
+            border-radius: 12px; color: #fff; box-shadow: 0 4px 0 #000;
+            min-width: 70px; text-align: center;
+            display: flex; flex-direction: column; justify-content: center;
+        }
+
+        .stat-label { font-size: 0.65rem; color: #ffeb3b; text-transform: uppercase; font-weight: 800; margin-bottom: 2px; }
+        .stat-value { font-family: 'Fredoka One', cursive; font-size: 1.1rem; color: #fff; text-shadow: 1px 1px 0 #000; }
+        #bar-stock-display { color: #00e5ff; }
+        .warning { border-color: #ff4444 !important; animation: pulse 1s infinite; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+
+        /* Edit Controls */
+        #edit-controls {
+            display: none; position: absolute; bottom: 110px; width: 100%;
+            justify-content: center; gap: 20px; pointer-events: auto;
+        }
+        .edit-btn {
+            background: #2196f3; color: white; border: none; border-radius: 50%;
+            width: 60px; height: 60px; font-size: 1.5rem; box-shadow: 0 4px 0 #0d47a1; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .edit-btn:active { transform: translateY(4px); box-shadow: none; }
+
+        /* Bottom Bar */
+        .hud-bottom {
+            padding: 10px; background: linear-gradient(0deg, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0) 100%);
+            display: flex; justify-content: center; align-items: flex-end; gap: 12px;
+            pointer-events: auto; padding-bottom: 30px;
+        }
+
+        .mode-btn {
+            background: #ff9800; border: none; border-bottom: 4px solid #e65100;
+            border-radius: 12px; padding: 10px 20px; color: white; font-family: 'Fredoka One', cursive;
+            font-size: 1.2rem; cursor: pointer; margin-right: 10px; flex-shrink: 0;
+        }
+        .mode-btn.active { background: #f44336; border-color: #d32f2f; }
+
+        .action-btn {
+            background: #4caf50; border: none; border-bottom: 4px solid #2e7d32;
+            border-radius: 15px; width: auto; min-width: 70px; height: 70px; padding: 0 15px;
+            color: white; font-size: 1.8rem; cursor: pointer;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5); margin-right: 5px;
+            position: relative; transition: transform 0.1s;
+        }
+        .action-btn:active { transform: translateY(4px); border-bottom: 0; }
+        .action-btn small { font-size: 0.6rem; font-family: 'Nunito', sans-serif; font-weight: 800; margin-top: 5px; }
+        
+        .btn-shop { background: #9c27b0; border-color: #7b1fa2; }
+        .btn-upgrade { background: #00bcd4; border-color: #0097a7; }
+        .btn-gemini { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-bottom: 4px solid #5a3b82; }
+
+        #notification-area {
+            position: absolute; top: 15%; width: 100%; text-align: center; pointer-events: none;
+        }
+        .notification {
+            display: inline-block; background: rgba(0,0,0,0.9); border: 2px solid #00e5ff;
+            color: #fff; padding: 8px 20px; border-radius: 20px;
+            font-family: 'Fredoka One', cursive; font-size: 1.2rem;
+            animation: fadeUp 3s forwards; margin-top: 5px; text-shadow: 0 2px 0 #000;
+        }
+        @keyframes fadeUp { 0% { transform: translateY(20px); opacity: 0; } 100% { transform: translateY(-20px); opacity: 0; } }
+
+        .thought-bubble {
+            position: absolute; background: white; color: #333; padding: 8px 12px;
+            border-radius: 15px; font-size: 0.8rem; font-weight: bold;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3); pointer-events: none;
+            transform: translate(-50%, -100%); opacity: 0; transition: opacity 0.3s;
+            max-width: 180px; text-align: center; z-index: 20;
+        }
+        .thought-bubble::after {
+            content: ''; position: absolute; bottom: -6px; left: 50%; margin-left: -6px;
+            border-width: 6px 6px 0; border-style: solid; border-color: white transparent transparent;
+        }
+        .thought-bubble.show { opacity: 1; top: -35px; }
+
+        /* General Modal */
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); z-index: 50; justify-content: center; align-items: center; pointer-events: auto;
+        }
+        .modal-content {
+            background: linear-gradient(135deg, #2a1f1a 0%, #1a1025 100%); border: 4px solid #ffd700;
+            padding: 20px; border-radius: 20px; text-align: center; color: white;
+            max-width: 500px; width: 95%; max-height: 80vh; overflow-y: auto;
+            box-shadow: 0 0 50px rgba(255, 215, 0, 0.5);
+            animation: popIn 0.2s ease-out;
+        }
+        .modal-title { font-family: 'Fredoka One', cursive; font-size: 2rem; color: #ffeb3b; margin-bottom: 15px; text-shadow: 2px 2px 0 #000; }
+        .close-btn {
+            background: #f44336; color: white; border: none; padding: 8px 20px; margin-top: 20px;
+            font-family: 'Fredoka One', cursive; font-size: 1rem; border-radius: 30px; cursor: pointer;
+        }
+        
+        /* Shop Grid */
+        .shop-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 15px; }
+        .shop-item {
+            background: #3e2723; border: 2px solid #5d4037; border-radius: 10px; padding: 10px;
+            cursor: pointer; transition: transform 0.1s; position: relative;
+        }
+        .shop-item:active { transform: scale(0.95); }
+        .shop-item img { width: 40px; height: 40px; margin-bottom: 5px; }
+        .shop-item-name { font-size: 0.8rem; font-weight: bold; color: #fff; }
+        .shop-item-cost { color: #00e676; font-weight: bold; font-size: 0.9rem; }
+        .shop-item-desc { font-size: 0.7rem; color: #aaa; margin-top: 2px; line-height: 1.1; }
+        
+        /* Shop Tabs */
+        .shop-tab {
+            flex: 1; padding: 10px; border: none; border-radius: 8px;
+            font-family: 'Fredoka One', cursive; font-size: 1rem;
+            cursor: pointer; background: #333; color: #888;
+            transition: all 0.2s;
+        }
+        .shop-tab:hover { background: #444; }
+        .shop-tab.active { background: #9c27b0; color: #fff; }
+        .tile-item { border-color: #9c27b0; }
+        .tile-item:hover { background: #4a2040; }
+
+        /* Upgrade List */
+        .upgrade-list { display: flex; flex-direction: column; gap: 10px; }
+        .upgrade-row {
+            background: #333; border-radius: 10px; padding: 10px; display: flex; justify-content: space-between; align-items: center;
+            border: 1px solid #555;
+        }
+        .upgrade-info { text-align: left; }
+        .upgrade-name { font-weight: bold; color: #ffeb3b; font-size: 1rem; }
+        .upgrade-detail { font-size: 0.8rem; color: #ccc; }
+        .upgrade-btn {
+            background: #4caf50; border: none; color: white; padding: 8px 15px; border-radius: 8px;
+            font-weight: bold; cursor: pointer; min-width: 80px;
+        }
+        .upgrade-btn:disabled { background: #555; color: #888; cursor: not-allowed; }
+
+        @keyframes popIn { 0% { transform: scale(0.5); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+
+        #loading {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #1a1025; display: flex; justify-content: center; align-items: center;
+            color: #e6b800; font-family: 'Fredoka One', cursive; font-size: 2rem;
+            z-index: 9999; transition: opacity 0.5s;
+        }
+        
+        #error-log {
+            position: fixed; top: 0; left: 0; width: 100%; background: rgba(255,0,0,0.8); color: white;
+            z-index: 10000; padding: 10px; display: none; font-family: monospace; font-size: 12px;
+        }
+    </style>
+    
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+<body>
+
+    <div id="error-log"></div>
+    <div id="loading">POWERING UP...</div>
+    <div id="canvas-container"></div>
+
+    <div id="ui-layer">
+        <div class="hud-top">
+            <div class="stat-group">
+                <div class="stat-box">
+                    <div class="stat-label">Cash</div>
+                    <div class="stat-value">$<span id="cash-display">0</span></div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Hype</div>
+                    <div class="stat-value"><span id="rep-display">0</span></div>
+                </div>
+            </div>
+            
+            <div class="stat-group">
+                <div class="stat-box">
+                    <div class="stat-label">Stock</div>
+                    <div class="stat-value"><span id="bar-stock-display">100</span>%</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Guests</div>
+                    <div class="stat-value"><span id="pop-display">0</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="notification-area"></div>
+
+        <!-- Edit Controls -->
+        <div id="edit-controls">
+            <button class="edit-btn" onclick="game.rotateSelection()">↻</button>
+            <button class="edit-btn" style="background:#f44336; border-color:#d32f2f" onclick="game.deleteSelection()">🗑️</button>
+        </div>
+
+        <!-- Main Menu -->
+        <div class="hud-bottom" id="main-controls">
+            <button class="mode-btn" id="btn-mode" onclick="game.toggleMode()">🔨 EDIT</button>
+            
+            <button class="action-btn" id="btn-restock" onclick="game.restockBar()">
+                🍻<small>RESTOCK</small>
+            </button>
+
+            <button class="action-btn btn-shop" onclick="game.openModal('shop')">
+                🛒<small>SHOP</small>
+            </button>
+
+            <button class="action-btn btn-upgrade" onclick="game.openModal('upgrade')">
+                ⬆️<small>UPGRADE</small>
+            </button>
+
+            <button class="action-btn btn-gemini" id="btn-event" onclick="game.planEvent()">
+                ✨<small>PLAN</small>
+            </button>
+        </div>
+    </div>
+
+    <!-- Shop Modal -->
+    <div id="shop-modal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-title">Shop</div>
+            <!-- Shop Tabs -->
+            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                <button class="shop-tab active" id="tab-furniture" onclick="switchShopTab('furniture')">🪑 Furniture</button>
+                <button class="shop-tab" id="tab-tiles" onclick="switchShopTab('tiles')">🧱 Tiles</button>
+            </div>
+            <!-- Furniture Tab -->
+            <div id="shop-furniture" class="shop-grid">
+                <div class="shop-item" onclick="game.buyItem('table', 200)">
+                    <div class="upgrade-icon">🕯️</div>
+                    <div class="shop-item-name">Candle Table</div>
+                    <div class="shop-item-cost">$200</div>
+                    <div class="shop-item-desc">Relaxing vibe</div>
+                </div>
+                <div class="shop-item" onclick="game.buyItem('booth', 400)">
+                    <div class="upgrade-icon">🛋️</div>
+                    <div class="shop-item-name">VIP Booth</div>
+                    <div class="shop-item-cost">$400</div>
+                    <div class="shop-item-desc">High energy recovery</div>
+                </div>
+                <div class="shop-item" onclick="game.buyItem('bar', 600)">
+                    <div class="upgrade-icon">🍸</div>
+                    <div class="shop-item-name">Lux Bar</div>
+                    <div class="shop-item-cost">$600</div>
+                    <div class="shop-item-desc">Serves drinks</div>
+                </div>
+                <div class="shop-item" onclick="game.buyItem('dancefloor', 800)">
+                    <div class="upgrade-icon">💃</div>
+                    <div class="shop-item-name">LED Floor</div>
+                    <div class="shop-item-cost">$800</div>
+                    <div class="shop-item-desc">Dancing spot</div>
+                </div>
+                <div class="shop-item" onclick="game.buyItem('dj', 1000)">
+                    <div class="upgrade-icon">🎧</div>
+                    <div class="shop-item-name">DJ Station</div>
+                    <div class="shop-item-cost">$1000</div>
+                    <div class="shop-item-desc">Music center</div>
+                </div>
+                <div class="shop-item" onclick="game.buyItem('pooltable', 500)">
+                    <div class="upgrade-icon">🎱</div>
+                    <div class="shop-item-name">Pool Table</div>
+                    <div class="shop-item-cost">$500</div>
+                    <div class="shop-item-desc">Entertainment</div>
+                </div>
+            </div>
+            <!-- Tiles Tab (Advanced Drag Mode) -->
+            <div id="shop-tiles" class="shop-grid" style="display: none;">
+                <div style="grid-column: 1/-1; text-align: center; color: #aaa; font-size: 0.85rem; margin-bottom: 10px;">
+                    🖱️ Click a tile, then drag on floor to place multiple!
+                </div>
+                <div class="shop-item tile-item" onclick="game.buyTile('tile_wood', 25)">
+                    <div class="upgrade-icon">🪵</div>
+                    <div class="shop-item-name">Wood Floor</div>
+                    <div class="shop-item-cost">$25/tile</div>
+                </div>
+                <div class="shop-item tile-item" onclick="game.buyTile('tile_marble', 50)">
+                    <div class="upgrade-icon">⬜</div>
+                    <div class="shop-item-name">Marble Floor</div>
+                    <div class="shop-item-cost">$50/tile</div>
+                </div>
+                <div class="shop-item tile-item" onclick="game.buyTile('tile_checker', 35)">
+                    <div class="upgrade-icon">⬛</div>
+                    <div class="shop-item-name">Checker Floor</div>
+                    <div class="shop-item-cost">$35/tile</div>
+                </div>
+                <div class="shop-item tile-item" onclick="game.buyTile('tile_carpet', 40)">
+                    <div class="upgrade-icon">🟥</div>
+                    <div class="shop-item-name">Red Carpet</div>
+                    <div class="shop-item-cost">$40/tile</div>
+                </div>
+                <div class="shop-item tile-item" onclick="game.buyTile('tile_disco', 75)">
+                    <div class="upgrade-icon">🪩</div>
+                    <div class="shop-item-name">Disco Floor</div>
+                    <div class="shop-item-cost">$75/tile</div>
+                </div>
+                <div class="shop-item tile-item" onclick="game.buyTile('tile_neon', 100)">
+                    <div class="upgrade-icon">💜</div>
+                    <div class="shop-item-name">Neon Floor</div>
+                    <div class="shop-item-cost">$100/tile</div>
+                </div>
+                <div class="shop-item tile-item" onclick="game.buyTile('tile_gold', 150)">
+                    <div class="upgrade-icon">🟨</div>
+                    <div class="shop-item-name">Gold Floor</div>
+                    <div class="shop-item-cost">$150/tile</div>
+                </div>
+                <div class="shop-item tile-item" onclick="game.buyTile('tile_hologram', 200)">
+                    <div class="upgrade-icon">🔷</div>
+                    <div class="shop-item-name">Hologram Floor</div>
+                    <div class="shop-item-cost">$200/tile</div>
+                </div>
+            </div>
+            <button class="close-btn" onclick="game.closeModals()">CLOSE</button>
+        </div>
+    </div>
+
+    <!-- Upgrades Modal -->
+    <div id="upgrade-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-title">Club Upgrades</div>
+            <div class="upgrade-list">
+                <div class="upgrade-row">
+                    <div class="upgrade-info">
+                        <div class="upgrade-name">Expand Space</div>
+                        <div class="upgrade-detail">Max Capacity +5</div>
+                    </div>
+                    <button class="upgrade-btn" id="upg-cap" onclick="game.buyUpgrade('capacity')">$500</button>
+                </div>
+                <div class="upgrade-row">
+                    <div class="upgrade-info">
+                        <div class="upgrade-name">Marketing</div>
+                        <div class="upgrade-detail">Faster Spawns</div>
+                    </div>
+                    <button class="upgrade-btn" id="upg-spawn" onclick="game.buyUpgrade('marketing')">$300</button>
+                </div>
+                <div class="upgrade-row">
+                    <div class="upgrade-info">
+                        <div class="upgrade-name">Premium Drinks</div>
+                        <div class="upgrade-detail">Earn 20% More</div>
+                    </div>
+                    <button class="upgrade-btn" id="upg-profit" onclick="game.buyUpgrade('profit')">$400</button>
+                </div>
+            </div>
+            <button class="close-btn" onclick="game.closeModals()">CLOSE</button>
+        </div>
+    </div>
+
+    <!-- AI Event Modal -->
+    <div id="event-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-title" id="event-title">Theme Night</div>
+            <div id="event-desc" style="font-size: 1.1rem; margin-bottom: 20px;"></div>
+            <div id="event-bonus" style="color: #00e676; font-weight: bold;"></div>
+            <button class="close-btn" onclick="document.getElementById('event-modal').style.display='none'">LET'S PARTY!</button>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    
+    <script type="module">
+        import * as THREE from 'three';
+        import { MapControls } from 'three/addons/controls/MapControls.js';
+
+        // Global Error Handler
+        window.onerror = function(msg, url, line) {
+            const el = document.getElementById('error-log');
+            el.style.display = 'block';
+            el.innerHTML += `Error: ${msg} at line ${line}<br>`;
+        };
+
+        // Check for visit mode
+        const urlParams = new URLSearchParams(window.location.search);
+        const visitFriendUid = urlParams.get('visit');
+        let isVisitMode = false;
+        let visitingFriendName = 'Friend';
+        
+        if (visitFriendUid) {
+            isVisitMode = true;
+            const visitInfo = JSON.parse(sessionStorage.getItem('visitMode') || '{}');
+            visitingFriendName = visitInfo.friendName || 'Friend';
+            console.log('Visit mode detected for:', visitingFriendName);
+        }
+
+        const apiKey = ""; 
+
+        // --- GEMINI HELPER ---
+        async function callGemini(prompt) {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+            try {
+                const response = await fetch(url, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                });
+                const data = await response.json();
+                return data.candidates?.[0]?.content?.parts?.[0]?.text || "...";
+            } catch (e) { return "..."; }
+        }
+
+        // --- SHOP TAB SWITCHER ---
+        function switchShopTab(tab) {
+            document.getElementById('shop-furniture').style.display = tab === 'furniture' ? 'grid' : 'none';
+            document.getElementById('shop-tiles').style.display = tab === 'tiles' ? 'grid' : 'none';
+            document.getElementById('tab-furniture').classList.toggle('active', tab === 'furniture');
+            document.getElementById('tab-tiles').classList.toggle('active', tab === 'tiles');
+        }
+
+        // --- GAME STATE ---
+        const game = {
+            cash: 1500, hype: 20, barStock: 100,
+            visitors: [], queue: [], furniture: [],
+            maxVisitors: 15, spawnRate: 1500, lastSpawn: 0,
+            mode: 'play', selectedObject: null, eventMultiplier: 1,
+            
+            stats: {
+                capacityLevel: 1,
+                marketingLevel: 1,
+                profitLevel: 1
+            },
+
+            // Economy
+            addCash: function(amt) {
+                if(isNaN(amt)) amt = 0;
+                amt *= this.eventMultiplier;
+                this.cash += Math.floor(amt);
+                this.updateUI();
+                if(amt > 0) createFloatingText(`+$${Math.floor(amt)}`, new THREE.Vector3(0,5,0), '#85ff85');
+            },
+
+            consumeStock: function() {
+                if(this.barStock > 0) { this.barStock -= 2; this.updateUI(); return true; }
+                else { ui.notify("BAR EMPTY!", "error"); return false; }
+            },
+
+            restockBar: function() {
+                if(this.cash >= 100) { this.cash -= 100; this.barStock = 100; ui.notify("Restocked!"); this.updateUI(); }
+                else ui.notify("Need $100", "error");
+            },
+
+            // --- SHOP & UPGRADES ---
+            openModal: function(type) {
+                this.updateUI(); // Refresh buttons
+                document.getElementById(type === 'shop' ? 'shop-modal' : 'upgrade-modal').style.display = 'flex';
+            },
+
+            closeModals: function() {
+                document.querySelectorAll('.modal-overlay').forEach(el => el.style.display = 'none');
+            },
+
+            buyItem: function(type, cost) {
+                if(this.cash >= cost) {
+                    this.cash -= cost;
+                    this.closeModals();
+                    const item = createFurniture(type, 0, 0);
+                    if(this.mode !== 'edit') this.toggleMode();
+                    this.selectedObject = item;
+                    highlightBox.setFromObject(item);
+                    highlightBox.visible = true;
+                    controls.enabled = false;
+                    ui.notify("Item Purchased!", "info");
+                    this.updateUI();
+                } else {
+                    ui.notify("Not enough cash!", "error");
+                }
+            },
+
+            // Advanced tile placement - drag to place multiple
+            buyTile: function(type, costPerTile) {
+                this.closeModals();
+                if (window.startTilePlacement) {
+                    window.startTilePlacement(type, costPerTile);
+                } else {
+                    ui.notify("Tile system not ready!", "error");
+                }
+            },
+
+            buyUpgrade: function(type) {
+                let cost = 0;
+                if(type === 'capacity') cost = 500 * this.stats.capacityLevel;
+                if(type === 'marketing') cost = 300 * this.stats.marketingLevel;
+                if(type === 'profit') cost = 400 * this.stats.profitLevel;
+
+                if(this.cash >= cost) {
+                    this.cash -= cost;
+                    if(type === 'capacity') { this.stats.capacityLevel++; this.maxVisitors += 5; }
+                    if(type === 'marketing') { this.stats.marketingLevel++; this.spawnRate *= 0.9; }
+                    if(type === 'profit') { this.stats.profitLevel++; }
+                    ui.notify("Upgrade Successful!", "info");
+                    this.updateUI(); 
+                } else {
+                    ui.notify("Too expensive!", "error");
+                }
+            },
+
+            getFurniture: function(type) { return this.furniture.filter(f => f.userData.type === type); },
+
+            getRandomSpot: function(type) {
+                const items = this.getFurniture(type);
+                if(items.length === 0) return null;
+                const item = items[Math.floor(Math.random() * items.length)];
+                const pos = item.position.clone();
+                if(type === 'bar') pos.z += 2.5; 
+                if(type === 'dj') pos.z += 4;
+                if(type === 'dancefloor') {
+                    pos.x += (Math.random() - 0.5) * 8; 
+                    pos.z += (Math.random() - 0.5) * 8;
+                }
+                else {
+                    pos.x += (Math.random() - 0.5) * 1.5;
+                    pos.z += (Math.random() - 0.5) * 1.5;
+                }
+                return pos;
+            },
+
+            toggleMode: function() {
+                this.mode = this.mode === 'play' ? 'edit' : 'play';
+                document.getElementById('btn-mode').innerText = this.mode === 'edit' ? "✅ DONE" : "🔨 EDIT";
+                document.getElementById('btn-mode').classList.toggle('active');
+                document.getElementById('edit-controls').style.display = this.mode === 'edit' ? 'flex' : 'none';
+                
+                const btns = document.querySelectorAll('#main-controls button:not(#btn-mode)');
+                btns.forEach(b => b.style.display = this.mode === 'edit' ? 'none' : 'flex');
+
+                controls.enabled = this.mode === 'play';
+                if(this.mode === 'play') { this.selectedObject = null; highlightBox.visible = false; }
+            },
+
+            rotateSelection: function() { if(this.selectedObject) this.selectedObject.rotation.y += Math.PI / 4; },
+            
+            deleteSelection: function() {
+                if(this.selectedObject) {
+                    scene.remove(this.selectedObject);
+                    this.furniture = this.furniture.filter(i => i !== this.selectedObject);
+                    this.selectedObject = null; highlightBox.visible = false;
+                }
+            },
+
+            planEvent: async function() {
+                const btn = document.getElementById('btn-event'); btn.disabled = true; btn.style.opacity = 0.5;
+                ui.notify("AI Planning...", "info");
+                const prompt = `Generate a cool nightclub theme name and 8 word description. Format JSON: {"title": "X", "desc": "Y"}`;
+                try {
+                    let txt = await callGemini(prompt);
+                    txt = txt.replace(/```json|```/g, '');
+                    const data = JSON.parse(txt);
+                    document.getElementById('event-title').innerText = data.title;
+                    document.getElementById('event-desc').innerText = data.desc;
+                    document.getElementById('event-bonus').innerText = "2x CASH (30s)";
+                    document.getElementById('event-modal').style.display = 'flex';
+                    this.eventMultiplier = 2;
+                    setTimeout(() => { this.eventMultiplier = 1; btn.disabled = false; btn.style.opacity = 1; }, 30000);
+                } catch(e) { btn.disabled = false; btn.style.opacity = 1; }
+            },
+
+            updateUI: function() {
+                document.getElementById('cash-display').innerText = this.cash;
+                document.getElementById('rep-display').innerText = Math.floor(this.hype);
+                document.getElementById('bar-stock-display').innerText = this.barStock;
+                document.getElementById('pop-display').innerText = this.visitors.length + "/" + this.maxVisitors;
+
+                const capCost = 500 * this.stats.capacityLevel;
+                document.getElementById('upg-cap').innerText = `$${capCost}`;
+                const mktCost = 300 * this.stats.marketingLevel;
+                document.getElementById('upg-spawn').innerText = `$${mktCost}`;
+                const prfCost = 400 * this.stats.profitLevel;
+                document.getElementById('upg-profit').innerText = `$${prfCost}`;
+            }
+        };
+
+        window.game = game;
+        const ui = { notify: (msg, t) => { 
+            const d = document.createElement('div'); d.className = 'notification'; 
+            if(t==='error') d.style.borderColor='red'; d.innerText=msg; 
+            document.getElementById('notification-area').appendChild(d); 
+            setTimeout(()=>d.remove(), 2000); 
+        }};
+
+        // --- THREE SETUP ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x1a1025);
+        scene.fog = new THREE.Fog(0x1a1025, 40, 120);
+
+        const aspect = window.innerWidth / window.innerHeight;
+        const d = 40;
+        const camera = new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, 1, 1000);
+        camera.position.set(50, 50, 50); camera.lookAt(0,0,0);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        // Reverted to standard encoding/mapping for compatibility
+        renderer.outputEncoding = THREE.sRGBEncoding;
+        document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+        const controls = new MapControls(camera, renderer.domElement);
+        controls.enableDamping = true; controls.minZoom = 0.5; controls.maxZoom = 2.5; controls.maxPolarAngle = Math.PI / 2.2;
+
+        // --- ASSETS ---
+        const mats = {
+            floor: new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.1 }),
+            wall: new THREE.MeshStandardMaterial({ color: 0x4e342e }),
+            wood: new THREE.MeshStandardMaterial({ color: 0x3e2723 }),
+            skin: [new THREE.MeshStandardMaterial({color: 0xffcc80}), new THREE.MeshStandardMaterial({color: 0x8d5524})],
+            clothes: [new THREE.MeshStandardMaterial({color: 0xe91e63}), new THREE.MeshStandardMaterial({color: 0x2196f3}), new THREE.MeshStandardMaterial({color: 0x00e676}), new THREE.MeshStandardMaterial({color: 0x7e57c2})],
+            gold: new THREE.MeshStandardMaterial({color: 0xffd700, metalness: 0.8, roughness: 0.2}),
+            glass: new THREE.MeshStandardMaterial({color: 0xaaddff, transparent: true, opacity: 0.5})
+        };
+
+        // --- WORLD ---
+        const world = new THREE.Group(); scene.add(world);
+        const street = new THREE.Mesh(new THREE.PlaneGeometry(300,300), new THREE.MeshStandardMaterial({color:0x222}));
+        street.rotation.x=-Math.PI/2; street.position.y=-0.5; street.receiveShadow=true; world.add(street);
+        const sidewalk = new THREE.Mesh(new THREE.BoxGeometry(120,0.5,25), new THREE.MeshStandardMaterial({color:0x555}));
+        sidewalk.position.set(0,-0.2,35); sidewalk.receiveShadow=true; world.add(sidewalk);
+        
+        const backWall = new THREE.Mesh(new THREE.BoxGeometry(60,14,2), mats.wall);
+        backWall.position.set(0,7,-25); backWall.castShadow=true; backWall.receiveShadow=true; world.add(backWall);
+        const leftWall = new THREE.Mesh(new THREE.BoxGeometry(2,14,50), mats.wall);
+        leftWall.position.set(-30,7,0); leftWall.castShadow=true; leftWall.receiveShadow=true; world.add(leftWall);
+
+        // --- LIGHTS (BRIGHTER CONFIG) ---
+        const ambient = new THREE.AmbientLight(0xffffff, 0.8); scene.add(ambient);
+        const mainLight = new THREE.DirectionalLight(0xffddcc, 1.0);
+        mainLight.position.set(30,50,20); mainLight.castShadow=true; 
+        mainLight.shadow.mapSize.width = 1024; mainLight.shadow.mapSize.height = 1024;
+        scene.add(mainLight);
+
+        // --- TILE PLACEMENT SYSTEM ---
+        const tilePlacement = {
+            active: false, tileType: null, tileCost: 0,
+            startPos: null, currentPos: null, previewTiles: [], costDisplay: null
+        };
+        
+        function startTilePlacement(type, cost) {
+            console.log('Starting tile placement:', type, 'at $' + cost + '/tile');
+            tilePlacement.active = true;
+            tilePlacement.tileType = type;
+            tilePlacement.tileCost = cost;
+            tilePlacement.previewTiles = [];
+            tilePlacement.startPos = null;
+            tilePlacement.currentPos = null;
+            
+            if (!tilePlacement.costDisplay) {
+                const d = document.createElement('div');
+                d.id = 'tile-cost-display';
+                d.style.cssText = 'position:fixed;top:20%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.9);color:#4caf50;padding:15px 25px;border-radius:10px;font-family:Fredoka One,cursive;font-size:1.2rem;z-index:9999;pointer-events:none;border:3px solid #4caf50;text-align:center;';
+                document.body.appendChild(d);
+                tilePlacement.costDisplay = d;
+            }
+            tilePlacement.costDisplay.style.display = 'block';
+            tilePlacement.costDisplay.innerHTML = `🧱 ${type.replace('tile_','').toUpperCase()} TILES<br><small>$${cost}/tile - Click & drag to place!</small>`;
+            ui.notify('🖱️ Click & drag on floor to place tiles!', 'info');
+        }
+        
+        function updateTilePreview() {
+            if (!tilePlacement.active || !tilePlacement.startPos || !tilePlacement.currentPos) return;
+            tilePlacement.previewTiles.forEach(t => scene.remove(t));
+            tilePlacement.previewTiles = [];
+            const start = tilePlacement.startPos, end = tilePlacement.currentPos, tileSize = 4;
+            const minX = Math.min(start.x, end.x), maxX = Math.max(start.x, end.x);
+            const minZ = Math.min(start.z, end.z), maxZ = Math.max(start.z, end.z);
+            const countX = Math.floor((maxX - minX) / tileSize) + 1;
+            const countZ = Math.floor((maxZ - minZ) / tileSize) + 1;
+            const totalTiles = countX * countZ, totalCost = totalTiles * tilePlacement.tileCost;
+            const canAfford = game.cash >= totalCost;
+            const mat = new THREE.MeshBasicMaterial({color: canAfford ? 0x00ff00 : 0xff0000, transparent: true, opacity: 0.5});
+            for (let x = 0; x < countX; x++) {
+                for (let z = 0; z < countZ; z++) {
+                    const tile = new THREE.Mesh(new THREE.BoxGeometry(tileSize - 0.2, 0.15, tileSize - 0.2), mat);
+                    tile.position.set(minX + x * tileSize, 0.35, minZ + z * tileSize);
+                    scene.add(tile); tilePlacement.previewTiles.push(tile);
+                }
+            }
+            if (tilePlacement.costDisplay) {
+                tilePlacement.costDisplay.style.display = 'block';
+                tilePlacement.costDisplay.style.borderColor = canAfford ? '#4caf50' : '#f44336';
+                tilePlacement.costDisplay.style.color = canAfford ? '#4caf50' : '#f44336';
+                tilePlacement.costDisplay.innerHTML = `${totalTiles} tiles = $${totalCost}<br><small style="color:${canAfford?'#aaa':'#ff6666'}">${canAfford?'Release to place':'NOT ENOUGH CASH!'}</small>`;
+            }
+        }
+        
+        function confirmTilePlacement() {
+            console.log('Confirming tile placement...', tilePlacement);
+            if (!tilePlacement.active || !tilePlacement.startPos) { 
+                console.log('No active placement or no start pos');
+                cancelTilePlacement(); 
+                return; 
+            }
+            const start = tilePlacement.startPos, end = tilePlacement.currentPos || start, tileSize = 4;
+            const minX = Math.min(start.x, end.x), maxX = Math.max(start.x, end.x);
+            const minZ = Math.min(start.z, end.z), maxZ = Math.max(start.z, end.z);
+            const countX = Math.floor((maxX - minX) / tileSize) + 1;
+            const countZ = Math.floor((maxZ - minZ) / tileSize) + 1;
+            const totalTiles = countX * countZ, totalCost = totalTiles * tilePlacement.tileCost;
+            console.log('Placing', totalTiles, 'tiles for $' + totalCost);
+            if (game.cash < totalCost) { ui.notify('Not enough cash!', 'error'); cancelTilePlacement(); return; }
+            game.cash -= totalCost; game.updateUI();
+            tilePlacement.previewTiles.forEach(t => scene.remove(t));
+            tilePlacement.previewTiles = [];
+            for (let x = 0; x < countX; x++) {
+                for (let z = 0; z < countZ; z++) {
+                    createFloorTile(tilePlacement.tileType, minX + x * tileSize, minZ + z * tileSize);
+                }
+            }
+            ui.notify(`Placed ${totalTiles} tiles for $${totalCost}!`, 'success');
+            cancelTilePlacement();
+        }
+        
+        function cancelTilePlacement() {
+            tilePlacement.previewTiles.forEach(t => scene.remove(t));
+            tilePlacement.previewTiles = [];
+            if (tilePlacement.costDisplay) tilePlacement.costDisplay.style.display = 'none';
+            tilePlacement.active = false;
+            tilePlacement.startPos = null;
+            tilePlacement.currentPos = null;
+        }
+        
+        window.startTilePlacement = startTilePlacement;
+        
+        function createFloorTile(type, x, z) {
+            const group = new THREE.Group();
+            group.position.set(x, 0, z);
+            group.userData = { type, isFurniture: true };
+            const size = 4;
+            const colors = {
+                tile_wood: 0x8B4513, tile_marble: 0xf5f5f5, tile_checker: 0x222222,
+                tile_carpet: 0x8b0000, tile_disco: 0xff00ff, tile_neon: 0x9900ff,
+                tile_gold: 0xffd700, tile_hologram: 0x00ffff
+            };
+            const color = colors[type] || 0x333333;
+            const isGlow = ['tile_disco', 'tile_neon', 'tile_hologram'].includes(type);
+            const mat = new THREE.MeshStandardMaterial({
+                color: color,
+                emissive: isGlow ? color : 0x000000,
+                emissiveIntensity: isGlow ? 0.5 : 0,
+                metalness: type === 'tile_gold' ? 0.8 : 0.1,
+                roughness: type === 'tile_marble' ? 0.2 : 0.6
+            });
+            const tile = new THREE.Mesh(new THREE.BoxGeometry(size, 0.1, size), mat);
+            tile.position.y = 0.28;
+            tile.receiveShadow = true;
+            group.add(tile);
+            scene.add(group);
+            game.furniture.push(group);
+            return group;
+        }
+
+        // --- FURNITURE SYSTEM ---
+        function createFurniture(type, x, z, rot=0) {
+            const group = new THREE.Group(); group.position.set(x,0,z); group.rotation.y=rot;
+            group.userData = { type, isFurniture: true };
+
+            if(type === 'dancefloor') {
+                const base = new THREE.Mesh(new THREE.BoxGeometry(15, 0.1, 15), new THREE.MeshStandardMaterial({color:0x111}));
+                base.position.y=0.05; base.receiveShadow=true; group.add(base);
+                // Simple LED Tiles
+                for(let r=0;r<4;r++) for(let c=0;c<4;c++) {
+                    const tile = new THREE.Mesh(new THREE.BoxGeometry(3,0.2,3), new THREE.MeshStandardMaterial({color: 0x333, emissive:0x000}));
+                    tile.position.set((c-1.5)*3.5, 0.1, (r-1.5)*3.5); group.add(tile);
+                    if(!group.leds) group.leds=[]; group.leds.push(tile.material);
+                }
+            }
+            else if(type === 'bar') {
+                const c = new THREE.Mesh(new THREE.BoxGeometry(2,3.5,14), mats.wood);
+                c.position.y=1.75; c.castShadow=true; group.add(c);
+                const s = new THREE.Mesh(new THREE.BoxGeometry(1,6,12), new THREE.MeshStandardMaterial({color:0x222}));
+                s.position.set(3,3,0); group.add(s);
+            }
+            else if(type === 'dj') {
+                const d = new THREE.Mesh(new THREE.BoxGeometry(7,3,3), new THREE.MeshStandardMaterial({color:0x222}));
+                d.position.y=1.5; d.castShadow=true; group.add(d);
+            }
+            else if(type === 'booth') {
+                const s = new THREE.Mesh(new THREE.BoxGeometry(6,2,3), new THREE.MeshStandardMaterial({color:0xb71c1c}));
+                s.position.y=1; s.castShadow=true; group.add(s);
+            }
+            else if(type === 'table') {
+                const t = new THREE.Mesh(new THREE.CylinderGeometry(2,2,2.2), new THREE.MeshStandardMaterial({color:0x222}));
+                t.position.y=1.1; t.castShadow=true; group.add(t);
+                const candle = new THREE.PointLight(0xffaa00, 1, 5); candle.position.set(0,2.5,0); group.add(candle);
+            }
+            else if(type === 'pooltable') {
+                const b = new THREE.Mesh(new THREE.BoxGeometry(8,3,5), mats.wood); b.position.y=1.5; group.add(b);
+                const f = new THREE.Mesh(new THREE.PlaneGeometry(7,4), new THREE.MeshStandardMaterial({color:0x2e7d32}));
+                f.rotation.x=-Math.PI/2; f.position.y=3.01; group.add(f);
+            }
+
+            scene.add(group); game.furniture.push(group); return group;
+        }
+
+        createFurniture('dancefloor', 0, 0);
+        createFurniture('bar', 20, 0);
+        createFurniture('dj', 0, -18);
+        createFurniture('booth', -24, -10, Math.PI/2);
+        createFurniture('booth', -24, 0, Math.PI/2);
+        createFurniture('table', -10, 12);
+
+        // --- HUMAN ---
+        class Human {
+            constructor(isCelebrity = false) {
+                this.isCelebrity = isCelebrity;
+                this.mesh = new THREE.Group();
+                this.mesh.userData.owner = this;
+                
+                const skinMat = mats.skin[Math.floor(Math.random()*mats.skin.length)];
+                let clothMat = mats.clothes[Math.floor(Math.random()*mats.clothes.length)];
+                if(isCelebrity) clothMat = mats.gold;
+
+                this.hip = new THREE.Group(); this.hip.position.y=1.8; this.mesh.add(this.hip);
+                const torso = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.2, 0.5), clothMat);
+                torso.position.y = 0.6; torso.castShadow = true; this.hip.add(torso);
+                const head = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.7, 0.7), skinMat);
+                head.position.y = 1.5; head.castShadow = true; this.hip.add(head);
+
+                scene.add(this.mesh);
+                this.state = 'queue'; this.target = new THREE.Vector3();
+                this.needs = { energy: 100, thirst: 50 };
+            }
+
+            setPosition(x, z) { this.mesh.position.set(x,0,z); }
+
+            pickActivity() {
+                this.needs.thirst += 30; this.needs.energy -= 20;
+                if(this.state === 'dancing' && Math.random() < 0.7) {
+                    const spot = game.getRandomSpot('dancefloor');
+                    if(spot) { this.goTo(spot, 'dancing'); return; }
+                }
+                let choice = 'dance';
+                if(this.needs.thirst > 80) choice = 'drink';
+                else if(this.needs.energy < 30) choice = 'sit';
+                
+                if(choice === 'drink') {
+                    let spot = game.getRandomSpot('bar') || game.getRandomSpot('table');
+                    if(spot) { this.goTo(spot, 'drinking'); return; }
+                }
+                if(choice === 'sit') {
+                    let spot = game.getRandomSpot('booth');
+                    if(spot) { this.goTo(spot, 'sitting'); return; }
+                }
+                let spot = game.getRandomSpot('dancefloor');
+                if(spot) this.goTo(spot, 'dancing');
+                else this.goTo(new THREE.Vector3(0,0,0), 'dancing');
+            }
+
+            goTo(pos, nextState) {
+                this.target.copy(pos); this.state = 'walking'; this.nextState = nextState;
+            }
+
+            update(delta, time) {
+                if(this.state === 'walking') {
+                    const dist = this.mesh.position.distanceTo(this.target);
+                    if(dist < 0.5) {
+                        this.state = this.nextState;
+                        if(this.state === 'drinking') {
+                            if(game.consumeStock()) game.addCash(this.isCelebrity ? 50 : 15);
+                            else this.pickActivity();
+                        }
+                        setTimeout(() => this.pickActivity(), 5000 + Math.random()*5000);
+                    } else {
+                        const dir = new THREE.Vector3().subVectors(this.target, this.mesh.position).normalize();
+                        this.mesh.position.add(dir.multiplyScalar(6*delta));
+                        this.mesh.lookAt(this.target);
+                        this.hip.position.y = 1.8 + Math.sin(time*15)*0.1;
+                    }
+                } else if(this.state === 'dancing') {
+                    this.hip.position.y = 1.8 + Math.abs(Math.sin(time*10))*0.2;
+                }
+            }
+        }
+
+        const visitors = []; const queue = []; const clock = new THREE.Clock();
+        for(let i=0; i<5; i++) { const p = new Human(); p.setPosition(-14-(i*2), 38); queue.push(p); }
+
+        const raycaster = new THREE.Raycaster(); const mouse = new THREE.Vector2();
+        const highlightBox = new THREE.BoxHelper(new THREE.Mesh(), 0x00ff00); scene.add(highlightBox); highlightBox.visible=false;
+        const plane = new THREE.Plane(new THREE.Vector3(0,1,0), 0);
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const delta = clock.getDelta(); const time = clock.getElapsedTime();
+            if(game.mode === 'play') controls.update();
+
+            if(time - game.lastSpawn > (game.spawnRate/1000)) {
+                if(visitors.length < game.maxVisitors && queue.length > 0) {
+                    const p = queue.shift(); p.pickActivity(); visitors.push(p);
+                    const np = new Human(Math.random()<0.1); np.setPosition(-30, 38); queue.push(np);
+                    game.lastSpawn = time;
+                }
+            }
+
+            queue.forEach((p, i) => {
+                const tx = -14-(i*2);
+                if(p.mesh.position.x < tx) { p.mesh.position.x += 3*delta; p.hip.position.y = 1.8 + Math.sin(time*15)*0.1; }
+            });
+            visitors.forEach(p => p.update(delta, time));
+
+            // LED Anim
+            const floors = game.getFurniture('dancefloor');
+            floors.forEach(f => {
+                if(f.leds) f.leds.forEach((mat, i) => {
+                    const val = Math.sin(i*0.5 + time*5);
+                    if(val>0.5) mat.emissive.setHex(0xff00ff); else mat.emissive.setHex(0x000000);
+                });
+            });
+
+            if(game.selectedObject) highlightBox.update();
+            updateFloaters(delta);
+            
+            if(time > 1) document.getElementById('loading').style.display = 'none';
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('pointerdown', onPointerDown);
+        window.addEventListener('pointermove', onPointerMove);
+        window.addEventListener('pointerup', onPointerUp);
+        window.addEventListener('keydown', (e) => { if(e.key === 'Escape') cancelTilePlacement(); });
+
+        function onPointerDown(e) {
+            if(e.target.closest('#ui-layer') || e.target.closest('.modal-overlay')) return;
+            mouse.x = (e.clientX/window.innerWidth)*2-1; mouse.y=-(e.clientY/window.innerHeight)*2+1;
+            raycaster.setFromCamera(mouse, camera);
+            
+            // Handle tile placement mode
+            if(tilePlacement.active) {
+                const target = new THREE.Vector3();
+                const result = raycaster.ray.intersectPlane(plane, target);
+                if(result) {
+                    const tileSize = 4;
+                    tilePlacement.startPos = { x: Math.round(target.x/tileSize)*tileSize, z: Math.round(target.z/tileSize)*tileSize };
+                    tilePlacement.currentPos = { ...tilePlacement.startPos };
+                    updateTilePreview();
+                    console.log('Tile drag started at:', tilePlacement.startPos);
+                }
+                return;
+            }
+            
+            if(game.mode !== 'edit') {
+                const hits = raycaster.intersectObjects(scene.children, true);
+                for(let h of hits) {
+                    let o = h.object;
+                    while(o.parent && o.parent!==scene) {
+                        if(o.userData.owner) { showThought(o.userData.owner); return; }
+                        o = o.parent;
+                    }
+                }
+                return;
+            }
+            const hits = raycaster.intersectObjects(scene.children, true);
+            for(let h of hits) {
+                let o = h.object;
+                while(o.parent && o.parent!==scene) {
+                    if(o.userData.isFurniture) {
+                        game.selectedObject = o; highlightBox.setFromObject(o); highlightBox.visible=true; controls.enabled=false; return;
+                    }
+                    o = o.parent;
+                }
+            }
+            game.selectedObject = null; highlightBox.visible=false;
+        }
+
+        function onPointerMove(e) {
+            mouse.x = (e.clientX/window.innerWidth)*2-1; mouse.y=-(e.clientY/window.innerHeight)*2+1;
+            raycaster.setFromCamera(mouse, camera);
+            
+            // Handle tile placement drag
+            if(tilePlacement.active && tilePlacement.startPos) {
+                const target = new THREE.Vector3();
+                const result = raycaster.ray.intersectPlane(plane, target);
+                if(result) {
+                    const tileSize = 4;
+                    tilePlacement.currentPos = { x: Math.round(target.x/tileSize)*tileSize, z: Math.round(target.z/tileSize)*tileSize };
+                    updateTilePreview();
+                }
+                return;
+            }
+            
+            if(game.mode==='edit' && game.selectedObject) {
+                const target = new THREE.Vector3();
+                const result = raycaster.ray.intersectPlane(plane, target);
+                if(result) game.selectedObject.position.set(Math.round(target.x/2)*2, 0, Math.round(target.z/2)*2);
+            }
+        }
+        
+        function onPointerUp() {
+            if(tilePlacement.active && tilePlacement.startPos) { confirmTilePlacement(); return; }
+            if(game.mode==='edit') controls.enabled=false;
+        }
+
+        async function showThought(h) {
+            if(h.isThinking) return; h.isThinking=true;
+            const b = createBubble("...", h.mesh.position);
+            const p = `Nightclub guest is ${h.state}. Hype ${game.hype}. Short funny thought (max 6 words):`;
+            const t = await callGemini(p);
+            b.el.innerText = t;
+            setTimeout(() => { b.remove(); h.isThinking=false; }, 3000);
+        }
+
+        const floaters = [];
+        function createFloatingText(t, p, c) {
+            const d = document.createElement('div'); d.innerText=t; 
+            d.style.cssText=`position:absolute; color:${c}; font-weight:bold; text-shadow:1px 1px 0 #000; pointer-events:none; font-family:'Fredoka One'; z-index:10`;
+            document.body.appendChild(d); floaters.push({el:d, pos:p.clone(), age:0});
+        }
+        function createBubble(t, p) {
+            const d = document.createElement('div'); d.className='thought-bubble show'; d.innerText=t;
+            document.body.appendChild(d); 
+            const o = {el:d, pos:p.clone().add(new THREE.Vector3(0,3,0))};
+            o.remove = () => { d.remove(); floaters.splice(floaters.indexOf(o), 1); };
+            floaters.push(o); return o;
+        }
+        function updateFloaters(dt) {
+            for(let i=floaters.length-1; i>=0; i--) {
+                const f = floaters[i];
+                if(f.age !== undefined) { f.age+=dt; f.pos.y+=dt; f.el.style.opacity = 1-f.age; if(f.age>1){ f.el.remove(); floaters.splice(i,1); continue; }}
+                const v = f.pos.clone().project(camera);
+                const x = (v.x*.5+.5)*window.innerWidth; const y = (-(v.y*.5)+.5)*window.innerHeight;
+                f.el.style.left=`${x}px`; f.el.style.top=`${y}px`;
+            }
+        }
+
+        window.addEventListener('resize', () => {
+            camera.left = -d * (window.innerWidth/window.innerHeight); camera.right = d * (window.innerWidth/window.innerHeight);
+            camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // ============ VISIT MODE SETUP ============
+        async function setupVisitMode() {
+            if (!isVisitMode) return;
+            
+            // Initialize Firebase
+            const firebaseConfig = {
+                apiKey: "AIzaSyCMSYVZ0JGzcSthwcXKqFjMkMsMCmJBzjg",
+                authDomain: "nightclub-city.firebaseapp.com",
+                databaseURL: "https://nightclub-city-default-rtdb.asia-southeast1.firebasedatabase.app",
+                projectId: "nightclub-city",
+                storageBucket: "nightclub-city.appspot.com",
+                messagingSenderId: "702074041372",
+                appId: "1:702074041372:web:7cdd77c3bc8f6c4d49e8ff"
+            };
+            
+            if (!firebase.apps.length) {
+                firebase.initializeApp(firebaseConfig);
+            }
+            
+            // Show visit mode banner
+            const banner = document.createElement('div');
+            banner.id = 'visit-banner';
+            banner.innerHTML = `
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <span style="font-size:24px;">👀</span>
+                    <span>Visiting <strong>${visitingFriendName}'s Club</strong></span>
+                    <span style="background:rgba(255,255,255,0.2);padding:4px 10px;border-radius:12px;font-size:11px;font-weight:700;">PREVIEW</span>
+                </div>
+                <button onclick="window.location.href='index.html'" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:white;padding:8px 16px;border-radius:8px;cursor:pointer;font-weight:600;display:flex;align-items:center;gap:6px;">
+                    🏠 Go Back to My Club
+                </button>
+            `;
+            banner.style.cssText = `
+                position:fixed;top:0;left:0;right:0;height:50px;
+                background:linear-gradient(90deg,#8b5cf6,#a855f7);
+                display:flex;align-items:center;justify-content:space-between;
+                padding:0 20px;z-index:9999;color:white;
+                font-family:'Nunito',sans-serif;
+                box-shadow:0 4px 20px rgba(139,92,246,0.4);
+            `;
+            document.body.appendChild(banner);
+            
+            // Adjust UI layer position
+            document.getElementById('ui-layer').style.top = '50px';
+            
+            // Hide bottom controls (EDIT, SHOP, RESTOCK, UPGRADE, PLAN)
+            const hudBottom = document.querySelector('.hud-bottom');
+            if (hudBottom) hudBottom.style.display = 'none';
+            
+            // Load friend's club data
+            try {
+                const snapshot = await firebase.database().ref(`saves/${visitFriendUid}`).once('value');
+                const friendData = snapshot.val();
+                
+                if (friendData) {
+                    // Update game state with friend's data
+                    game.cash = friendData.cash || 1500;
+                    game.hype = friendData.hype || 20;
+                    game.barStock = friendData.barStock || 100;
+                    game.maxVisitors = friendData.maxVisitors || 15;
+                    
+                    // Load friend's furniture
+                    if (friendData.furniture && Array.isArray(friendData.furniture)) {
+                        friendData.furniture.forEach(item => {
+                            if (item.type && furnitureTemplates[item.type]) {
+                                const mesh = furnitureTemplates[item.type]();
+                                mesh.position.set(item.x || 0, 0, item.z || 0);
+                                scene.add(mesh);
+                                game.furniture.push(mesh);
+                            }
+                        });
+                    }
+                    
+                    console.log('Loaded friend club data:', friendData);
+                    ui.notify(`Now viewing ${visitingFriendName}'s club!`, 'success');
+                }
+            } catch (e) {
+                console.error('Failed to load friend club:', e);
+                ui.notify('Failed to load club data', 'error');
+            }
+            
+            game.updateUI();
+        }
+        
+        // Run visit mode setup if needed, then start game
+        if (isVisitMode) {
+            setupVisitMode();
+        }
+        
+        game.updateUI(); animate();
+
+    </script>
+</body>
+</html>

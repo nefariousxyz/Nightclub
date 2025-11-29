@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Club District - Open World</title>
+    
+    <!-- Import map polyfill for Safari -->
+    <script async src="https://ga.jspm.io/npm:es-module-shims@1.8.0/dist/es-module-shims.js"></script>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.0.3/src/bold/style.css">
+    <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.0.3/src/fill/style.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap');
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Outfit', sans-serif; 
+            background: #000; 
+            overflow: hidden; 
+            user-select: none;
+            cursor: crosshair;
+        }
+
+        #world-container {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 1;
+        }
+
+        #ui-layer {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 50;
+        }
+
+        /* Chat Box - GTA Style */
+        #chat-box {
+            position: absolute;
+            top: 20px; left: 20px;
+            width: 380px; height: 250px;
+            background: linear-gradient(180deg, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0) 100%);
+            display: flex; flex-direction: column;
+            padding: 15px;
+            pointer-events: auto;
+            mask-image: linear-gradient(to bottom, black 70%, transparent 100%);
+        }
+
+        #chat-messages {
+            overflow-y: auto;
+            color: white;
+            font-size: 14px;
+            font-weight: 500;
+            text-shadow: 1px 1px 3px black;
+            scrollbar-width: none;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        #chat-messages::-webkit-scrollbar { display: none; }
+
+        .chat-msg {
+            background: rgba(0,0,0,0.4);
+            padding: 4px 10px;
+            border-radius: 4px;
+            width: fit-content;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn { 
+            from { opacity: 0; transform: translateX(-10px); } 
+            to { opacity: 1; transform: translateX(0); } 
+        }
+
+        #chat-input {
+            background: rgba(0,0,0,0.8);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            display: none;
+            border-radius: 4px;
+            outline: none;
+        }
+
+        /* Currency HUD - Top Right */
+        #currency-container {
+            position: absolute;
+            top: 20px; right: 20px;
+            display: flex; flex-direction: column;
+            gap: 8px; align-items: flex-end;
+            pointer-events: auto;
+        }
+
+        .currency-pill {
+            background: rgba(10, 10, 10, 0.9);
+            padding: 8px 18px;
+            border-radius: 30px;
+            color: white;
+            font-weight: 700;
+            display: flex; align-items: center; gap: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            border-left: 3px solid transparent;
+            backdrop-filter: blur(8px);
+        }
+        .currency-pill.diamonds { border-color: #a855f7; }
+        .currency-pill.cash { border-color: #4ade80; }
+        .currency-label { font-size: 10px; text-transform: uppercase; color: #888; }
+
+        /* Time Display */
+        #time-display {
+            position: absolute;
+            top: 20px; left: 50%;
+            transform: translateX(-50%);
+            background: rgba(10, 10, 10, 0.9);
+            padding: 10px 24px;
+            border-radius: 30px;
+            color: white;
+            font-weight: 700;
+            font-size: 18px;
+            display: flex; align-items: center; gap: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            -webkit-backdrop-filter: blur(8px);
+            backdrop-filter: blur(8px);
+        }
+        #weather-icon { font-size: 22px; }
+
+        /* HUD Cluster - Bottom Left */
+        #hud-cluster {
+            position: absolute;
+            bottom: 30px; left: 30px;
+            width: 180px; height: 180px;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        #minimap-container {
+            width: 140px; height: 140px;
+            border-radius: 50%;
+            overflow: hidden;
+            background: #1a1a1a;
+            position: relative;
+            border: 3px solid rgba(0,0,0,0.8);
+            box-shadow: 0 0 25px rgba(0,0,0,0.6);
+        }
+
+        #minimap-canvas { width: 100%; height: 100%; display: block; }
+
+        #minimap-arrow {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 0; height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-bottom: 14px solid #00ff88;
+            transform: translate(-50%, -50%);
+            z-index: 20;
+            filter: drop-shadow(0 2px 3px rgba(0,0,0,0.8));
+        }
+
+        .status-rings {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            transform: rotate(90deg);
+            pointer-events: none;
+        }
+
+        .ring-bg { fill: none; stroke: rgba(0,0,0,0.5); stroke-width: 7; stroke-linecap: round; }
+        .ring-fill { fill: none; stroke-width: 7; stroke-linecap: round; transition: stroke-dashoffset 0.15s linear; }
+        .health-color { stroke: #22c55e; filter: drop-shadow(0 0 3px rgba(34, 197, 94, 0.6)); }
+        .stamina-color { stroke: #f59e0b; filter: drop-shadow(0 0 3px rgba(245, 158, 11, 0.6)); }
+
+        /* Controls Info - Bottom Right */
+        #controls-info {
+            position: absolute;
+            bottom: 30px; right: 30px;
+            background: rgba(0,0,0,0.7);
+            padding: 15px 20px;
+            border-radius: 10px;
+            color: rgba(255,255,255,0.8);
+            font-size: 12px;
+            pointer-events: auto;
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .control-row {
+            display: flex; align-items: center; gap: 10px;
+            margin-bottom: 6px;
+        }
+        .control-row:last-child { margin-bottom: 0; }
+
+        .key-badge {
+            background: rgba(139, 92, 246, 0.3);
+            border: 1px solid rgba(139, 92, 246, 0.5);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: 700;
+            font-size: 11px;
+            color: #a855f7;
+        }
+
+        /* Back Button */
+        #back-btn {
+            position: absolute;
+            top: 20px; left: 20px;
+            background: linear-gradient(135deg, #8b5cf6, #a855f7);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 10px;
+            color: white;
+            font-weight: 700;
+            cursor: pointer;
+            pointer-events: auto;
+            display: flex; align-items: center; gap: 8px;
+            box-shadow: 0 4px 20px rgba(139, 92, 246, 0.4);
+            transition: all 0.2s;
+            z-index: 100;
+        }
+        #back-btn:hover { transform: translateY(-2px); }
+
+        /* Online Counter */
+        #online-badge {
+            position: absolute;
+            top: 20px; left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            padding: 8px 20px;
+            border-radius: 20px;
+            color: white;
+            font-weight: 600;
+            display: flex; align-items: center; gap: 8px;
+            backdrop-filter: blur(8px);
+        }
+
+        .online-dot {
+            width: 8px; height: 8px;
+            background: #22c55e;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.6); }
+            50% { opacity: 0.8; box-shadow: 0 0 0 6px rgba(34, 197, 94, 0); }
+        }
+
+        /* Crosshair */
+        #crosshair {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 4px; height: 4px;
+            background: rgba(255,255,255,0.6);
+            border-radius: 50%;
+            pointer-events: none;
+            box-shadow: 0 0 3px rgba(0,0,0,0.8);
+            display: none;
+        }
+
+        /* Interaction Prompt */
+        #interact-prompt {
+            position: absolute;
+            top: 65%; left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.85);
+            padding: 10px 20px;
+            border-radius: 6px;
+            color: white;
+            font-weight: 700;
+            font-size: 14px;
+            display: none;
+            border-left: 4px solid #a855f7;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Player List */
+        #player-list {
+            position: absolute;
+            top: 80px; right: 20px;
+            width: 200px;
+            background: rgba(0,0,0,0.7);
+            border-radius: 10px;
+            padding: 15px;
+            max-height: 250px;
+            overflow-y: auto;
+            pointer-events: auto;
+            backdrop-filter: blur(8px);
+        }
+
+        .player-list-title {
+            font-weight: 700;
+            color: white;
+            margin-bottom: 10px;
+            display: flex; align-items: center; gap: 8px;
+            font-size: 13px;
+        }
+
+        .player-item {
+            display: flex; align-items: center; gap: 8px;
+            padding: 6px 0;
+            color: rgba(255,255,255,0.8);
+            font-size: 13px;
+        }
+
+        .player-dot {
+            width: 6px; height: 6px;
+            border-radius: 50%;
+        }
+
+        /* Loading Overlay */
+        #loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: #050508;
+            z-index: 1000;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            gap: 20px;
+            transition: opacity 0.5s;
+        }
+
+        #loading-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        #loading-overlay h1 {
+            font-size: 42px;
+            font-weight: 900;
+            color: #a855f7;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+        }
+
+        #loading-status {
+            color: #888;
+            font-size: 14px;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); }
+        ::-webkit-scrollbar-thumb { background: rgba(139, 92, 246, 0.5); border-radius: 2px; }
+
+        /* Lobby Selection Screen */
+        #lobby-screen {
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(135deg, #0a0a15 0%, #1a1025 50%, #0a0a15 100%);
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+        }
+        #lobby-screen.hidden { display: none; }
+        
+        .lobby-title {
+            font-size: 48px;
+            font-weight: 900;
+            color: #a855f7;
+            text-transform: uppercase;
+            letter-spacing: 6px;
+            margin-bottom: 10px;
+            text-shadow: 0 0 30px rgba(168, 85, 247, 0.5);
+        }
+        .lobby-subtitle {
+            color: #888;
+            font-size: 16px;
+            margin-bottom: 40px;
+        }
+
+        .settings-row {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .settings-label {
+            color: #aaa;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .fps-toggle {
+            display: flex;
+            background: rgba(255,255,255,0.1);
+            border-radius: 25px;
+            overflow: hidden;
+        }
+        .fps-btn {
+            padding: 10px 24px;
+            background: transparent;
+            border: none;
+            color: #888;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .fps-btn.active {
+            background: linear-gradient(135deg, #a855f7, #7c3aed);
+            color: white;
+        }
+
+        .servers-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            max-width: 900px;
+            width: 100%;
+        }
+        .server-card {
+            background: rgba(255,255,255,0.05);
+            border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 24px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+        }
+        .server-card:hover {
+            border-color: #a855f7;
+            transform: translateY(-4px);
+            box-shadow: 0 10px 30px rgba(168, 85, 247, 0.2);
+        }
+        .server-card.selected {
+            border-color: #a855f7;
+            background: rgba(168, 85, 247, 0.15);
+        }
+        .server-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+        .server-name {
+            color: white;
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+        .server-desc {
+            color: #888;
+            font-size: 13px;
+            margin-bottom: 12px;
+        }
+        .server-players {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(0,0,0,0.3);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            color: #4ade80;
+        }
+        .server-players::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background: #4ade80;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .join-btn {
+            margin-top: 40px;
+            padding: 16px 60px;
+            background: linear-gradient(135deg, #a855f7, #7c3aed);
+            border: none;
+            border-radius: 30px;
+            color: white;
+            font-size: 18px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        .join-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 30px rgba(168, 85, 247, 0.4);
+        }
+        .join-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        @media (max-width: 768px) {
+            .servers-grid { grid-template-columns: repeat(2, 1fr); }
+            .lobby-title { font-size: 32px; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Lobby Selection Screen -->
+    <div id="lobby-screen">
+        <h1 class="lobby-title">Metro Life</h1>
+        <p class="lobby-subtitle">Choose your server and join the world</p>
+
+        <div class="settings-row">
+            <span class="settings-label">Performance:</span>
+            <div class="fps-toggle">
+                <button class="fps-btn active" data-fps="20">20 FPS (Battery Saver)</button>
+                <button class="fps-btn" data-fps="30">30 FPS</button>
+            </div>
+        </div>
+
+        <div class="servers-grid">
+            <div class="server-card" data-server="roleplay">
+                <div class="server-icon">🎭</div>
+                <div class="server-name">Roleplay</div>
+                <div class="server-desc">Immersive roleplay experience</div>
+                <div class="server-players"><span id="players-roleplay">0</span> players</div>
+            </div>
+            <div class="server-card" data-server="carmeet">
+                <div class="server-icon">🚗</div>
+                <div class="server-name">Car Meets</div>
+                <div class="server-desc">Show off your rides</div>
+                <div class="server-players"><span id="players-carmeet">0</span> players</div>
+            </div>
+            <div class="server-card" data-server="office">
+                <div class="server-icon">🏢</div>
+                <div class="server-name">Office District</div>
+                <div class="server-desc">Business & networking</div>
+                <div class="server-players"><span id="players-office">0</span> players</div>
+            </div>
+            <div class="server-card" data-server="cafe">
+                <div class="server-icon">☕</div>
+                <div class="server-name">Coffee Shop</div>
+                <div class="server-desc">Chill & chat with friends</div>
+                <div class="server-players"><span id="players-cafe">0</span> players</div>
+            </div>
+            <div class="server-card" data-server="nightclub">
+                <div class="server-icon">🎉</div>
+                <div class="server-name">Nightclub</div>
+                <div class="server-desc">Party all night long</div>
+                <div class="server-players"><span id="players-nightclub">0</span> players</div>
+            </div>
+            <div class="server-card" data-server="beach">
+                <div class="server-icon">🏖️</div>
+                <div class="server-name">Beach Resort</div>
+                <div class="server-desc">Relax by the ocean</div>
+                <div class="server-players"><span id="players-beach">0</span> players</div>
+            </div>
+        </div>
+
+        <button class="join-btn" id="join-btn" disabled>Select a Server</button>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="hidden">
+        <h1 id="loading-title">Loading World</h1>
+        <div id="loading-status">Initializing world...</div>
+    </div>
+
+    <!-- 3D World Container -->
+    <div id="world-container"></div>
+
+    <!-- Crosshair -->
+    <div id="crosshair"></div>
+
+    <!-- UI Layer -->
+    <div id="ui-layer">
+        <!-- Back Button -->
+        <button id="back-btn" onclick="goToClub()">
+            <i class="ph-bold ph-arrow-left"></i>
+            Back to Club
+        </button>
+
+        <!-- Online Badge -->
+        <div id="online-badge">
+            <div class="online-dot"></div>
+            <span id="online-count">0</span> online
+        </div>
+
+        <!-- Time Display -->
+        <div id="time-display">
+            <span id="world-time">12:00 PM</span>
+            <span id="weather-icon">☀️</span>
+        </div>
+
+        <!-- Currency HUD -->
+        <div id="currency-container">
+            <div class="currency-pill diamonds">
+                <span class="currency-label">Diamonds</span>
+                <span id="diamond-display">0</span>
+                <span style="color: #a855f7;">💎</span>
+            </div>
+            <div class="currency-pill cash">
+                <span class="currency-label">Cash</span>
+                <span id="cash-display">$0</span>
+                <span style="color: #4ade80;">$</span>
+            </div>
+        </div>
+
+        <!-- HUD Cluster with Minimap and Status -->
+        <div id="hud-cluster">
+            <svg class="status-rings" viewBox="0 0 100 100">
+                <!-- Health Ring (Left Arc) -->
+                <path class="ring-bg" d="M 50 93 A 43 43 0 0 1 7 50" />
+                <path id="health-ring" class="ring-fill health-color" d="M 50 93 A 43 43 0 0 1 7 50" stroke-dasharray="67.5" stroke-dashoffset="0" />
+                <!-- Stamina Ring (Right Arc) -->
+                <path class="ring-bg" d="M 93 50 A 43 43 0 0 1 50 93" />
+                <path id="stamina-ring" class="ring-fill stamina-color" d="M 93 50 A 43 43 0 0 1 50 93" stroke-dasharray="67.5" stroke-dashoffset="0" />
+            </svg>
+            <div id="minimap-container">
+                <canvas id="minimap-canvas" width="280" height="280"></canvas>
+                <div id="minimap-arrow"></div>
+            </div>
+        </div>
+
+        <!-- Chat Box -->
+        <div id="chat-box">
+            <div id="chat-messages"></div>
+            <input type="text" id="chat-input" placeholder="Press T to chat...">
+        </div>
+
+        <!-- Controls Info -->
+        <div id="controls-info">
+            <div class="control-row">
+                <span class="key-badge">WASD</span>
+                <span>Move</span>
+            </div>
+            <div class="control-row">
+                <span class="key-badge">SHIFT</span>
+                <span>Sprint</span>
+            </div>
+            <div class="control-row">
+                <span class="key-badge">SPACE</span>
+                <span>Jump</span>
+            </div>
+            <div class="control-row">
+                <span class="key-badge">MOUSE</span>
+                <span>Look around</span>
+            </div>
+            <div class="control-row">
+                <span class="key-badge">T</span>
+                <span>Chat</span>
+            </div>
+        </div>
+
+        <!-- Interaction Prompt -->
+        <div id="interact-prompt">Press [E] to interact</div>
+
+        <!-- Player List -->
+        <div id="player-list">
+            <div class="player-list-title">
+                <span style="color: #a855f7;">👥</span>
+                Nearby Players
+            </div>
+            <div id="player-list-items"></div>
+        </div>
+    </div>
+
+    <!-- UI Scripts -->
+    <script>
+        window.goToClub = function() {
+            if (window.worldScene) {
+                window.worldScene.cleanup();
+            }
+            window.location.href = 'index.html';
+        };
+
+        // Chat toggle
+        window.toggleChat = function(open) {
+            const input = document.getElementById('chat-input');
+            window.chatOpen = open;
+            if (open) {
+                input.style.display = 'block';
+                input.focus();
+            } else {
+                input.style.display = 'none';
+                input.blur();
+            }
+        };
+
+        // Add chat message
+        window.addChatMessage = function(name, msg, color = '#a855f7') {
+            const container = document.getElementById('chat-messages');
+            const div = document.createElement('div');
+            div.className = 'chat-msg';
+            div.innerHTML = `<span style="color:${color}; font-weight:bold">${name}:</span> ${msg}`;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+            
+            // Limit messages
+            while (container.children.length > 50) {
+                container.removeChild(container.firstChild);
+            }
+        };
+
+        // Update HUD
+        window.updateHUD = function(health, stamina, cash, diamonds) {
+            const healthRing = document.getElementById('health-ring');
+            const staminaRing = document.getElementById('stamina-ring');
+            
+            if (healthRing) {
+                const healthOffset = 67.5 * (1 - health / 100);
+                healthRing.style.strokeDashoffset = healthOffset;
+            }
+            if (staminaRing) {
+                const staminaOffset = 67.5 * (1 - stamina / 100);
+                staminaRing.style.strokeDashoffset = staminaOffset;
+            }
+            
+            document.getElementById('cash-display').textContent = '$' + (cash || 0).toLocaleString();
+            document.getElementById('diamond-display').textContent = (diamonds || 0).toLocaleString();
+        };
+
+        // Initial welcome message
+        window.addChatMessage('System', 'Welcome to Club District! Use WASD to move.', '#facc15');
+        window.addChatMessage('System', 'Sprint with SHIFT, Jump with SPACE', '#facc15');
+
+        // ===============================
+        // LOBBY SELECTION LOGIC
+        // ===============================
+        window.selectedServer = null;
+        window.selectedFPS = 20; // Default to battery saver
+        window.worldStarted = false;
+
+        // FPS Toggle
+        document.querySelectorAll('.fps-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.fps-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                window.selectedFPS = parseInt(btn.dataset.fps);
+            });
+        });
+
+        // Server Selection
+        document.querySelectorAll('.server-card').forEach(card => {
+            card.addEventListener('click', () => {
+                document.querySelectorAll('.server-card').forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                window.selectedServer = card.dataset.server;
+                
+                const joinBtn = document.getElementById('join-btn');
+                joinBtn.disabled = false;
+                joinBtn.textContent = 'Join ' + card.querySelector('.server-name').textContent;
+            });
+        });
+
+        // Join Button
+        document.getElementById('join-btn').addEventListener('click', () => {
+            if (!window.selectedServer) return;
+            
+            // Get server display name
+            const serverNames = {
+                roleplay: 'Roleplay City',
+                carmeet: 'Car Meet Zone',
+                office: 'Office District',
+                cafe: 'Coffee House',
+                nightclub: 'Metro Club',
+                beach: 'Beach Resort'
+            };
+            
+            // Hide lobby, show loading
+            document.getElementById('lobby-screen').classList.add('hidden');
+            document.getElementById('loading-overlay').classList.remove('hidden');
+            document.getElementById('loading-title').textContent = serverNames[window.selectedServer] || 'Loading';
+            document.getElementById('loading-status').textContent = 'Connecting to server...';
+            
+            // Store settings for world.js
+            window.gameSettings = {
+                server: window.selectedServer,
+                fps: window.selectedFPS
+            };
+            
+            window.worldStarted = true;
+            
+            // Start world (will be picked up by world.js)
+            if (window.startWorld) {
+                window.startWorld();
+            }
+        });
+
+    </script>
+
+    <!-- Lobby Firebase & World Scene -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getDatabase, ref, onValue } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+        
+        const firebaseConfig = {
+            apiKey: "AIzaSyB9Bx0t7LIrhWiAGULGjhNh1BI-S6qrFC8",
+            authDomain: "nightparty-city.firebaseapp.com",
+            databaseURL: "https://nightparty-city-default-rtdb.asia-southeast1.firebasedatabase.app/",
+            projectId: "nightparty-city",
+            storageBucket: "nightparty-city.firebasestorage.app",
+            messagingSenderId: "816223229032",
+            appId: "1:816223229032:web:63a3c47a2a8310109b57dd"
+        };
+        
+        const lobbyApp = initializeApp(firebaseConfig, 'lobby');
+        const lobbyDb = getDatabase(lobbyApp);
+        
+        // Fetch player counts for each server
+        const servers = ['roleplay', 'carmeet', 'office', 'cafe', 'nightclub', 'beach'];
+        servers.forEach(server => {
+            const playersRef = ref(lobbyDb, `servers/${server}/players`);
+            onValue(playersRef, (snapshot) => {
+                const count = snapshot.exists() ? Object.keys(snapshot.val()).length : 0;
+                const el = document.getElementById(`players-${server}`);
+                if (el) el.textContent = count;
+            });
+        });
+
+        // Import world scene
+        import './js/world.js';
+    </script>
+</body>
+</html>
