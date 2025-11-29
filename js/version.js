@@ -216,14 +216,43 @@
             if (countdown <= 0) {
                 clearInterval(timer);
                 if (CONFIG.enableAutoRefresh) {
-                    window.location.reload(true);
+                    // Save before auto-refresh
+                    (async () => {
+                        try {
+                            if (window.game && window.cloudSave && typeof firebase !== 'undefined' && firebase.apps?.length) {
+                                const saveData = window.game.getSaveData();
+                                await window.cloudSave.saveGame(saveData, true);
+                                const user = firebase.auth()?.currentUser;
+                                if (user) {
+                                    await firebase.database().ref(`saves/${user.uid}`).set(saveData);
+                                }
+                            }
+                        } catch(e) { console.warn('Save before refresh failed:', e); }
+                        window.location.reload(true);
+                    })();
                 }
             }
         }, 1000);
 
         // Button handlers
-        document.getElementById('update-now-btn').onclick = () => {
+        document.getElementById('update-now-btn').onclick = async () => {
             clearInterval(timer);
+            // Save game before reloading
+            try {
+                if (window.game && window.cloudSave && typeof firebase !== 'undefined' && firebase.apps?.length) {
+                    const saveData = window.game.getSaveData();
+                    console.log('💾 Saving before update...', saveData.cash, saveData.diamonds);
+                    await window.cloudSave.saveGame(saveData, true);
+                    // Also save to Realtime DB
+                    const user = firebase.auth()?.currentUser;
+                    if (user) {
+                        await firebase.database().ref(`saves/${user.uid}`).set(saveData);
+                    }
+                    console.log('💾 Save complete, reloading...');
+                }
+            } catch(e) {
+                console.warn('Save before update failed:', e);
+            }
             window.location.reload(true);
         };
 

@@ -1,11 +1,12 @@
 {
     "major": 1,
     "minor": 1,
-    "patch": 0,
-    "build": "20251129a",
-    "version": "v1.1.0",
+    "patch": 1,
+    "build": "20251129b",
+    "version": "v1.1.1",
     "releaseDate": "2025-11-29",
     "changelog": [
+        "Fixed: Game now saves before version update refresh",
         "Added offline connectivity checker with full-screen overlay",
         "Enhanced Logs tab with filtering, search, export, and real-time updates",
         "Redesigned Users tab with stats, filters, sorting, and detailed profiles",
