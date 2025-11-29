@@ -21,6 +21,31 @@ class AntiCheat {
         this.checksumSalt = 'NC_' + Date.now().toString(36);
         this.memoryTrapValues = {};
         this.heartbeatCount = 0;
+        
+        // Whitelist for legitimate operations (gift codes, admin actions, etc.)
+        this.legitimateOperation = false;
+        this.legitimateOperationExpiry = 0;
+    }
+    
+    // Allow legitimate operations to bypass anti-cheat temporarily
+    allowLegitimateOperation(durationMs = 5000) {
+        this.legitimateOperation = true;
+        this.legitimateOperationExpiry = Date.now() + durationMs;
+        // Update last values so the gain isn't flagged
+        if (window.game) {
+            this.lastCash = window.game.cash || 0;
+            this.lastDiamonds = window.game.diamonds || 0;
+        }
+        console.log('🛡️ Legitimate operation allowed for', durationMs, 'ms');
+    }
+    
+    // Check if legitimate operation is active
+    isLegitimateOperationActive() {
+        if (this.legitimateOperation && Date.now() < this.legitimateOperationExpiry) {
+            return true;
+        }
+        this.legitimateOperation = false;
+        return false;
     }
 
     async init() {
@@ -774,6 +799,19 @@ class AntiCheat {
 
     // Flag a violation
     flagViolation(type, details) {
+        // Skip if legitimate operation is active (gift codes, admin actions, etc.)
+        if (this.isLegitimateOperationActive()) {
+            console.log(`🛡️ Skipped violation (legitimate operation): ${type} - ${details}`);
+            return;
+        }
+        
+        // Skip debugger/frame rate issues - these are often false positives
+        const ignoredTypes = ['DEBUGGER_DETECTED', 'FRAME_RATE_ANOMALY'];
+        if (ignoredTypes.includes(type)) {
+            console.log(`🛡️ Skipped non-critical violation: ${type}`);
+            return;
+        }
+        
         this.violations++;
         console.warn(`🚨 Anti-cheat violation #${this.violations}: ${type} - ${details}`);
         

@@ -1193,54 +1193,173 @@
     </div>
 
     <!-- Settings Modal -->
-    <div id="settings-modal" class="modal-overlay hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+    <div id="settings-modal" class="modal-overlay hidden fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex items-center justify-center p-4" onclick="if(event.target===this) game.closeModals()">
+        <div class="glass-panel rounded-3xl w-full max-w-lg overflow-hidden font-display shadow-2xl border border-white/10" style="max-height: 90vh;">
+            <!-- Header -->
+            <div class="relative bg-gradient-to-r from-indigo-600/20 via-purple-600/20 to-pink-600/20 p-5 border-b border-white/10">
+                <div class="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent"></div>
+                <div class="relative flex items-center justify-between">
+                    <h2 class="text-2xl font-bold text-white flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
+                            <i class="ph-fill ph-gear-six text-xl text-white"></i>
+                        </div>
+                        Settings
+                    </h2>
+                    <button class="w-10 h-10 rounded-xl bg-white/10 hover:bg-red-500/50 flex items-center justify-center text-white transition-all hover:scale-105" onclick="game.closeModals()" title="Close">
+                        <i class="ph-bold ph-x text-xl"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Scrollable Content -->
+            <div class="p-5 space-y-5 overflow-y-auto" style="max-height: calc(90vh - 80px);">
+                
+                <!-- Audio & Display Section -->
+                <div class="space-y-2">
+                    <div class="text-xs font-bold text-slate-400 uppercase tracking-wider px-1 flex items-center gap-2">
+                        <i class="ph-fill ph-sliders text-indigo-400"></i> Audio & Display
+                    </div>
+                    <div class="bg-white/5 rounded-2xl p-1 space-y-1">
+                        <div class="flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-colors">
+                            <span class="text-white flex items-center gap-3 text-sm">
+                                <div class="w-8 h-8 rounded-lg bg-green-500/20 flex items-center justify-center">
+                                    <i class="ph-fill ph-monitor text-green-400"></i>
+                                </div>
+                                Graphics
+                            </span>
+                            <select id="graphics-quality" title="Graphics Quality" class="px-3 py-1.5 rounded-lg bg-black/40 text-white font-medium text-xs border border-white/10 cursor-pointer focus:outline-none focus:border-indigo-500" onchange="setGraphicsQuality(this.value)">
+                                <option value="low">🔋 Low</option>
+                                <option value="medium">⚖️ Medium</option>
+                                <option value="high" selected>✨ High</option>
+                            </select>
+                        </div>
+                        <div class="flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-colors">
+                            <span class="text-white flex items-center gap-3 text-sm">
+                                <div class="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                                    <i class="ph-fill ph-speaker-high text-blue-400"></i>
+                                </div>
+                                Sound FX
+                            </span>
+                            <button class="w-16 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-400 font-bold text-xs border border-emerald-500/30 hover:bg-emerald-500/30 transition-colors" id="sound-toggle" onclick="game.toggleSound()">ON</button>
+                        </div>
+                        <div class="flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-colors">
+                            <span class="text-white flex items-center gap-3 text-sm">
+                                <div class="w-8 h-8 rounded-lg bg-pink-500/20 flex items-center justify-center">
+                                    <i class="ph-fill ph-music-notes text-pink-400"></i>
+                                </div>
+                                Music
+                            </span>
+                            <button class="w-16 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-400 font-bold text-xs border border-emerald-500/30 hover:bg-emerald-500/30 transition-colors" id="music-toggle" onclick="game.toggleMusic()">ON</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Game Info Section -->
+                <div class="space-y-2">
+                    <div class="text-xs font-bold text-slate-400 uppercase tracking-wider px-1 flex items-center gap-2">
+                        <i class="ph-fill ph-game-controller text-purple-400"></i> Game Info
+                    </div>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button onclick="game.closeModals(); game.openModal('achievements'); refreshAchievements();" class="flex flex-col items-center gap-2 p-4 bg-white/5 rounded-2xl hover:bg-yellow-500/10 border border-transparent hover:border-yellow-500/30 transition-all group">
+                            <div class="w-10 h-10 rounded-xl bg-yellow-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                <i class="ph-fill ph-trophy text-yellow-400 text-xl"></i>
+                            </div>
+                            <span class="text-white text-xs font-medium">Achievements</span>
+                        </button>
+                        <button onclick="game.closeModals(); game.openModal('challenges'); refreshChallenges();" class="flex flex-col items-center gap-2 p-4 bg-white/5 rounded-2xl hover:bg-orange-500/10 border border-transparent hover:border-orange-500/30 transition-all group">
+                            <div class="w-10 h-10 rounded-xl bg-orange-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                <i class="ph-fill ph-list-checks text-orange-400 text-xl"></i>
+                            </div>
+                            <span class="text-white text-xs font-medium">Challenges</span>
+                        </button>
+                        <button onclick="game.closeModals(); game.openModal('stats'); refreshStats();" class="flex flex-col items-center gap-2 p-4 bg-white/5 rounded-2xl hover:bg-cyan-500/10 border border-transparent hover:border-cyan-500/30 transition-all group">
+                            <div class="w-10 h-10 rounded-xl bg-cyan-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                <i class="ph-fill ph-chart-bar text-cyan-400 text-xl"></i>
+                            </div>
+                            <span class="text-white text-xs font-medium">Statistics</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Redeem Code Section -->
+                <div class="space-y-2">
+                    <div class="text-xs font-bold text-slate-400 uppercase tracking-wider px-1 flex items-center gap-2">
+                        <i class="ph-fill ph-gift text-yellow-400"></i> Rewards
+                    </div>
+                    <button onclick="game.openRedeemModal()" class="w-full p-4 bg-gradient-to-r from-yellow-500/10 via-amber-500/10 to-orange-500/10 rounded-2xl border border-yellow-500/20 hover:border-yellow-500/40 transition-all group">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-yellow-500 to-amber-500 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                                <i class="ph-fill ph-gift text-white text-2xl"></i>
+                            </div>
+                            <div class="flex-1 text-left">
+                                <div class="text-white font-bold">Redeem Gift Code</div>
+                                <div class="text-yellow-400/70 text-xs">Enter a code to claim rewards!</div>
+                            </div>
+                            <i class="ph-bold ph-caret-right text-yellow-400 text-xl group-hover:translate-x-1 transition-transform"></i>
+                        </div>
+                    </button>
+                </div>
+                
+                <!-- Data Section -->
+                <div class="space-y-2">
+                    <div class="text-xs font-bold text-slate-400 uppercase tracking-wider px-1 flex items-center gap-2">
+                        <i class="ph-fill ph-database text-slate-400"></i> Data
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="game.manualSave()" class="flex items-center gap-3 p-3 bg-purple-500/10 rounded-xl border border-purple-500/20 hover:bg-purple-500/20 hover:border-purple-500/40 transition-all group">
+                            <div class="w-9 h-9 rounded-lg bg-purple-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                <i class="ph-fill ph-floppy-disk text-purple-400"></i>
+                            </div>
+                            <div class="text-left">
+                                <div class="text-white text-sm font-medium">Save Game</div>
+                                <div class="text-purple-400/60 text-[10px]">Save progress now</div>
+                            </div>
+                        </button>
+                        <button onclick="game.resetGame()" class="flex items-center gap-3 p-3 bg-red-500/10 rounded-xl border border-red-500/20 hover:bg-red-500/20 hover:border-red-500/40 transition-all group">
+                            <div class="w-9 h-9 rounded-lg bg-red-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                <i class="ph-fill ph-trash text-red-400"></i>
+                            </div>
+                            <div class="text-left">
+                                <div class="text-white text-sm font-medium">Reset</div>
+                                <div class="text-red-400/60 text-[10px]">Delete all data</div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Version Info -->
+                <div class="text-center pt-2 border-t border-white/5">
+                    <div class="text-[10px] text-slate-500">Nightclub Tycoon • Made with ❤️</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Redeem Code Modal -->
+    <div id="redeem-modal" class="modal-overlay hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
         <div class="glass-panel rounded-3xl w-full max-w-md overflow-hidden font-display">
             <div class="flex items-center justify-between p-5 border-b border-white/10">
                 <h2 class="text-2xl font-bold text-white flex items-center gap-3">
-                    <i class="ph-fill ph-gear text-gray-400"></i>
-                    SETTINGS
+                    <i class="ph-fill ph-gift text-yellow-400"></i>
+                    REDEEM CODE
                 </h2>
-                <button class="w-10 h-10 rounded-xl bg-white/10 hover:bg-red-500/50 flex items-center justify-center text-white transition-colors" onclick="game.closeModals()" title="Close">
+                <button class="w-10 h-10 rounded-xl bg-white/10 hover:bg-red-500/50 flex items-center justify-center text-white transition-colors" onclick="game.closeRedeemModal()" title="Close">
                     <i class="ph-bold ph-x text-xl"></i>
                 </button>
             </div>
-            <div class="p-5 space-y-3">
-                <div class="flex items-center justify-between p-3 bg-white/5 rounded-xl">
-                    <span class="text-white flex items-center gap-2"><i class="ph-fill ph-monitor text-green-400"></i> Graphics Quality</span>
-                    <select id="graphics-quality" title="Graphics Quality" class="px-3 py-2 rounded-lg bg-black/30 text-white font-bold text-sm border border-white/20 cursor-pointer" onchange="setGraphicsQuality(this.value)">
-                        <option value="low">🔋 Low (Best FPS)</option>
-                        <option value="medium">⚖️ Medium</option>
-                        <option value="high" selected>✨ High</option>
-                    </select>
+            <div class="p-5 space-y-4">
+                <div class="text-sm text-gray-400 text-center">Enter a gift code to claim your rewards!</div>
+                <div class="relative">
+                    <input type="text" id="redeem-code-input" placeholder="XXXX-XXXX-XXXX" 
+                        class="w-full bg-black/30 border-2 border-yellow-500/30 rounded-xl px-4 py-4 text-white text-center text-xl font-mono uppercase tracking-widest focus:outline-none focus:border-yellow-500 placeholder-gray-600"
+                        maxlength="20" autocomplete="off" spellcheck="false">
                 </div>
-                <div class="flex items-center justify-between p-3 bg-white/5 rounded-xl">
-                    <span class="text-white flex items-center gap-2"><i class="ph-fill ph-speaker-high text-blue-400"></i> Sound Effects</span>
-                    <button class="px-4 py-2 rounded-lg bg-green-500/30 text-green-400 font-bold text-sm hover:bg-green-500/50 transition-colors" id="sound-toggle" onclick="game.toggleSound()">ON</button>
-                </div>
-                <div class="flex items-center justify-between p-3 bg-white/5 rounded-xl">
-                    <span class="text-white flex items-center gap-2"><i class="ph-fill ph-music-notes text-pink-400"></i> Music</span>
-                    <button class="px-4 py-2 rounded-lg bg-green-500/30 text-green-400 font-bold text-sm hover:bg-green-500/50 transition-colors" id="music-toggle" onclick="game.toggleMusic()">ON</button>
-                </div>
-                <div class="flex items-center justify-between p-3 bg-white/5 rounded-xl">
-                    <span class="text-white flex items-center gap-2"><i class="ph-fill ph-trophy text-yellow-400"></i> Achievements</span>
-                    <button class="px-4 py-2 rounded-lg bg-white/10 text-white font-bold text-sm hover:bg-white/20 transition-colors" onclick="game.closeModals(); game.openModal('achievements'); refreshAchievements();">View</button>
-                </div>
-                <div class="flex items-center justify-between p-3 bg-white/5 rounded-xl">
-                    <span class="text-white flex items-center gap-2"><i class="ph-fill ph-list-checks text-orange-400"></i> Challenges</span>
-                    <button class="px-4 py-2 rounded-lg bg-white/10 text-white font-bold text-sm hover:bg-white/20 transition-colors" onclick="game.closeModals(); game.openModal('challenges'); refreshChallenges();">View</button>
-                </div>
-                <div class="flex items-center justify-between p-3 bg-white/5 rounded-xl">
-                    <span class="text-white flex items-center gap-2"><i class="ph-fill ph-chart-bar text-cyan-400"></i> Statistics</span>
-                    <button class="px-4 py-2 rounded-lg bg-white/10 text-white font-bold text-sm hover:bg-white/20 transition-colors" onclick="game.closeModals(); game.openModal('stats'); refreshStats();">View</button>
-                </div>
-                <div class="flex items-center justify-between p-3 bg-white/5 rounded-xl">
-                    <span class="text-white flex items-center gap-2"><i class="ph-fill ph-floppy-disk text-purple-400"></i> Save Game</span>
-                    <button class="px-4 py-2 rounded-lg bg-purple-500/30 text-purple-400 font-bold text-sm hover:bg-purple-500/50 transition-colors" onclick="game.manualSave()">Save</button>
-                </div>
-                <div class="flex items-center justify-between p-3 bg-red-500/10 rounded-xl">
-                    <span class="text-white flex items-center gap-2"><i class="ph-fill ph-trash text-red-400"></i> Reset Progress</span>
-                    <button class="px-4 py-2 rounded-lg bg-red-500/30 text-red-400 font-bold text-sm hover:bg-red-500/50 transition-colors" onclick="game.resetGame()">Reset</button>
-                </div>
+                <div id="redeem-status" class="text-center text-sm hidden"></div>
+                <button onclick="game.redeemCode()" id="redeem-btn" 
+                    class="w-full py-4 rounded-xl bg-gradient-to-r from-yellow-600 to-amber-600 hover:from-yellow-500 hover:to-amber-500 text-white font-bold text-lg flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i class="ph-fill ph-gift"></i> Redeem
+                </button>
+                <div class="text-center text-xs text-gray-500">Gift codes are case-insensitive</div>
             </div>
         </div>
     </div>
@@ -3959,5 +4078,7 @@
             console.log('📟 Error reporter initialized');
         })();
     </script>
+    <!-- Offline Checker -->
+    <script src="js/offline-checker.js"></script>
 </body>
 </html>

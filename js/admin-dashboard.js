@@ -103,6 +103,8 @@ class AdminDashboard {
     navigate(page) {
         this.currentPage = page;
         this.loadPage(page);
+        // Log page navigation
+        this.log('info', `Navigated to ${page} page`, { page });
     }
 
     loadPage(page) {
@@ -114,6 +116,10 @@ class AdminDashboard {
             if(this.chatRef) this.chatRef.off();
             if(this.onlineRef) this.onlineRef.off();
         }
+        
+        if(page !== 'logs') {
+            if(this.logsRealtimeRef) this.logsRealtimeRef.off();
+        }
 
         switch(page) {
             case 'dashboard': this.renderDashboard(content); break;
@@ -124,6 +130,8 @@ class AdminDashboard {
             case 'economy': this.renderEconomy(content); break;
             case 'anticheat': this.renderAnticheat(content); break;
             case 'shop': this.renderShopManager(content); break;
+            case 'logs': this.renderLogs(content); break;
+            case 'coupons': this.renderCoupons(content); break;
             default: content.innerHTML = '<div class="text-center text-slate-500 mt-20">Module loading...</div>';
         }
     }
@@ -820,6 +828,7 @@ class AdminDashboard {
         
         this.closeModModal();
         this.toast(`🚫 ${name} banned`, 'error');
+        this.log('action', `Banned user: ${name}`, { uid, name, reason: 'Manual ban' });
     }
 
     async unbanUser(uid) {
@@ -829,6 +838,7 @@ class AdminDashboard {
         await this.db.ref(`moderation/warnings/${uid}`).remove();
         this.closeModModal();
         this.toast(`✅ ${userData?.name || 'User'} unbanned`, 'success');
+        this.log('action', `Unbanned user: ${userData?.name || uid}`, { uid });
     }
 
     async sendAdminMessage() {
@@ -854,6 +864,7 @@ class AdminDashboard {
         if(confirm('Delete ALL chat messages? This cannot be undone.')) {
             await this.db.ref('globalChat').remove();
             this.toast('Chat cleared', 'success');
+            this.log('action', 'Cleared all chat messages', { action: 'clear_chat' });
         }
     }
 
@@ -972,71 +983,244 @@ class AdminDashboard {
         });
     }
 
-    // USERS
+    // ============================
+    // ENHANCED USERS MODULE
+    // ============================
+    
     async renderUsers(el) {
+        this.usersFilter = 'all';
+        this.usersSort = 'newest';
+        this.usersSearch = '';
+        this.selectedUsers = new Set();
+        this.onlineUserIds = new Set();
+        
         el.innerHTML = `
-            <div class="mb-6"><input type="text" id="user-search" oninput="admin.filterUsers()" class="w-64 bg-slate-800 border border-slate-700 rounded-lg py-2 px-4 text-sm text-white" placeholder="Search..."></div>
-            <div class="glass rounded-2xl border border-white/5 overflow-hidden"><table class="w-full text-left"><tbody id="users-table-body"></tbody></table></div>
-        `;
-        await this.loadUsers();
-    }
-
-    async loadUsers() {
-        const snap = await this.firestore.collection('users').get();
-        this.users = [];
-        snap.forEach(doc => this.users.push({uid:doc.id, ...doc.data()}));
-        this.filterUsers();
-    }
-
-    filterUsers() {
-        const search = document.getElementById('user-search')?.value?.toLowerCase() || '';
-        const filtered = this.users.filter(u => (u.displayName||'').toLowerCase().includes(search));
-        const tbody = document.getElementById('users-table-body');
-        if(!tbody) return;
-        tbody.innerHTML = filtered.map(u => `
-            <tr class="border-b border-white/5 hover:bg-white/5">
-                <td class="p-4 text-white">${this.esc(u.displayName)}</td>
-                <td class="p-4 text-slate-400">${u.email}</td>
-                <td class="p-4 text-right"><button onclick="admin.editUser('${u.uid}')" class="text-indigo-400">Edit</button></td>
-            </tr>`).join('');
-    }
-
-    async editUser(uid) {
-        // Simplified modal for brevity/reliability in this write
-        const overlay = document.getElementById('modal-overlay');
-        const user = this.users.find(u => u.uid === uid) || {};
-        overlay.innerHTML = `
-            <div class="glass p-6 rounded-xl max-w-lg w-full relative">
-                <button onclick="admin.closeModal()" class="absolute top-4 right-4 text-white">X</button>
-                <h3 class="text-xl font-bold text-white mb-4">Edit ${this.esc(user.displayName)}</h3>
-                <div class="space-y-4">
-                    <input type="text" id="e-name" value="${this.esc(user.displayName)}" class="w-full bg-slate-800 p-2 rounded text-white">
-                    <input type="number" id="e-coins" value="${user.coins||0}" class="w-full bg-slate-800 p-2 rounded text-white" placeholder="Coins">
-                    <button onclick="admin.saveUser('${uid}')" class="w-full bg-indigo-600 py-2 rounded text-white">Save</button>
-                    <button onclick="admin.resetUserProgress('${uid}')" class="w-full bg-red-500/20 text-red-400 py-2 rounded">Reset Progress</button>
+            <div class="space-y-6">
+                <!-- Stats -->
+                <div class="grid grid-cols-2 md:grid-cols-6 gap-4">
+                    <div class="glass p-4 rounded-xl border border-white/5 group hover:border-indigo-500/30 transition-all">
+                        <div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center text-indigo-400"><i class="ph-fill ph-users text-xl"></i></div><div><div class="text-2xl font-bold text-white" id="users-total">--</div><div class="text-xs text-slate-400">Total</div></div></div>
+                    </div>
+                    <div class="glass p-4 rounded-xl border border-white/5 group hover:border-emerald-500/30 transition-all">
+                        <div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center text-emerald-400"><i class="ph-fill ph-broadcast text-xl"></i></div><div><div class="text-2xl font-bold text-white" id="users-online">--</div><div class="text-xs text-slate-400">Online</div></div></div>
+                    </div>
+                    <div class="glass p-4 rounded-xl border border-white/5 group hover:border-cyan-500/30 transition-all">
+                        <div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-cyan-500/20 flex items-center justify-center text-cyan-400"><i class="ph-fill ph-user-plus text-xl"></i></div><div><div class="text-2xl font-bold text-white" id="users-new">--</div><div class="text-xs text-slate-400">New Today</div></div></div>
+                    </div>
+                    <div class="glass p-4 rounded-xl border border-white/5 group hover:border-yellow-500/30 transition-all">
+                        <div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-yellow-500/20 flex items-center justify-center text-yellow-400"><i class="ph-fill ph-coins text-xl"></i></div><div><div class="text-2xl font-bold text-white" id="users-total-coins">--</div><div class="text-xs text-slate-400">Total Coins</div></div></div>
+                    </div>
+                    <div class="glass p-4 rounded-xl border border-white/5 group hover:border-purple-500/30 transition-all">
+                        <div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center text-purple-400"><i class="ph-fill ph-crown text-xl"></i></div><div><div class="text-2xl font-bold text-white" id="users-premium">--</div><div class="text-xs text-slate-400">Premium</div></div></div>
+                    </div>
+                    <div class="glass p-4 rounded-xl border border-white/5 group hover:border-red-500/30 transition-all">
+                        <div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-red-500/20 flex items-center justify-center text-red-400"><i class="ph-fill ph-prohibit text-xl"></i></div><div><div class="text-2xl font-bold text-white" id="users-banned">--</div><div class="text-xs text-slate-400">Banned</div></div></div>
+                    </div>
                 </div>
-            </div>`;
-        overlay.classList.remove('hidden');
+                <!-- Controls -->
+                <div class="glass rounded-2xl border border-white/5 p-4">
+                    <div class="flex flex-wrap gap-4 items-center justify-between">
+                        <div class="flex-1 min-w-[250px] relative">
+                            <i class="ph-bold ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"></i>
+                            <input type="text" id="users-search" placeholder="Search by name, email, UID..." class="w-full bg-slate-800/50 border border-white/10 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500/50">
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="admin.setUsersFilter('all')" class="users-filter-btn active px-3 py-2 rounded-xl text-xs" data-filter="all">All</button>
+                            <button onclick="admin.setUsersFilter('online')" class="users-filter-btn px-3 py-2 rounded-xl text-xs" data-filter="online"><span class="w-2 h-2 bg-emerald-400 rounded-full inline-block mr-1"></span>Online</button>
+                            <button onclick="admin.setUsersFilter('premium')" class="users-filter-btn px-3 py-2 rounded-xl text-xs" data-filter="premium">👑 Premium</button>
+                            <button onclick="admin.setUsersFilter('banned')" class="users-filter-btn px-3 py-2 rounded-xl text-xs" data-filter="banned">🚫 Banned</button>
+                        </div>
+                        <select id="users-sort" onchange="admin.setUsersSort(this.value)" class="bg-slate-800/50 border border-white/10 rounded-xl px-3 py-2 text-xs text-white">
+                            <option value="newest">Newest</option><option value="name">Name A-Z</option><option value="coins-high">Most Coins</option><option value="level-high">Highest Level</option>
+                        </select>
+                        <button onclick="admin.refreshUsers()" class="p-2.5 rounded-xl bg-slate-800/50 border border-white/10 text-slate-400 hover:text-indigo-400"><i class="ph-bold ph-arrows-clockwise"></i></button>
+                    </div>
+                </div>
+                <!-- Users Grid -->
+                <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                    <div class="lg:col-span-3 glass rounded-2xl border border-white/5 overflow-hidden">
+                        <div class="p-4 border-b border-white/5 flex justify-between bg-slate-900/50">
+                            <h3 class="font-bold text-white flex items-center gap-2"><i class="ph-fill ph-users text-indigo-400"></i> Users</h3>
+                            <span class="text-xs text-slate-500" id="users-showing">Loading...</span>
+                        </div>
+                        <div id="users-container" class="max-h-[600px] overflow-y-auto"><div class="p-8 text-center text-slate-500"><div class="spinner mx-auto mb-3"></div>Loading...</div></div>
+                    </div>
+                    <div class="space-y-6">
+                        <div class="glass rounded-2xl border border-white/5 p-4">
+                            <h4 class="font-bold text-white mb-4 text-sm flex items-center gap-2"><i class="ph-fill ph-trophy text-yellow-400"></i> Top Players</h4>
+                            <div id="top-players" class="space-y-2"><div class="text-center text-slate-500 text-xs py-4">Loading...</div></div>
+                        </div>
+                        <div class="glass rounded-2xl border border-white/5 p-4">
+                            <h4 class="font-bold text-white mb-4 text-sm flex items-center gap-2"><i class="ph-fill ph-clock text-cyan-400"></i> Recent Signups</h4>
+                            <div id="recent-signups" class="space-y-2"><div class="text-center text-slate-500 text-xs py-4">Loading...</div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <style>.users-filter-btn{background:rgba(51,65,85,0.5);color:#94a3b8;border:1px solid transparent}.users-filter-btn:hover,.users-filter-btn.active{background:rgba(99,102,241,0.2);color:#a5b4fc;border-color:rgba(99,102,241,0.5)}</style>
+        `;
+        document.getElementById('users-search').addEventListener('input', (e) => { this.usersSearch = e.target.value.toLowerCase(); this.renderUsersData(); });
+        await this.loadUsersData();
     }
-
+    
+    async loadUsersData() {
+        try {
+            const [usersSnap, savesSnap, bannedSnap, onlineSnap] = await Promise.all([
+                this.firestore.collection('users').get(),
+                this.db.ref('saves').once('value'),
+                this.db.ref('moderation/banned').once('value'),
+                this.db.ref('onlineUsers').once('value')
+            ]);
+            const saves = savesSnap.val() || {};
+            const banned = bannedSnap.val() || {};
+            this.onlineUserIds = new Set(onlineSnap.exists() ? Object.keys(onlineSnap.val()) : []);
+            this.users = [];
+            usersSnap.forEach(doc => {
+                const u = doc.data(), s = saves[doc.id] || {};
+                this.users.push({ uid: doc.id, ...u, coins: u.coins || s.cash || 0, diamonds: u.diamonds || s.diamonds || 0, level: s.level || u.level || 1, hype: s.hype || 0, isBanned: !!banned[doc.id], isPremium: u.premium || u.isPremium || false, createdAt: u.createdAt?.toDate?.() || u.createdAt || new Date(0) });
+            });
+            this.renderUsersData();
+            this.loadUsersStats();
+            this.loadTopPlayers();
+            this.loadRecentSignups();
+        } catch(e) { document.getElementById('users-container').innerHTML = `<div class="p-8 text-center text-red-400">Failed: ${e.message}</div>`; }
+    }
+    
+    setUsersFilter(f) { this.usersFilter = f; document.querySelectorAll('.users-filter-btn').forEach(b => b.classList.toggle('active', b.dataset.filter === f)); this.renderUsersData(); }
+    setUsersSort(s) { this.usersSort = s; this.renderUsersData(); }
+    
+    renderUsersData() {
+        const c = document.getElementById('users-container'); if (!c) return;
+        let list = [...this.users];
+        if (this.usersFilter === 'online') list = list.filter(u => this.onlineUserIds.has(u.uid));
+        else if (this.usersFilter === 'premium') list = list.filter(u => u.isPremium);
+        else if (this.usersFilter === 'banned') list = list.filter(u => u.isBanned);
+        if (this.usersSearch) list = list.filter(u => (u.displayName||'').toLowerCase().includes(this.usersSearch) || (u.email||'').toLowerCase().includes(this.usersSearch));
+        if (this.usersSort === 'newest') list.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+        else if (this.usersSort === 'name') list.sort((a,b) => (a.displayName||'').localeCompare(b.displayName||''));
+        else if (this.usersSort === 'coins-high') list.sort((a,b) => (b.coins||0) - (a.coins||0));
+        else if (this.usersSort === 'level-high') list.sort((a,b) => (b.level||1) - (a.level||1));
+        document.getElementById('users-showing').textContent = `${list.length} users`;
+        if (!list.length) { c.innerHTML = '<div class="p-12 text-center text-slate-500">No users found</div>'; return; }
+        c.innerHTML = list.slice(0, 100).map(u => this.renderUserCard(u)).join('');
+    }
+    
+    renderUserCard(u) {
+        const on = this.onlineUserIds.has(u.uid), i = (u.displayName||'U')[0].toUpperCase();
+        const colors = ['from-purple-500 to-indigo-500','from-pink-500 to-rose-500','from-cyan-500 to-blue-500','from-emerald-500 to-green-500','from-amber-500 to-orange-500'];
+        return `<div class="flex items-center gap-4 p-4 border-b border-white/5 hover:bg-indigo-500/5 transition-all">
+            <div class="relative"><div class="w-12 h-12 rounded-xl bg-gradient-to-br ${colors[u.uid.charCodeAt(0)%5]} flex items-center justify-center text-white font-bold shadow-lg">${i}</div>${on?'<div class="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-slate-900"></div>':''}${u.isPremium?'<div class="absolute -top-1 -right-1 text-yellow-400">👑</div>':''}</div>
+            <div class="flex-1 min-w-0"><div class="flex items-center gap-2"><span class="text-white font-medium truncate">${this.esc(u.displayName||'Unknown')}</span>${u.isBanned?'<span class="text-[9px] bg-red-500/20 text-red-400 px-1.5 rounded">BANNED</span>':''}</div><div class="text-xs text-slate-500 truncate">${this.esc(u.email||u.uid.substring(0,16)+'...')}</div></div>
+            <div class="text-center px-3"><div class="text-sm font-medium text-indigo-400">Lv.${u.level||1}</div></div>
+            <div class="text-center px-3"><div class="text-sm font-medium text-yellow-400">${this.formatNumber(u.coins||0)}</div><div class="text-[10px] text-slate-500">coins</div></div>
+            <div class="flex gap-1">
+                <button onclick="admin.viewUserProfile('${u.uid}')" class="p-2 rounded-lg hover:bg-indigo-500/20 text-slate-400 hover:text-indigo-400" title="View"><i class="ph-bold ph-eye"></i></button>
+                <button onclick="admin.editUser('${u.uid}')" class="p-2 rounded-lg hover:bg-emerald-500/20 text-slate-400 hover:text-emerald-400" title="Edit"><i class="ph-bold ph-pencil"></i></button>
+                <button onclick="admin.giftUserCoins('${u.uid}')" class="p-2 rounded-lg hover:bg-yellow-500/20 text-slate-400 hover:text-yellow-400" title="Gift"><i class="ph-bold ph-gift"></i></button>
+                ${u.isBanned?`<button onclick="admin.unbanUserById('${u.uid}')" class="p-2 rounded-lg hover:bg-emerald-500/20 text-slate-400 hover:text-emerald-400" title="Unban"><i class="ph-bold ph-check"></i></button>`:`<button onclick="admin.banUserById('${u.uid}')" class="p-2 rounded-lg hover:bg-red-500/20 text-slate-400 hover:text-red-400" title="Ban"><i class="ph-bold ph-prohibit"></i></button>`}
+            </div>
+        </div>`;
+    }
+    
+    loadUsersStats() {
+        const t = this.users.length, o = this.onlineUserIds.size, td = new Date().setHours(0,0,0,0);
+        const n = this.users.filter(u => u.createdAt && new Date(u.createdAt) >= td).length;
+        const tc = this.users.reduce((s,u) => s + (u.coins||0), 0);
+        document.getElementById('users-total').textContent = t;
+        document.getElementById('users-online').textContent = o;
+        document.getElementById('users-new').textContent = n;
+        document.getElementById('users-total-coins').textContent = this.formatNumber(tc);
+        document.getElementById('users-premium').textContent = this.users.filter(u => u.isPremium).length;
+        document.getElementById('users-banned').textContent = this.users.filter(u => u.isBanned).length;
+    }
+    
+    loadTopPlayers() {
+        const el = document.getElementById('top-players'); if (!el) return;
+        const top = [...this.users].sort((a,b) => (b.coins||0) - (a.coins||0)).slice(0,5);
+        if (!top.length) { el.innerHTML = '<div class="text-center text-slate-500 text-xs py-4">No players</div>'; return; }
+        const m = ['🥇','🥈','🥉','4️⃣','5️⃣'];
+        el.innerHTML = top.map((u,i) => `<div class="flex items-center gap-2 p-2 rounded-lg bg-slate-800/30 hover:bg-slate-800/50 cursor-pointer" onclick="admin.viewUserProfile('${u.uid}')"><span>${m[i]}</span><div class="w-7 h-7 rounded-full bg-gradient-to-br from-yellow-500 to-orange-500 flex items-center justify-center text-white text-xs font-bold">${(u.displayName||'U')[0].toUpperCase()}</div><div class="flex-1 min-w-0"><div class="text-xs text-white truncate">${this.esc(u.displayName||'Unknown')}</div><div class="text-[10px] text-yellow-400">${this.formatNumber(u.coins||0)}</div></div></div>`).join('');
+    }
+    
+    loadRecentSignups() {
+        const el = document.getElementById('recent-signups'); if (!el) return;
+        const r = [...this.users].sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0,5);
+        if (!r.length) { el.innerHTML = '<div class="text-center text-slate-500 text-xs py-4">No signups</div>'; return; }
+        el.innerHTML = r.map(u => `<div class="flex items-center gap-2 p-2 rounded-lg bg-slate-800/30 hover:bg-slate-800/50 cursor-pointer" onclick="admin.viewUserProfile('${u.uid}')"><div class="w-7 h-7 rounded-full bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center text-white text-xs font-bold">${(u.displayName||'U')[0].toUpperCase()}</div><div class="flex-1 min-w-0"><div class="text-xs text-white truncate">${this.esc(u.displayName||'Unknown')}</div><div class="text-[10px] text-slate-500">${this.getTimeAgo(new Date(u.createdAt))}</div></div></div>`).join('');
+    }
+    
+    async refreshUsers() { this.toast('Refreshing...', 'info'); await this.loadUsersData(); this.toast('Users refreshed', 'success'); }
+    
+    async viewUserProfile(uid) {
+        const u = this.users.find(x => x.uid === uid); if (!u) return;
+        let s = {}; try { const snap = await this.db.ref(`saves/${uid}`).once('value'); s = snap.val() || {}; } catch(e){}
+        const on = this.onlineUserIds.has(uid), i = (u.displayName||'U')[0].toUpperCase();
+        const o = document.getElementById('modal-overlay');
+        o.innerHTML = `<div class="glass p-0 rounded-2xl max-w-xl w-full mx-4 overflow-hidden" style="animation:scaleIn .2s">
+            <div class="h-20 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 relative"><div class="absolute -bottom-8 left-6"><div class="w-16 h-16 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center text-white text-xl font-bold shadow-xl border-4 border-slate-900">${i}</div>${on?'<div class="absolute bottom-0 right-0 w-4 h-4 bg-emerald-500 rounded-full border-2 border-slate-900"></div>':''}</div><button onclick="admin.closeModal()" class="absolute top-3 right-3 w-8 h-8 rounded-lg bg-black/30 hover:bg-black/50 text-white flex items-center justify-center"><i class="ph-bold ph-x"></i></button></div>
+            <div class="pt-12 px-6 pb-6">
+                <div class="flex items-start justify-between mb-4"><div><div class="flex items-center gap-2"><span class="text-lg font-bold text-white">${this.esc(u.displayName||'Unknown')}</span>${u.isPremium?'<span class="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded-full">👑 Premium</span>':''}${u.isBanned?'<span class="text-xs bg-red-500/20 text-red-400 px-2 py-0.5 rounded-full">🚫 Banned</span>':''}</div><div class="text-sm text-slate-400">${this.esc(u.email||'No email')}</div><div class="text-xs text-slate-500 font-mono mt-1">${uid}</div></div><div class="px-3 py-1.5 rounded-full text-xs ${on?'bg-emerald-500/20 text-emerald-400':'bg-slate-700 text-slate-400'}">${on?'🟢 Online':'⚫ Offline'}</div></div>
+                <div class="grid grid-cols-4 gap-3 mb-4">${[['yellow',u.coins||0,'Coins'],['cyan',u.diamonds||0,'Diamonds'],['indigo',u.level||1,'Level'],['pink',s.hype||0,'Hype']].map(([c,v,l])=>`<div class="bg-slate-800/50 rounded-xl p-3 text-center"><div class="text-lg font-bold text-${c}-400">${this.formatNumber(v)}</div><div class="text-xs text-slate-500">${l}</div></div>`).join('')}</div>
+                <div class="bg-slate-800/30 rounded-xl p-4 mb-4"><h4 class="text-sm text-white mb-2 font-medium">Game Progress</h4><div class="grid grid-cols-2 gap-2 text-sm"><div class="flex justify-between"><span class="text-slate-400">Furniture</span><span class="text-white">${s.furniture?.length||0}</span></div><div class="flex justify-between"><span class="text-slate-400">Max Visitors</span><span class="text-white">${s.maxVisitors||15}</span></div><div class="flex justify-between"><span class="text-slate-400">Bar Stock</span><span class="text-white">${s.barStock||0}</span></div><div class="flex justify-between"><span class="text-slate-400">Club Name</span><span class="text-white">${this.esc(s.clubName||'My Club')}</span></div></div></div>
+                <div class="grid grid-cols-2 gap-2"><button onclick="admin.editUser('${uid}')" class="p-3 rounded-xl bg-indigo-500/20 text-indigo-400 text-sm flex items-center justify-center gap-2"><i class="ph-fill ph-pencil"></i> Edit</button><button onclick="admin.giftUserCoins('${uid}')" class="p-3 rounded-xl bg-yellow-500/20 text-yellow-400 text-sm flex items-center justify-center gap-2"><i class="ph-fill ph-gift"></i> Gift Coins</button><button onclick="admin.resetUserProgress('${uid}')" class="p-3 rounded-xl bg-orange-500/20 text-orange-400 text-sm flex items-center justify-center gap-2"><i class="ph-fill ph-arrow-counter-clockwise"></i> Reset</button>${u.isBanned?`<button onclick="admin.unbanUserById('${uid}')" class="p-3 rounded-xl bg-emerald-500/20 text-emerald-400 text-sm flex items-center justify-center gap-2"><i class="ph-fill ph-check"></i> Unban</button>`:`<button onclick="admin.banUserById('${uid}')" class="p-3 rounded-xl bg-red-500/20 text-red-400 text-sm flex items-center justify-center gap-2"><i class="ph-fill ph-prohibit"></i> Ban</button>`}</div>
+            </div></div>`;
+        o.classList.remove('hidden'); o.classList.add('flex'); setTimeout(() => o.classList.add('opacity-100'), 10);
+    }
+    
+    async editUser(uid) {
+        const u = this.users.find(x => x.uid === uid) || {};
+        const o = document.getElementById('modal-overlay');
+        o.innerHTML = `<div class="glass p-6 rounded-2xl max-w-lg w-full mx-4" style="animation:scaleIn .2s"><button onclick="admin.closeModal()" class="absolute top-4 right-4 w-8 h-8 rounded-lg bg-slate-700 text-white flex items-center justify-center"><i class="ph-bold ph-x"></i></button><h3 class="text-xl font-bold text-white mb-6"><i class="ph-fill ph-user-gear text-indigo-400 mr-2"></i>Edit User</h3><div class="space-y-4"><div><label class="text-xs text-slate-400 uppercase mb-2 block">Name</label><input type="text" id="e-name" value="${this.esc(u.displayName||'')}" class="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500"></div><div class="grid grid-cols-2 gap-4"><div><label class="text-xs text-slate-400 uppercase mb-2 block">Coins</label><input type="number" id="e-coins" value="${u.coins||0}" class="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-3 text-white"></div><div><label class="text-xs text-slate-400 uppercase mb-2 block">Diamonds</label><input type="number" id="e-diamonds" value="${u.diamonds||0}" class="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-3 text-white"></div></div><div class="grid grid-cols-2 gap-4"><div><label class="text-xs text-slate-400 uppercase mb-2 block">Level</label><input type="number" id="e-level" value="${u.level||1}" class="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-3 text-white"></div><div class="flex items-center pt-6"><label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="e-premium" ${u.isPremium?'checked':''}><span class="text-yellow-400">👑 Premium</span></label></div></div><button onclick="admin.saveUser('${uid}')" class="w-full bg-indigo-600 hover:bg-indigo-500 py-3 rounded-xl text-white font-medium"><i class="ph-fill ph-floppy-disk mr-2"></i>Save</button></div></div>`;
+        o.classList.remove('hidden'); o.classList.add('flex');
+    }
+    
     async saveUser(uid) {
-        await this.firestore.collection('users').doc(uid).update({
-            displayName: document.getElementById('e-name').value,
-            coins: parseInt(document.getElementById('e-coins').value)
-        });
-        this.closeModal();
-        this.loadUsers();
+        try {
+            const upd = { displayName: document.getElementById('e-name').value, coins: parseInt(document.getElementById('e-coins').value)||0, diamonds: parseInt(document.getElementById('e-diamonds').value)||0, level: parseInt(document.getElementById('e-level').value)||1, isPremium: document.getElementById('e-premium').checked };
+            await this.firestore.collection('users').doc(uid).update(upd);
+            await this.db.ref(`saves/${uid}`).update({ cash: upd.coins, diamonds: upd.diamonds, level: upd.level });
+            this.closeModal(); this.toast('User saved', 'success'); this.log('action', `Updated user: ${upd.displayName}`, { uid }); await this.loadUsersData();
+        } catch(e) { this.toast('Failed: ' + e.message, 'error'); }
     }
-
+    
+    async giftUserCoins(uid) {
+        const u = this.users.find(x => x.uid === uid);
+        const amt = prompt(`Gift coins to ${u?.displayName||'user'}:`, '1000'); if (!amt) return;
+        const c = parseInt(amt); if (isNaN(c) || c <= 0) { this.toast('Invalid amount', 'error'); return; }
+        try {
+            await this.firestore.collection('users').doc(uid).update({ coins: firebase.firestore.FieldValue.increment(c) });
+            await this.db.ref(`saves/${uid}/cash`).transaction(x => (x||0) + c);
+            this.toast(`Gifted ${this.formatNumber(c)} coins`, 'success'); this.log('action', `Gifted ${c} coins to ${u?.displayName}`, { uid }); await this.loadUsersData();
+        } catch(e) { this.toast('Failed: ' + e.message, 'error'); }
+    }
+    
+    async banUserById(uid) {
+        const u = this.users.find(x => x.uid === uid); if (!confirm(`Ban ${u?.displayName}?`)) return;
+        try {
+            await this.db.ref(`moderation/banned/${uid}`).set({ name: u?.displayName||'Unknown', email: u?.email||'', bannedAt: firebase.database.ServerValue.TIMESTAMP, bannedBy: this.user?.email });
+            this.closeModal(); this.toast(`${u?.displayName} banned`, 'success'); this.log('action', `Banned: ${u?.displayName}`, { uid }); await this.loadUsersData();
+        } catch(e) { this.toast('Failed: ' + e.message, 'error'); }
+    }
+    
+    async unbanUserById(uid) {
+        const u = this.users.find(x => x.uid === uid);
+        try {
+            await this.db.ref(`moderation/banned/${uid}`).remove();
+            this.closeModal(); this.toast(`${u?.displayName||'User'} unbanned`, 'success'); this.log('action', `Unbanned: ${u?.displayName}`, { uid }); await this.loadUsersData();
+        } catch(e) { this.toast('Failed: ' + e.message, 'error'); }
+    }
+    
     async resetUserProgress(uid) {
-        if(confirm('Reset?')) {
-            await this.firestore.collection('saves').doc(uid).delete();
-            this.closeModal();
-        }
+        if (!confirm('Reset all progress for this user?')) return;
+        try {
+            await this.db.ref(`saves/${uid}`).remove();
+            this.closeModal(); this.toast('Progress reset', 'success'); this.log('action', `Reset progress for user`, { uid });
+        } catch(e) { this.toast('Failed: ' + e.message, 'error'); }
     }
-
+    
     closeModal() {
-        document.getElementById('modal-overlay').classList.add('hidden');
+        const o = document.getElementById('modal-overlay');
+        o.classList.add('hidden'); o.classList.remove('flex', 'opacity-100');
     }
 
     // CLUBS
@@ -1234,6 +1418,7 @@ class AdminDashboard {
             });
             
             this.toast('📢 Broadcast sent successfully!', 'success');
+            this.log('action', `Broadcast sent: ${title || message.substring(0, 50)}`, { type: broadcastType, title, duration });
             
             // Clear inputs
             document.getElementById('broadcast-title').value = '';
@@ -2081,6 +2266,1161 @@ class AdminDashboard {
             timestamp: firebase.database.ServerValue.TIMESTAMP
         });
         this.loadEconomyTransactions();
+    }
+    
+    // ============================
+    // ADVANCED LOGS MODULE
+    // ============================
+    
+    async log(type, message, metadata = {}) {
+        try {
+            await this.db.ref('adminLogs').push({
+                type,
+                message,
+                admin: this.user?.email || 'System',
+                metadata,
+                timestamp: firebase.database.ServerValue.TIMESTAMP,
+                userAgent: navigator.userAgent,
+                sessionId: this.sessionId || 'unknown'
+            });
+        } catch(e) {
+            console.error('Failed to log:', e);
+        }
+    }
+    
+    async renderLogs(el) {
+        this.logsFilter = 'all';
+        this.logsSearch = '';
+        this.logsTimeRange = '24h';
+        this.logsData = [];
+        this.logsListeners = [];
+        
+        el.innerHTML = `
+            <div class="space-y-6">
+                <!-- Logs Header with Stats -->
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                    <div class="glass p-4 rounded-xl border border-white/5 relative overflow-hidden group hover:border-indigo-500/30 transition-all">
+                        <div class="absolute top-0 right-0 w-16 h-16 bg-indigo-500/10 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform"></div>
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center text-indigo-400">
+                                <i class="ph-fill ph-list-bullets text-xl"></i>
+                            </div>
+                            <div>
+                                <div class="text-2xl font-bold text-white" id="logs-total">--</div>
+                                <div class="text-xs text-slate-400">Total Logs</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="glass p-4 rounded-xl border border-white/5 relative overflow-hidden group hover:border-emerald-500/30 transition-all">
+                        <div class="absolute top-0 right-0 w-16 h-16 bg-emerald-500/10 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform"></div>
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center text-emerald-400">
+                                <i class="ph-fill ph-check-circle text-xl"></i>
+                            </div>
+                            <div>
+                                <div class="text-2xl font-bold text-white" id="logs-info">--</div>
+                                <div class="text-xs text-slate-400">Info</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="glass p-4 rounded-xl border border-white/5 relative overflow-hidden group hover:border-amber-500/30 transition-all">
+                        <div class="absolute top-0 right-0 w-16 h-16 bg-amber-500/10 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform"></div>
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-400">
+                                <i class="ph-fill ph-warning text-xl"></i>
+                            </div>
+                            <div>
+                                <div class="text-2xl font-bold text-white" id="logs-warning">--</div>
+                                <div class="text-xs text-slate-400">Warnings</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="glass p-4 rounded-xl border border-white/5 relative overflow-hidden group hover:border-red-500/30 transition-all">
+                        <div class="absolute top-0 right-0 w-16 h-16 bg-red-500/10 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform"></div>
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-red-500/20 flex items-center justify-center text-red-400">
+                                <i class="ph-fill ph-x-circle text-xl"></i>
+                            </div>
+                            <div>
+                                <div class="text-2xl font-bold text-white" id="logs-error">--</div>
+                                <div class="text-xs text-slate-400">Errors</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="glass p-4 rounded-xl border border-white/5 relative overflow-hidden group hover:border-purple-500/30 transition-all">
+                        <div class="absolute top-0 right-0 w-16 h-16 bg-purple-500/10 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform"></div>
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center text-purple-400">
+                                <i class="ph-fill ph-user-circle text-xl"></i>
+                            </div>
+                            <div>
+                                <div class="text-2xl font-bold text-white" id="logs-admins">--</div>
+                                <div class="text-xs text-slate-400">Active Admins</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Logs Controls -->
+                <div class="glass rounded-2xl border border-white/5 p-4">
+                    <div class="flex flex-wrap gap-4 items-center justify-between">
+                        <!-- Search -->
+                        <div class="flex-1 min-w-[250px]">
+                            <div class="relative">
+                                <i class="ph-bold ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"></i>
+                                <input type="text" id="logs-search" placeholder="Search logs by message, admin, type..." 
+                                    class="w-full bg-slate-800/50 border border-white/10 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 transition-all">
+                            </div>
+                        </div>
+                        
+                        <!-- Filter Buttons -->
+                        <div class="flex gap-2 flex-wrap">
+                            <button onclick="admin.setLogsFilter('all')" class="logs-filter-btn active px-4 py-2 rounded-xl text-sm font-medium transition-all" data-filter="all">
+                                <i class="ph-fill ph-stack mr-1"></i> All
+                            </button>
+                            <button onclick="admin.setLogsFilter('info')" class="logs-filter-btn px-4 py-2 rounded-xl text-sm font-medium transition-all" data-filter="info">
+                                <i class="ph-fill ph-info mr-1"></i> Info
+                            </button>
+                            <button onclick="admin.setLogsFilter('warning')" class="logs-filter-btn px-4 py-2 rounded-xl text-sm font-medium transition-all" data-filter="warning">
+                                <i class="ph-fill ph-warning mr-1"></i> Warning
+                            </button>
+                            <button onclick="admin.setLogsFilter('error')" class="logs-filter-btn px-4 py-2 rounded-xl text-sm font-medium transition-all" data-filter="error">
+                                <i class="ph-fill ph-x-circle mr-1"></i> Error
+                            </button>
+                            <button onclick="admin.setLogsFilter('action')" class="logs-filter-btn px-4 py-2 rounded-xl text-sm font-medium transition-all" data-filter="action">
+                                <i class="ph-fill ph-lightning mr-1"></i> Actions
+                            </button>
+                            <button onclick="admin.setLogsFilter('security')" class="logs-filter-btn px-4 py-2 rounded-xl text-sm font-medium transition-all" data-filter="security">
+                                <i class="ph-fill ph-shield-check mr-1"></i> Security
+                            </button>
+                        </div>
+                        
+                        <!-- Time Range -->
+                        <div class="flex gap-2">
+                            <select id="logs-time-range" onchange="admin.setLogsTimeRange(this.value)" 
+                                class="bg-slate-800/50 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500/50">
+                                <option value="1h">Last Hour</option>
+                                <option value="24h" selected>Last 24 Hours</option>
+                                <option value="7d">Last 7 Days</option>
+                                <option value="30d">Last 30 Days</option>
+                                <option value="all">All Time</option>
+                            </select>
+                            
+                            <!-- Actions -->
+                            <button onclick="admin.refreshLogs()" class="p-2.5 rounded-xl bg-slate-800/50 border border-white/10 text-slate-400 hover:text-indigo-400 hover:border-indigo-500/30 transition-all" title="Refresh">
+                                <i class="ph-bold ph-arrows-clockwise"></i>
+                            </button>
+                            <button onclick="admin.exportLogs()" class="p-2.5 rounded-xl bg-slate-800/50 border border-white/10 text-slate-400 hover:text-emerald-400 hover:border-emerald-500/30 transition-all" title="Export CSV">
+                                <i class="ph-bold ph-download-simple"></i>
+                            </button>
+                            <button onclick="admin.clearAllLogs()" class="p-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 transition-all" title="Clear All Logs">
+                                <i class="ph-bold ph-trash"></i>
+                            </button>
+                            <button onclick="admin.generateTestLogs()" class="p-2.5 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 hover:bg-purple-500/20 transition-all" title="Generate Test Logs">
+                                <i class="ph-bold ph-magic-wand"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Main Logs Content -->
+                <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                    <!-- Logs List (Main Area) -->
+                    <div class="lg:col-span-3 glass rounded-2xl border border-white/5 overflow-hidden">
+                        <div class="p-4 border-b border-white/5 flex items-center justify-between bg-slate-900/50">
+                            <div class="flex items-center gap-3">
+                                <h3 class="font-bold text-white flex items-center gap-2">
+                                    <i class="ph-fill ph-scroll text-indigo-400"></i> Activity Logs
+                                </h3>
+                                <span class="text-xs bg-indigo-500/20 text-indigo-400 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                    <span class="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-pulse"></span> Live
+                                </span>
+                            </div>
+                            <div class="text-xs text-slate-500" id="logs-showing">Showing 0 logs</div>
+                        </div>
+                        <div id="logs-container" class="divide-y divide-white/5 max-h-[600px] overflow-y-auto">
+                            <div class="p-8 text-center text-slate-500">
+                                <div class="spinner mx-auto mb-3"></div>
+                                Loading logs...
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Sidebar -->
+                    <div class="space-y-6">
+                        <!-- Recent Admin Activity -->
+                        <div class="glass rounded-2xl border border-white/5 p-4">
+                            <h4 class="font-bold text-white mb-4 flex items-center gap-2 text-sm">
+                                <i class="ph-fill ph-users-three text-purple-400"></i> Admin Activity
+                            </h4>
+                            <div id="logs-admin-activity" class="space-y-3">
+                                <div class="text-center text-slate-500 text-xs py-4">Loading...</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Log Types Breakdown -->
+                        <div class="glass rounded-2xl border border-white/5 p-4">
+                            <h4 class="font-bold text-white mb-4 flex items-center gap-2 text-sm">
+                                <i class="ph-fill ph-chart-pie text-cyan-400"></i> Log Breakdown
+                            </h4>
+                            <div id="logs-breakdown" class="space-y-3">
+                                <div class="text-center text-slate-500 text-xs py-4">Loading...</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Economy Transactions -->
+                        <div class="glass rounded-2xl border border-white/5 p-4">
+                            <h4 class="font-bold text-white mb-4 flex items-center gap-2 text-sm">
+                                <i class="ph-fill ph-coins text-yellow-400"></i> Economy Log
+                            </h4>
+                            <div id="logs-economy" class="space-y-2 max-h-[200px] overflow-y-auto">
+                                <div class="text-center text-slate-500 text-xs py-4">Loading...</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Quick Stats -->
+                        <div class="glass rounded-2xl border border-white/5 p-4">
+                            <h4 class="font-bold text-white mb-4 flex items-center gap-2 text-sm">
+                                <i class="ph-fill ph-clock-countdown text-emerald-400"></i> Peak Times
+                            </h4>
+                            <div id="logs-peak-times" class="space-y-2">
+                                <div class="text-center text-slate-500 text-xs py-4">Analyzing...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <style>
+                .logs-filter-btn {
+                    background: rgba(51, 65, 85, 0.5);
+                    color: #94a3b8;
+                    border: 1px solid transparent;
+                }
+                .logs-filter-btn:hover {
+                    background: rgba(99, 102, 241, 0.1);
+                    color: #a5b4fc;
+                    border-color: rgba(99, 102, 241, 0.3);
+                }
+                .logs-filter-btn.active {
+                    background: rgba(99, 102, 241, 0.2);
+                    color: #a5b4fc;
+                    border-color: rgba(99, 102, 241, 0.5);
+                }
+                .log-entry {
+                    transition: all 0.2s ease;
+                }
+                .log-entry:hover {
+                    background: rgba(99, 102, 241, 0.05);
+                }
+                .log-entry.expanded .log-details {
+                    display: block;
+                }
+                .log-details {
+                    display: none;
+                }
+            </style>
+        `;
+        
+        // Add search listener
+        document.getElementById('logs-search').addEventListener('input', (e) => {
+            this.logsSearch = e.target.value.toLowerCase();
+            this.renderLogsData();
+        });
+        
+        // Load logs data
+        this.loadLogs().then(() => {
+            this.loadLogsStats();
+            this.loadAdminActivity();
+            this.loadPeakTimes();
+        });
+        this.loadEconomyLogs();
+        this.setupLogsRealtime();
+    }
+    
+    setupLogsRealtime() {
+        // Listen for new admin logs in real-time
+        if (this.logsRealtimeRef) this.logsRealtimeRef.off();
+        this.logsRealtimeRef = this.db.ref('adminLogs').orderByChild('timestamp').startAt(Date.now());
+        this.logsRealtimeRef.on('child_added', (snap) => {
+            const log = snap.val();
+            if (log && log.timestamp) {
+                this.logsData.unshift({ id: snap.key, source: 'admin', ...log });
+                this.renderLogsData();
+                this.loadLogsStats();
+            }
+        });
+    }
+    
+    loadPeakTimes() {
+        const el = document.getElementById('logs-peak-times');
+        if (!el) return;
+        
+        // Analyze logs by hour
+        const hourCounts = {};
+        this.logsData.forEach(log => {
+            if (log.timestamp) {
+                const hour = new Date(log.timestamp).getHours();
+                hourCounts[hour] = (hourCounts[hour] || 0) + 1;
+            }
+        });
+        
+        // Get top 5 hours
+        const sorted = Object.entries(hourCounts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 5);
+        
+        if (sorted.length === 0) {
+            el.innerHTML = '<div class="text-center text-slate-500 text-xs py-4">Not enough data</div>';
+            return;
+        }
+        
+        const maxCount = sorted[0][1] || 1;
+        
+        el.innerHTML = sorted.map(([hour, count]) => {
+            const pct = Math.round((count / maxCount) * 100);
+            const hourLabel = `${hour.toString().padStart(2, '0')}:00`;
+            return `
+                <div class="flex items-center gap-3">
+                    <span class="text-xs text-slate-400 w-12">${hourLabel}</span>
+                    <div class="flex-1 h-2 bg-slate-800 rounded-full overflow-hidden">
+                        <div class="h-full bg-emerald-500 rounded-full" style="width: ${pct}%"></div>
+                    </div>
+                    <span class="text-xs text-white font-medium w-8 text-right">${count}</span>
+                </div>
+            `;
+        }).join('');
+    }
+    
+    setLogsFilter(filter) {
+        this.logsFilter = filter;
+        document.querySelectorAll('.logs-filter-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.filter === filter);
+        });
+        this.renderLogsData();
+    }
+    
+    setLogsTimeRange(range) {
+        this.logsTimeRange = range;
+        this.loadLogs();
+    }
+    
+    getTimeRangeMs() {
+        const now = Date.now();
+        switch(this.logsTimeRange) {
+            case '1h': return now - (60 * 60 * 1000);
+            case '24h': return now - (24 * 60 * 60 * 1000);
+            case '7d': return now - (7 * 24 * 60 * 60 * 1000);
+            case '30d': return now - (30 * 24 * 60 * 60 * 1000);
+            default: return 0;
+        }
+    }
+    
+    async loadLogs() {
+        const container = document.getElementById('logs-container');
+        if (!container) return;
+        
+        container.innerHTML = `<div class="p-8 text-center text-slate-500"><div class="spinner mx-auto mb-3"></div>Loading logs...</div>`;
+        
+        try {
+            const allLogs = [];
+            const minTime = this.getTimeRangeMs();
+            
+            // Load admin logs
+            const adminLogsSnap = await this.db.ref('adminLogs').orderByChild('timestamp').limitToLast(500).once('value');
+            if (adminLogsSnap.exists()) {
+                adminLogsSnap.forEach(child => {
+                    const log = child.val();
+                    if (log.timestamp >= minTime || this.logsTimeRange === 'all') {
+                        allLogs.push({ id: child.key, source: 'admin', ...log });
+                    }
+                });
+            }
+            
+            // Load economy transactions
+            const ecoSnap = await this.db.ref('economy/transactions').orderByChild('timestamp').limitToLast(200).once('value');
+            if (ecoSnap.exists()) {
+                ecoSnap.forEach(child => {
+                    const log = child.val();
+                    if (log.timestamp >= minTime || this.logsTimeRange === 'all') {
+                        allLogs.push({
+                            id: child.key,
+                            source: 'economy',
+                            type: 'action',
+                            message: `[Economy] ${log.description}`,
+                            admin: log.admin,
+                            timestamp: log.timestamp,
+                            metadata: { transactionType: log.type }
+                        });
+                    }
+                });
+            }
+            
+            // Load anticheat violations as security logs
+            const acSnap = await this.db.ref('anticheat/violations').orderByChild('timestamp').limitToLast(100).once('value');
+            if (acSnap.exists()) {
+                acSnap.forEach(child => {
+                    const log = child.val();
+                    if (log.timestamp >= minTime || this.logsTimeRange === 'all') {
+                        allLogs.push({
+                            id: child.key,
+                            source: 'anticheat',
+                            type: 'security',
+                            message: `[Security] ${log.type}: ${log.details || 'Violation detected'}`,
+                            admin: log.userName || 'Unknown User',
+                            timestamp: log.timestamp,
+                            metadata: { violationType: log.type, severity: log.severity }
+                        });
+                    }
+                });
+            }
+            
+            // Load moderation actions
+            const modSnap = await this.db.ref('moderationLogs').orderByChild('timestamp').limitToLast(100).once('value');
+            if (modSnap.exists()) {
+                modSnap.forEach(child => {
+                    const log = child.val();
+                    if (log.timestamp >= minTime || this.logsTimeRange === 'all') {
+                        allLogs.push({
+                            id: child.key,
+                            source: 'moderation',
+                            type: log.type || 'warning',
+                            message: `[Moderation] ${log.action}: ${log.target || ''}`,
+                            admin: log.admin,
+                            timestamp: log.timestamp,
+                            metadata: log
+                        });
+                    }
+                });
+            }
+            
+            // Sort by timestamp descending
+            allLogs.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+            this.logsData = allLogs;
+            this.renderLogsData();
+            
+        } catch(e) {
+            console.error('Failed to load logs:', e);
+            container.innerHTML = `<div class="p-8 text-center text-red-400"><i class="ph-bold ph-warning mr-2"></i>Failed to load logs: ${e.message}</div>`;
+        }
+    }
+    
+    renderLogsData() {
+        const container = document.getElementById('logs-container');
+        if (!container) return;
+        
+        let filtered = this.logsData;
+        
+        // Apply type filter
+        if (this.logsFilter !== 'all') {
+            filtered = filtered.filter(log => log.type === this.logsFilter);
+        }
+        
+        // Apply search filter
+        if (this.logsSearch) {
+            filtered = filtered.filter(log => 
+                (log.message || '').toLowerCase().includes(this.logsSearch) ||
+                (log.admin || '').toLowerCase().includes(this.logsSearch) ||
+                (log.type || '').toLowerCase().includes(this.logsSearch) ||
+                (log.source || '').toLowerCase().includes(this.logsSearch)
+            );
+        }
+        
+        // Update showing count
+        const showingEl = document.getElementById('logs-showing');
+        if (showingEl) showingEl.textContent = `Showing ${filtered.length} of ${this.logsData.length} logs`;
+        
+        if (filtered.length === 0) {
+            container.innerHTML = `
+                <div class="p-12 text-center">
+                    <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-slate-800/50 flex items-center justify-center">
+                        <i class="ph-fill ph-file-search text-3xl text-slate-600"></i>
+                    </div>
+                    <div class="text-slate-400 font-medium">No logs found</div>
+                    <div class="text-slate-500 text-sm mt-1">Try adjusting your filters or time range</div>
+                </div>
+            `;
+            return;
+        }
+        
+        container.innerHTML = filtered.slice(0, 200).map((log, idx) => this.renderLogEntry(log, idx)).join('');
+    }
+    
+    renderLogEntry(log, idx) {
+        const typeConfig = {
+            info: { icon: 'ph-info', color: 'emerald', bg: 'bg-emerald-500/10', text: 'text-emerald-400', border: 'border-emerald-500/20' },
+            warning: { icon: 'ph-warning', color: 'amber', bg: 'bg-amber-500/10', text: 'text-amber-400', border: 'border-amber-500/20' },
+            error: { icon: 'ph-x-circle', color: 'red', bg: 'bg-red-500/10', text: 'text-red-400', border: 'border-red-500/20' },
+            action: { icon: 'ph-lightning', color: 'indigo', bg: 'bg-indigo-500/10', text: 'text-indigo-400', border: 'border-indigo-500/20' },
+            security: { icon: 'ph-shield-warning', color: 'rose', bg: 'bg-rose-500/10', text: 'text-rose-400', border: 'border-rose-500/20' }
+        };
+        
+        const config = typeConfig[log.type] || typeConfig.info;
+        const time = log.timestamp ? new Date(log.timestamp) : new Date();
+        const timeAgo = this.getTimeAgo(time);
+        const formattedTime = time.toLocaleString();
+        
+        const sourceLabels = {
+            admin: { label: 'Admin', color: 'bg-purple-500/20 text-purple-400' },
+            economy: { label: 'Economy', color: 'bg-yellow-500/20 text-yellow-400' },
+            anticheat: { label: 'Security', color: 'bg-red-500/20 text-red-400' },
+            moderation: { label: 'Moderation', color: 'bg-orange-500/20 text-orange-400' }
+        };
+        const source = sourceLabels[log.source] || { label: 'System', color: 'bg-slate-500/20 text-slate-400' };
+        
+        return `
+            <div class="log-entry p-4 cursor-pointer" onclick="admin.toggleLogDetails('log-${idx}')">
+                <div class="flex items-start gap-4">
+                    <!-- Type Icon -->
+                    <div class="w-10 h-10 rounded-xl ${config.bg} ${config.border} border flex items-center justify-center shrink-0">
+                        <i class="ph-fill ${config.icon} ${config.text} text-lg"></i>
+                    </div>
+                    
+                    <!-- Content -->
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-start justify-between gap-4 mb-1">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="text-xs font-medium px-2 py-0.5 rounded-full ${source.color}">${source.label}</span>
+                                <span class="text-xs font-medium px-2 py-0.5 rounded-full ${config.bg} ${config.text} capitalize">${log.type || 'info'}</span>
+                            </div>
+                            <div class="text-xs text-slate-500 shrink-0" title="${formattedTime}">${timeAgo}</div>
+                        </div>
+                        <div class="text-sm text-white font-medium mb-1 break-words">${this.esc(log.message || 'No message')}</div>
+                        <div class="flex items-center gap-3 text-xs text-slate-500">
+                            <span class="flex items-center gap-1">
+                                <i class="ph-bold ph-user"></i>
+                                ${this.esc(log.admin || 'System')}
+                            </span>
+                            ${log.metadata?.transactionType ? `<span class="flex items-center gap-1"><i class="ph-bold ph-tag"></i>${log.metadata.transactionType}</span>` : ''}
+                        </div>
+                        
+                        <!-- Expandable Details -->
+                        <div class="log-details mt-3 pt-3 border-t border-white/5" id="log-${idx}">
+                            <div class="grid grid-cols-2 gap-3 text-xs">
+                                <div class="bg-slate-800/50 rounded-lg p-2">
+                                    <div class="text-slate-500 mb-1">Timestamp</div>
+                                    <div class="text-white font-mono">${formattedTime}</div>
+                                </div>
+                                <div class="bg-slate-800/50 rounded-lg p-2">
+                                    <div class="text-slate-500 mb-1">Source</div>
+                                    <div class="text-white">${log.source || 'Unknown'}</div>
+                                </div>
+                                ${log.metadata ? `
+                                <div class="col-span-2 bg-slate-800/50 rounded-lg p-2">
+                                    <div class="text-slate-500 mb-1">Metadata</div>
+                                    <pre class="text-white font-mono text-[10px] overflow-x-auto">${JSON.stringify(log.metadata, null, 2)}</pre>
+                                </div>` : ''}
+                            </div>
+                            <div class="flex gap-2 mt-3">
+                                <button onclick="event.stopPropagation(); admin.copyLog('${log.id}')" class="text-xs px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 transition-all">
+                                    <i class="ph-bold ph-copy mr-1"></i> Copy
+                                </button>
+                                <button onclick="event.stopPropagation(); admin.deleteLog('${log.source}', '${log.id}')" class="text-xs px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-all">
+                                    <i class="ph-bold ph-trash mr-1"></i> Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Expand Arrow -->
+                    <div class="text-slate-500 shrink-0">
+                        <i class="ph-bold ph-caret-down text-sm"></i>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    toggleLogDetails(id) {
+        const el = document.getElementById(id);
+        if (el) {
+            el.parentElement.parentElement.parentElement.classList.toggle('expanded');
+        }
+    }
+    
+    getTimeAgo(date) {
+        const seconds = Math.floor((new Date() - date) / 1000);
+        if (seconds < 60) return 'Just now';
+        if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+        if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+        if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
+        return date.toLocaleDateString();
+    }
+    
+    async loadLogsStats() {
+        try {
+            // Count logs by type
+            const counts = { total: 0, info: 0, warning: 0, error: 0, action: 0, security: 0 };
+            const admins = new Set();
+            
+            this.logsData.forEach(log => {
+                counts.total++;
+                counts[log.type] = (counts[log.type] || 0) + 1;
+                if (log.admin) admins.add(log.admin);
+            });
+            
+            // Update UI
+            const update = (id, val) => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = val;
+            };
+            
+            update('logs-total', counts.total);
+            update('logs-info', counts.info);
+            update('logs-warning', counts.warning);
+            update('logs-error', counts.error);
+            update('logs-admins', admins.size);
+            
+            // Render breakdown
+            this.renderLogsBreakdown(counts);
+            
+        } catch(e) {
+            console.error('Failed to load logs stats:', e);
+        }
+    }
+    
+    renderLogsBreakdown(counts) {
+        const el = document.getElementById('logs-breakdown');
+        if (!el) return;
+        
+        const total = counts.total || 1;
+        const types = [
+            { label: 'Info', count: counts.info || 0, color: 'emerald' },
+            { label: 'Actions', count: counts.action || 0, color: 'indigo' },
+            { label: 'Security', count: counts.security || 0, color: 'rose' },
+            { label: 'Warnings', count: counts.warning || 0, color: 'amber' },
+            { label: 'Errors', count: counts.error || 0, color: 'red' }
+        ];
+        
+        el.innerHTML = types.map(t => {
+            const pct = Math.round((t.count / total) * 100);
+            return `
+                <div class="space-y-1">
+                    <div class="flex items-center justify-between text-xs">
+                        <span class="text-slate-400">${t.label}</span>
+                        <span class="text-white font-medium">${t.count}</span>
+                    </div>
+                    <div class="h-2 bg-slate-800 rounded-full overflow-hidden">
+                        <div class="h-full bg-${t.color}-500 rounded-full transition-all duration-500" style="width: ${pct}%"></div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+    
+    async loadAdminActivity() {
+        const el = document.getElementById('logs-admin-activity');
+        if (!el) return;
+        
+        try {
+            // Group by admin
+            const adminLogs = {};
+            this.logsData.forEach(log => {
+                if (!log.admin) return;
+                if (!adminLogs[log.admin]) {
+                    adminLogs[log.admin] = { count: 0, lastActive: 0 };
+                }
+                adminLogs[log.admin].count++;
+                if (log.timestamp > adminLogs[log.admin].lastActive) {
+                    adminLogs[log.admin].lastActive = log.timestamp;
+                }
+            });
+            
+            const sorted = Object.entries(adminLogs).sort((a, b) => b[1].lastActive - a[1].lastActive).slice(0, 5);
+            
+            if (sorted.length === 0) {
+                el.innerHTML = '<div class="text-center text-slate-500 text-xs py-4">No admin activity</div>';
+                return;
+            }
+            
+            el.innerHTML = sorted.map(([admin, data]) => {
+                const initial = admin.charAt(0).toUpperCase();
+                const timeAgo = this.getTimeAgo(new Date(data.lastActive));
+                return `
+                    <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-800/30 hover:bg-slate-800/50 transition-all">
+                        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center text-white text-xs font-bold">${initial}</div>
+                        <div class="flex-1 min-w-0">
+                            <div class="text-sm text-white truncate">${this.esc(admin.split('@')[0])}</div>
+                            <div class="text-[10px] text-slate-500">${data.count} actions • ${timeAgo}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+        } catch(e) {
+            el.innerHTML = '<div class="text-center text-red-400 text-xs py-4">Failed to load</div>';
+        }
+    }
+    
+    async loadEconomyLogs() {
+        const el = document.getElementById('logs-economy');
+        if (!el) return;
+        
+        try {
+            const snap = await this.db.ref('economy/transactions').orderByChild('timestamp').limitToLast(10).once('value');
+            
+            if (!snap.exists()) {
+                el.innerHTML = '<div class="text-center text-slate-500 text-xs py-4">No transactions</div>';
+                return;
+            }
+            
+            const transactions = [];
+            snap.forEach(child => transactions.push({ id: child.key, ...child.val() }));
+            transactions.reverse();
+            
+            el.innerHTML = transactions.map(t => {
+                const icons = { gift: '🎁', multiplier: '✨', event: '🎉', reset: '🔄' };
+                const icon = icons[t.type] || '💰';
+                return `
+                    <div class="p-2 rounded-lg bg-slate-800/30 hover:bg-slate-800/50 transition-all">
+                        <div class="flex items-center gap-2">
+                            <span class="text-lg">${icon}</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="text-xs text-white truncate">${this.esc(t.description || 'Transaction')}</div>
+                                <div class="text-[10px] text-slate-500">${this.getTimeAgo(new Date(t.timestamp))}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+        } catch(e) {
+            el.innerHTML = '<div class="text-center text-red-400 text-xs py-4">Failed to load</div>';
+        }
+    }
+    
+    async refreshLogs() {
+        this.toast('Refreshing logs...', 'info');
+        await this.loadLogs();
+        this.loadLogsStats();
+        this.loadAdminActivity();
+        this.loadEconomyLogs();
+        this.toast('Logs refreshed', 'success');
+    }
+    
+    copyLog(logId) {
+        const log = this.logsData.find(l => l.id === logId);
+        if (log) {
+            const text = JSON.stringify(log, null, 2);
+            navigator.clipboard.writeText(text);
+            this.toast('Log copied to clipboard', 'success');
+        }
+    }
+    
+    async deleteLog(source, logId) {
+        const paths = {
+            admin: 'adminLogs',
+            economy: 'economy/transactions',
+            anticheat: 'anticheat/violations',
+            moderation: 'moderationLogs'
+        };
+        
+        const path = paths[source];
+        if (!path) return;
+        
+        try {
+            await this.db.ref(`${path}/${logId}`).remove();
+            this.logsData = this.logsData.filter(l => l.id !== logId);
+            this.renderLogsData();
+            this.loadLogsStats();
+            this.toast('Log deleted', 'success');
+        } catch(e) {
+            this.toast('Failed to delete log', 'error');
+        }
+    }
+    
+    async clearAllLogs() {
+        const confirmed = await this.showConfirmModal({
+            title: 'Clear All Logs',
+            message: 'This will permanently delete all logs. This action cannot be undone. Are you sure?',
+            confirmText: 'Clear All',
+            type: 'danger'
+        });
+        
+        if (!confirmed) return;
+        
+        try {
+            await Promise.all([
+                this.db.ref('adminLogs').remove(),
+                this.db.ref('moderationLogs').remove()
+            ]);
+            
+            this.logsData = [];
+            this.renderLogsData();
+            this.loadLogsStats();
+            this.toast('All logs cleared', 'success');
+        } catch(e) {
+            this.toast('Failed to clear logs: ' + e.message, 'error');
+        }
+    }
+    
+    exportLogs() {
+        if (this.logsData.length === 0) {
+            this.toast('No logs to export', 'warning');
+            return;
+        }
+        
+        const csv = [
+            ['Timestamp', 'Type', 'Source', 'Message', 'Admin', 'Metadata'].join(','),
+            ...this.logsData.map(log => [
+                new Date(log.timestamp).toISOString(),
+                log.type || 'info',
+                log.source || 'system',
+                `"${(log.message || '').replace(/"/g, '""')}"`,
+                log.admin || 'System',
+                `"${JSON.stringify(log.metadata || {}).replace(/"/g, '""')}"`
+            ].join(','))
+        ].join('\n');
+        
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `nightclub-logs-${new Date().toISOString().split('T')[0]}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+        
+        this.toast('Logs exported successfully', 'success');
+    }
+    
+    async generateTestLogs() {
+        this.toast('Generating test logs...', 'info');
+        
+        const testLogs = [
+            { type: 'info', message: 'Admin dashboard accessed' },
+            { type: 'info', message: 'User data loaded successfully' },
+            { type: 'action', message: 'Economy page opened' },
+            { type: 'action', message: 'Broadcast message sent to all users' },
+            { type: 'warning', message: 'High server load detected' },
+            { type: 'warning', message: 'User attempted rapid coin farming' },
+            { type: 'error', message: 'Failed to sync user data' },
+            { type: 'security', message: 'Suspicious login attempt blocked' },
+            { type: 'security', message: 'Anti-cheat violation detected: speed hack' },
+            { type: 'action', message: 'Gift sent: 1000 coins to all users' },
+            { type: 'info', message: 'Shop catalog updated' },
+            { type: 'warning', message: 'Database connection slow' },
+            { type: 'action', message: 'User banned: suspicious activity' },
+            { type: 'info', message: 'System backup completed' },
+            { type: 'security', message: 'New device login from admin account' }
+        ];
+        
+        // Generate logs with random timestamps in the last 24 hours
+        const now = Date.now();
+        const promises = testLogs.map((log, i) => {
+            const randomOffset = Math.random() * 24 * 60 * 60 * 1000;
+            return this.db.ref('adminLogs').push({
+                ...log,
+                admin: this.user?.email || 'test@admin.com',
+                timestamp: now - randomOffset,
+                metadata: { generated: true, index: i }
+            });
+        });
+        
+        try {
+            await Promise.all(promises);
+            this.toast(`Generated ${testLogs.length} test logs!`, 'success');
+            await this.loadLogs();
+            this.loadLogsStats();
+            this.loadAdminActivity();
+            this.loadPeakTimes();
+        } catch(e) {
+            this.toast('Failed to generate logs: ' + e.message, 'error');
+        }
+    }
+    
+    // ============================
+    // GIFT CODES / COUPONS MODULE
+    // ============================
+    
+    async renderCoupons(el) {
+        el.innerHTML = `
+            <div class="space-y-6">
+                <!-- Stats -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="glass p-4 rounded-xl border border-white/5 group hover:border-indigo-500/30 transition-all">
+                        <div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center text-indigo-400"><i class="ph-fill ph-ticket text-xl"></i></div><div><div class="text-2xl font-bold text-white" id="coupons-total">--</div><div class="text-xs text-slate-400">Total Codes</div></div></div>
+                    </div>
+                    <div class="glass p-4 rounded-xl border border-white/5 group hover:border-emerald-500/30 transition-all">
+                        <div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center text-emerald-400"><i class="ph-fill ph-check-circle text-xl"></i></div><div><div class="text-2xl font-bold text-white" id="coupons-active">--</div><div class="text-xs text-slate-400">Active</div></div></div>
+                    </div>
+                    <div class="glass p-4 rounded-xl border border-white/5 group hover:border-yellow-500/30 transition-all">
+                        <div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-yellow-500/20 flex items-center justify-center text-yellow-400"><i class="ph-fill ph-gift text-xl"></i></div><div><div class="text-2xl font-bold text-white" id="coupons-redeemed">--</div><div class="text-xs text-slate-400">Redeemed</div></div></div>
+                    </div>
+                    <div class="glass p-4 rounded-xl border border-white/5 group hover:border-red-500/30 transition-all">
+                        <div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-red-500/20 flex items-center justify-center text-red-400"><i class="ph-fill ph-x-circle text-xl"></i></div><div><div class="text-2xl font-bold text-white" id="coupons-expired">--</div><div class="text-xs text-slate-400">Expired</div></div></div>
+                    </div>
+                </div>
+                
+                <!-- Main Grid -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Create Code -->
+                    <div class="glass rounded-2xl border border-white/5 p-6">
+                        <h3 class="font-bold text-white mb-4 flex items-center gap-2"><i class="ph-fill ph-plus-circle text-emerald-400"></i> Create Gift Code</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="text-xs text-slate-400 uppercase mb-2 block">Code (auto-generated or custom)</label>
+                                <div class="flex gap-2">
+                                    <input type="text" id="coupon-code" placeholder="NIGHTCLUB2024" class="flex-1 bg-slate-800/50 border border-white/10 rounded-xl px-4 py-3 text-white uppercase font-mono focus:outline-none focus:border-indigo-500">
+                                    <button onclick="admin.generateCouponCode()" class="p-3 rounded-xl bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30" title="Generate Random"><i class="ph-bold ph-shuffle"></i></button>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="text-xs text-slate-400 uppercase mb-2 block">💰 Cash Reward</label>
+                                    <input type="number" id="coupon-cash" value="0" min="0" class="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-yellow-500">
+                                </div>
+                                <div>
+                                    <label class="text-xs text-slate-400 uppercase mb-2 block">💎 Diamonds</label>
+                                    <input type="number" id="coupon-diamonds" value="0" min="0" class="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-cyan-500">
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="text-xs text-slate-400 uppercase mb-2 block">Max Uses</label>
+                                    <input type="number" id="coupon-max-uses" value="100" min="1" class="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500">
+                                </div>
+                                <div>
+                                    <label class="text-xs text-slate-400 uppercase mb-2 block">Expires In</label>
+                                    <select id="coupon-expiry" class="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none">
+                                        <option value="1">1 Day</option>
+                                        <option value="7" selected>7 Days</option>
+                                        <option value="30">30 Days</option>
+                                        <option value="90">90 Days</option>
+                                        <option value="365">1 Year</option>
+                                        <option value="0">Never</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="text-xs text-slate-400 uppercase mb-2 block">Description (optional)</label>
+                                <input type="text" id="coupon-desc" placeholder="Welcome bonus!" class="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500">
+                            </div>
+                            <button onclick="admin.createCoupon()" class="w-full p-3 rounded-xl bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white font-medium transition-all flex items-center justify-center gap-2">
+                                <i class="ph-fill ph-ticket"></i> Create Code
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Codes List -->
+                    <div class="lg:col-span-2 glass rounded-2xl border border-white/5 overflow-hidden">
+                        <div class="p-4 border-b border-white/5 flex items-center justify-between bg-slate-900/50">
+                            <h3 class="font-bold text-white flex items-center gap-2"><i class="ph-fill ph-list text-indigo-400"></i> All Gift Codes</h3>
+                            <div class="flex gap-2">
+                                <button onclick="admin.refreshCoupons()" class="p-2 rounded-lg bg-slate-700 text-slate-300 hover:bg-slate-600" title="Refresh"><i class="ph-bold ph-arrows-clockwise"></i></button>
+                            </div>
+                        </div>
+                        <div id="coupons-list" class="max-h-[500px] overflow-y-auto">
+                            <div class="p-8 text-center text-slate-500">Loading...</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Recent Redemptions -->
+                <div class="glass rounded-2xl border border-white/5 overflow-hidden">
+                    <div class="p-4 border-b border-white/5 bg-slate-900/50">
+                        <h3 class="font-bold text-white flex items-center gap-2"><i class="ph-fill ph-clock-clockwise text-cyan-400"></i> Recent Redemptions</h3>
+                    </div>
+                    <div id="redemptions-list" class="p-4 max-h-[300px] overflow-y-auto">
+                        <div class="text-center text-slate-500 py-4">Loading...</div>
+                    </div>
+                </div>
+            </div>
+        `;
+        await this.loadCoupons();
+    }
+    
+    generateCouponCode() {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let code = '';
+        for (let i = 0; i < 12; i++) {
+            if (i > 0 && i % 4 === 0) code += '-';
+            code += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        document.getElementById('coupon-code').value = code;
+    }
+    
+    async createCoupon() {
+        const code = document.getElementById('coupon-code').value.trim().toUpperCase().replace(/[^A-Z0-9-]/g, '');
+        const cash = parseInt(document.getElementById('coupon-cash').value) || 0;
+        const diamonds = parseInt(document.getElementById('coupon-diamonds').value) || 0;
+        const maxUses = parseInt(document.getElementById('coupon-max-uses').value) || 100;
+        const expiryDays = parseInt(document.getElementById('coupon-expiry').value);
+        const description = document.getElementById('coupon-desc').value.trim();
+        
+        if (!code || code.length < 4) { this.toast('Code must be at least 4 characters', 'error'); return; }
+        if (cash <= 0 && diamonds <= 0) { this.toast('Add at least one reward', 'error'); return; }
+        
+        try {
+            // Check if code exists
+            const existing = await this.db.ref(`giftCodes/${code}`).once('value');
+            if (existing.exists()) { this.toast('Code already exists!', 'error'); return; }
+            
+            const coupon = {
+                code,
+                rewards: { cash, diamonds },
+                maxUses,
+                usedCount: 0,
+                usedBy: {},
+                description,
+                createdAt: firebase.database.ServerValue.TIMESTAMP,
+                createdBy: this.user?.email,
+                expiresAt: expiryDays > 0 ? Date.now() + (expiryDays * 24 * 60 * 60 * 1000) : 0,
+                active: true
+            };
+            
+            await this.db.ref(`giftCodes/${code}`).set(coupon);
+            this.toast(`Created code: ${code}`, 'success');
+            this.log('action', `Created gift code: ${code}`, { code, cash, diamonds, maxUses });
+            
+            // Clear form
+            document.getElementById('coupon-code').value = '';
+            document.getElementById('coupon-cash').value = '0';
+            document.getElementById('coupon-diamonds').value = '0';
+            document.getElementById('coupon-desc').value = '';
+            
+            await this.loadCoupons();
+        } catch(e) { this.toast('Failed: ' + e.message, 'error'); }
+    }
+    
+    async loadCoupons() {
+        try {
+            const snap = await this.db.ref('giftCodes').once('value');
+            const codes = snap.val() || {};
+            this.coupons = Object.entries(codes).map(([k, v]) => ({ id: k, ...v }));
+            
+            // Stats
+            const now = Date.now();
+            const total = this.coupons.length;
+            const active = this.coupons.filter(c => c.active && (c.expiresAt === 0 || c.expiresAt > now) && c.usedCount < c.maxUses).length;
+            const totalRedeemed = this.coupons.reduce((s, c) => s + (c.usedCount || 0), 0);
+            const expired = this.coupons.filter(c => !c.active || (c.expiresAt > 0 && c.expiresAt < now)).length;
+            
+            document.getElementById('coupons-total').textContent = total;
+            document.getElementById('coupons-active').textContent = active;
+            document.getElementById('coupons-redeemed').textContent = totalRedeemed;
+            document.getElementById('coupons-expired').textContent = expired;
+            
+            this.renderCouponsList();
+            this.loadRedemptions();
+        } catch(e) { console.error('Failed to load coupons:', e); }
+    }
+    
+    renderCouponsList() {
+        const el = document.getElementById('coupons-list');
+        if (!el) return;
+        
+        if (this.coupons.length === 0) {
+            el.innerHTML = '<div class="p-8 text-center text-slate-500">No gift codes yet. Create one!</div>';
+            return;
+        }
+        
+        const now = Date.now();
+        const sorted = [...this.coupons].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        
+        el.innerHTML = sorted.map(c => {
+            const isExpired = c.expiresAt > 0 && c.expiresAt < now;
+            const isUsedUp = c.usedCount >= c.maxUses;
+            const isActive = c.active && !isExpired && !isUsedUp;
+            const statusColor = isActive ? 'emerald' : isExpired ? 'red' : 'slate';
+            const statusText = isExpired ? 'Expired' : isUsedUp ? 'Used Up' : !c.active ? 'Disabled' : 'Active';
+            
+            return `
+                <div class="p-4 border-b border-white/5 hover:bg-indigo-500/5 transition-all">
+                    <div class="flex items-center gap-4">
+                        <div class="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white">
+                            <i class="ph-fill ph-ticket text-xl"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="font-mono font-bold text-white text-lg tracking-wider">${c.code}</span>
+                                <button onclick="admin.copyCouponCode('${c.code}')" class="p-1 rounded hover:bg-white/10 text-slate-400 hover:text-white" title="Copy"><i class="ph-bold ph-copy text-xs"></i></button>
+                                <span class="px-2 py-0.5 rounded-full text-[10px] bg-${statusColor}-500/20 text-${statusColor}-400">${statusText}</span>
+                            </div>
+                            <div class="flex items-center gap-4 text-xs">
+                                ${c.rewards?.cash > 0 ? `<span class="text-yellow-400">💰 ${this.formatNumber(c.rewards.cash)}</span>` : ''}
+                                ${c.rewards?.diamonds > 0 ? `<span class="text-cyan-400">💎 ${c.rewards.diamonds}</span>` : ''}
+                                <span class="text-slate-500">Used: ${c.usedCount || 0}/${c.maxUses}</span>
+                                ${c.expiresAt > 0 ? `<span class="text-slate-500">Expires: ${new Date(c.expiresAt).toLocaleDateString()}</span>` : '<span class="text-slate-500">No expiry</span>'}
+                            </div>
+                            ${c.description ? `<div class="text-xs text-slate-400 mt-1">${this.esc(c.description)}</div>` : ''}
+                        </div>
+                        <div class="flex gap-1">
+                            ${isActive ? `<button onclick="admin.toggleCoupon('${c.code}', false)" class="p-2 rounded-lg hover:bg-red-500/20 text-slate-400 hover:text-red-400" title="Disable"><i class="ph-bold ph-pause"></i></button>` : `<button onclick="admin.toggleCoupon('${c.code}', true)" class="p-2 rounded-lg hover:bg-emerald-500/20 text-slate-400 hover:text-emerald-400" title="Enable"><i class="ph-bold ph-play"></i></button>`}
+                            <button onclick="admin.deleteCoupon('${c.code}')" class="p-2 rounded-lg hover:bg-red-500/20 text-slate-400 hover:text-red-400" title="Delete"><i class="ph-bold ph-trash"></i></button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+    
+    async loadRedemptions() {
+        const el = document.getElementById('redemptions-list');
+        if (!el) return;
+        
+        // Get recent redemptions from all codes
+        const redemptions = [];
+        this.coupons.forEach(c => {
+            if (c.usedBy) {
+                Object.entries(c.usedBy).forEach(([uid, data]) => {
+                    redemptions.push({ code: c.code, uid, ...data, rewards: c.rewards });
+                });
+            }
+        });
+        
+        redemptions.sort((a, b) => (b.redeemedAt || 0) - (a.redeemedAt || 0));
+        const recent = redemptions.slice(0, 20);
+        
+        if (recent.length === 0) {
+            el.innerHTML = '<div class="text-center text-slate-500 py-4">No redemptions yet</div>';
+            return;
+        }
+        
+        el.innerHTML = `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">${recent.map(r => `
+            <div class="p-3 rounded-xl bg-slate-800/30 border border-white/5">
+                <div class="flex items-center gap-2 mb-2">
+                    <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-yellow-500 to-orange-500 flex items-center justify-center text-white text-xs font-bold">${(r.userName || 'U')[0].toUpperCase()}</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-sm text-white truncate">${this.esc(r.userName || r.uid?.substring(0, 8) || 'Unknown')}</div>
+                        <div class="text-[10px] text-slate-500">${this.getTimeAgo(new Date(r.redeemedAt))}</div>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="font-mono text-xs text-indigo-400">${r.code}</span>
+                    <div class="text-xs">${r.rewards?.cash > 0 ? `<span class="text-yellow-400">+${this.formatNumber(r.rewards.cash)}</span>` : ''} ${r.rewards?.diamonds > 0 ? `<span class="text-cyan-400">+${r.rewards.diamonds}💎</span>` : ''}</div>
+                </div>
+            </div>
+        `).join('')}</div>`;
+    }
+    
+    copyCouponCode(code) {
+        navigator.clipboard.writeText(code);
+        this.toast(`Copied: ${code}`, 'success');
+    }
+    
+    async toggleCoupon(code, active) {
+        try {
+            await this.db.ref(`giftCodes/${code}/active`).set(active);
+            this.toast(`Code ${active ? 'enabled' : 'disabled'}`, 'success');
+            this.log('action', `${active ? 'Enabled' : 'Disabled'} gift code: ${code}`, { code });
+            await this.loadCoupons();
+        } catch(e) { this.toast('Failed: ' + e.message, 'error'); }
+    }
+    
+    async deleteCoupon(code) {
+        if (!confirm(`Delete code ${code}? This cannot be undone.`)) return;
+        try {
+            await this.db.ref(`giftCodes/${code}`).remove();
+            this.toast('Code deleted', 'success');
+            this.log('action', `Deleted gift code: ${code}`, { code });
+            await this.loadCoupons();
+        } catch(e) { this.toast('Failed: ' + e.message, 'error'); }
+    }
+    
+    async refreshCoupons() {
+        this.toast('Refreshing...', 'info');
+        await this.loadCoupons();
+        this.toast('Refreshed', 'success');
     }
     
     // ANTI-CHEAT MODULE

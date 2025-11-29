@@ -732,6 +732,243 @@ class GameState {
         audioManager.play('notification');
     }
 
+    // ============================
+    // GIFT CODE REDEMPTION SYSTEM
+    // ============================
+    
+    openRedeemModal() {
+        this.closeModals();
+        const modal = document.getElementById('redeem-modal');
+        if (modal) {
+            modal.classList.remove('hidden');
+            const input = document.getElementById('redeem-code-input');
+            if (input) {
+                input.value = '';
+                input.focus();
+            }
+            const status = document.getElementById('redeem-status');
+            if (status) status.classList.add('hidden');
+        }
+    }
+    
+    closeRedeemModal() {
+        const modal = document.getElementById('redeem-modal');
+        if (modal) modal.classList.add('hidden');
+    }
+    
+    async redeemCode() {
+        const input = document.getElementById('redeem-code-input');
+        const status = document.getElementById('redeem-status');
+        const btn = document.getElementById('redeem-btn');
+        
+        if (!input || !status || !btn) return;
+        
+        const code = input.value.trim().toUpperCase().replace(/[^A-Z0-9-]/g, '');
+        if (!code || code.length < 4) {
+            this.showRedeemStatus('Please enter a valid code', 'error');
+            return;
+        }
+        
+        // Check if user is logged in
+        const user = firebase.auth().currentUser;
+        if (!user) {
+            this.showRedeemStatus('Please log in to redeem codes', 'error');
+            return;
+        }
+        
+        // Disable button
+        btn.disabled = true;
+        btn.innerHTML = '<i class="ph-bold ph-spinner animate-spin"></i> Checking...';
+        
+        try {
+            const db = firebase.database();
+            const codeRef = db.ref(`giftCodes/${code}`);
+            const snap = await codeRef.once('value');
+            
+            if (!snap.exists()) {
+                this.showRedeemStatus('Invalid code. Please check and try again.', 'error');
+                this.resetRedeemBtn();
+                return;
+            }
+            
+            const coupon = snap.val();
+            const now = Date.now();
+            
+            // Check if active
+            if (!coupon.active) {
+                this.showRedeemStatus('This code has been disabled.', 'error');
+                this.resetRedeemBtn();
+                return;
+            }
+            
+            // Check expiry
+            if (coupon.expiresAt > 0 && coupon.expiresAt < now) {
+                this.showRedeemStatus('This code has expired.', 'error');
+                this.resetRedeemBtn();
+                return;
+            }
+            
+            // Check max uses
+            if (coupon.usedCount >= coupon.maxUses) {
+                this.showRedeemStatus('This code has reached its maximum uses.', 'error');
+                this.resetRedeemBtn();
+                return;
+            }
+            
+            // Check if user already redeemed
+            if (coupon.usedBy && coupon.usedBy[user.uid]) {
+                this.showRedeemStatus('You have already redeemed this code!', 'error');
+                this.resetRedeemBtn();
+                return;
+            }
+            
+            // IMPORTANT: Tell anti-cheat this is a legitimate operation BEFORE changing values
+            if (window.antiCheat) {
+                window.antiCheat.allowLegitimateOperation(10000); // 10 seconds
+            }
+            
+            // Apply rewards
+            const rewards = coupon.rewards || {};
+            let rewardText = [];
+            
+            // Store current values before adding
+            const oldCash = this.cash;
+            const oldDiamonds = this.diamonds;
+            
+            if (rewards.cash > 0) {
+                this.cash = (this.cash || 0) + rewards.cash;
+                rewardText.push(`💰 ${rewards.cash.toLocaleString()} Cash`);
+            }
+            
+            if (rewards.diamonds > 0) {
+                this.diamonds = (this.diamonds || 0) + rewards.diamonds;
+                rewardText.push(`💎 ${rewards.diamonds} Diamonds`);
+            }
+            
+            // Update anti-cheat's tracked values to prevent future false positives
+            if (window.antiCheat) {
+                window.antiCheat.lastCash = this.cash;
+                window.antiCheat.lastDiamonds = this.diamonds;
+            }
+            
+            console.log('🎁 Redeem - Before:', oldCash, oldDiamonds, '| After:', this.cash, this.diamonds);
+            
+            // Update coupon usage in Firebase
+            await codeRef.update({
+                usedCount: (coupon.usedCount || 0) + 1,
+                [`usedBy/${user.uid}`]: {
+                    userName: user.displayName || user.email || 'Unknown',
+                    redeemedAt: firebase.database.ServerValue.TIMESTAMP
+                }
+            });
+            
+            // Get full save data with updated values
+            const saveData = this.getSaveData();
+            console.log('🎁 SaveData cash:', saveData.cash, 'diamonds:', saveData.diamonds);
+            
+            // Save to Realtime Database (what admin reads)
+            await db.ref(`saves/${user.uid}`).set(saveData);
+            console.log('🎁 Saved to Realtime DB');
+            
+            // Also update Firestore saves collection
+            try {
+                await firebase.firestore().collection('saves').doc(user.uid).set({
+                    ...saveData,
+                    savedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                console.log('🎁 Saved to Firestore saves');
+            } catch(e) { console.warn('Firestore saves update failed:', e); }
+            
+            // Also update Firestore users collection
+            try {
+                await firebase.firestore().collection('users').doc(user.uid).update({
+                    coins: this.cash,
+                    diamonds: this.diamonds
+                });
+                console.log('🎁 Saved to Firestore users');
+            } catch(e) { console.warn('Firestore users update failed:', e); }
+            
+            // Also save to local storage
+            if (window.storage) {
+                window.storage.save(this);
+            }
+            
+            // Update UI
+            this.updateUI();
+            
+            // Show success
+            this.showRedeemStatus(`🎉 Success! You received: ${rewardText.join(' + ')}`, 'success');
+            ui.notify(`Code redeemed! +${rewardText.join(' + ')}`, 'success');
+            audioManager.play('success');
+            
+            // Clear input
+            input.value = '';
+            
+            // Create celebration effect
+            this.createRedeemCelebration();
+            
+        } catch (e) {
+            console.error('Redeem error:', e);
+            this.showRedeemStatus('Error redeeming code. Please try again.', 'error');
+        }
+        
+        this.resetRedeemBtn();
+    }
+    
+    showRedeemStatus(message, type) {
+        const status = document.getElementById('redeem-status');
+        if (!status) return;
+        
+        status.classList.remove('hidden', 'text-red-400', 'text-green-400', 'text-yellow-400');
+        status.classList.add(type === 'error' ? 'text-red-400' : type === 'success' ? 'text-green-400' : 'text-yellow-400');
+        status.innerHTML = message;
+    }
+    
+    resetRedeemBtn() {
+        const btn = document.getElementById('redeem-btn');
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="ph-fill ph-gift"></i> Redeem';
+        }
+    }
+    
+    createRedeemCelebration() {
+        // Create confetti effect
+        const colors = ['#FFD700', '#FFA500', '#FF6B6B', '#4ECDC4', '#A855F7'];
+        for (let i = 0; i < 50; i++) {
+            setTimeout(() => {
+                const confetti = document.createElement('div');
+                confetti.style.cssText = `
+                    position: fixed;
+                    width: 10px;
+                    height: 10px;
+                    background: ${colors[Math.floor(Math.random() * colors.length)]};
+                    left: ${50 + (Math.random() - 0.5) * 30}%;
+                    top: 40%;
+                    z-index: 9999;
+                    border-radius: ${Math.random() > 0.5 ? '50%' : '0'};
+                    pointer-events: none;
+                    animation: confetti-fall 2s ease-out forwards;
+                `;
+                document.body.appendChild(confetti);
+                setTimeout(() => confetti.remove(), 2000);
+            }, i * 30);
+        }
+        
+        // Add confetti animation if not exists
+        if (!document.getElementById('confetti-style')) {
+            const style = document.createElement('style');
+            style.id = 'confetti-style';
+            style.textContent = `
+                @keyframes confetti-fall {
+                    0% { transform: translateY(0) rotate(0deg) scale(1); opacity: 1; }
+                    100% { transform: translateY(300px) rotate(720deg) scale(0); opacity: 0; }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+    }
+
     // Economy System - Load from Firebase
     initEconomySystem() {
         if (this.economyListenerActive) return;
