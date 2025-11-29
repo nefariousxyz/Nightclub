@@ -107,6 +107,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         loginGate.style.display = 'none';
     }
     
+    // Safety timeout - never stay on session loader for more than 8 seconds
+    const safetyTimeout = setTimeout(() => {
+        console.warn('Session check timeout - forcing show login');
+        hideSessionLoader(true);
+    }, 8000);
+    
     try {
         // Initialize Firebase Auth
         await authSystem.init();
@@ -116,6 +122,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         // Initialize Cloud Save
         cloudSave.init();
+        
+        // Clear safety timeout since init succeeded
+        clearTimeout(safetyTimeout);
         
         // Check if already logged in
         if (authSystem.user) {
