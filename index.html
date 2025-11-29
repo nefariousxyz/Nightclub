@@ -126,6 +126,18 @@
             .modal-overlay .glass-panel > div:first-child {
                 padding: 12px 16px !important;
             }
+            /* Smaller notifications on mobile */
+            #notification-area > div {
+                padding: 8px 12px !important;
+                font-size: 11px !important;
+                max-width: 280px !important;
+            }
+            #notification-area > div h4 {
+                font-size: 12px !important;
+            }
+            #notification-area > div p {
+                font-size: 10px !important;
+            }
         }
         .glass-panel-light {
             background: rgba(40, 40, 70, 0.6);
@@ -719,26 +731,33 @@
     <!-- 3D Canvas -->
     <div id="canvas-container"></div>
 
-    <!-- Furniture Edit Bar - Fixed at bottom, always clickable -->
-    <div id="furniture-edit-bar" class="hidden" style="position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); z-index: 99999; pointer-events: auto;">
-        <div style="background: rgba(0,0,0,0.95); border-radius: 20px; padding: 12px 20px; border: 2px solid rgba(255,255,255,0.2); box-shadow: 0 8px 32px rgba(0,0,0,0.8); display: flex; align-items: center; gap: 12px;">
-            <span id="selection-count" style="color: #fbbf24; font-weight: bold; font-size: 14px; min-width: 80px;">1 selected</span>
-            <div style="width: 1px; height: 30px; background: rgba(255,255,255,0.2);"></div>
-            <button id="btn-furniture-move" onclick="window.furnitureMove()" style="padding: 10px 20px; border-radius: 10px; background: linear-gradient(135deg, #f59e0b, #d97706); border: none; color: white; font-weight: bold; font-size: 14px; cursor: pointer;">
-                ✋ Move
+    <!-- Furniture Edit Bar - Fixed at bottom, responsive -->
+    <div id="furniture-edit-bar" class="hidden fixed bottom-16 sm:bottom-20 left-1/2 -translate-x-1/2 z-[99999] pointer-events-auto">
+        <div class="bg-black/95 rounded-xl sm:rounded-2xl px-2 py-2 sm:px-5 sm:py-3 border-2 border-white/20 shadow-2xl flex items-center gap-1 sm:gap-3 flex-wrap justify-center max-w-[95vw]">
+            <span id="selection-count" class="text-yellow-400 font-bold text-[10px] sm:text-sm min-w-[50px] sm:min-w-[80px] text-center">1 selected</span>
+            <div class="hidden sm:block w-px h-6 bg-white/20"></div>
+            <button id="btn-furniture-move" onclick="window.furnitureMove()" class="px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 text-white font-bold text-[10px] sm:text-sm">
+                ✋ <span class="hidden sm:inline">Move</span>
             </button>
-            <button id="btn-furniture-rotate" onclick="window.furnitureRotate()" style="padding: 10px 20px; border-radius: 10px; background: linear-gradient(135deg, #3b82f6, #4f46e5); border: none; color: white; font-weight: bold; font-size: 14px; cursor: pointer;">
-                🔄 Rotate
+            <button id="btn-furniture-rotate" onclick="window.furnitureRotate()" class="px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-bold text-[10px] sm:text-sm">
+                🔄 <span class="hidden sm:inline">Rotate</span>
             </button>
-            <button id="btn-furniture-delete" onclick="window.furnitureDelete()" style="padding: 10px 20px; border-radius: 10px; background: linear-gradient(135deg, #ef4444, #dc2626); border: none; color: white; font-weight: bold; font-size: 14px; cursor: pointer;">
-                🗑️ Delete
+            <!-- Up/Down for light height adjustment -->
+            <button id="btn-furniture-up" onclick="window.furnitureMoveUp && window.furnitureMoveUp()" class="px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg bg-gradient-to-br from-green-500 to-emerald-600 text-white font-bold text-[10px] sm:text-sm" title="Move Up">
+                ⬆️
             </button>
-            <button id="btn-furniture-cancel" onclick="window.furnitureCancel()" style="padding: 10px 16px; border-radius: 10px; background: rgba(255,255,255,0.1); border: none; color: white; font-size: 14px; cursor: pointer;">
+            <button id="btn-furniture-down" onclick="window.furnitureMoveDown && window.furnitureMoveDown()" class="px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg bg-gradient-to-br from-green-500 to-emerald-600 text-white font-bold text-[10px] sm:text-sm" title="Move Down">
+                ⬇️
+            </button>
+            <button id="btn-furniture-delete" onclick="window.furnitureDelete()" class="px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg bg-gradient-to-br from-red-500 to-red-600 text-white font-bold text-[10px] sm:text-sm">
+                🗑️ <span class="hidden sm:inline">Delete</span>
+            </button>
+            <button id="btn-furniture-cancel" onclick="window.furnitureCancel()" class="px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg bg-white/10 text-white text-[10px] sm:text-sm">
                 ✕
             </button>
         </div>
-        <div style="text-align: center; margin-top: 8px; color: rgba(255,255,255,0.5); font-size: 11px;">
-            Shift+Click to select multiple • Press Del to delete • R to rotate
+        <div class="hidden sm:block text-center mt-2 text-white/50 text-[11px]">
+            Shift+Click to select multiple • Press Del to delete • R to rotate • ↑↓ to adjust height
         </div>
     </div>
 
@@ -883,8 +902,14 @@
             <div class="flex justify-center mx-0 sm:mx-32">
                 <div class="glass-panel rounded-2xl p-1 sm:p-2 flex items-end gap-0 overflow-x-auto scrollbar-hide">
                     
-                    <!-- Mobile-only: Stats inline -->
+                    <!-- Mobile-only: Now Playing + Stats inline -->
                     <div class="flex sm:hidden items-center gap-1 px-1 border-r border-white/10 mr-1">
+                        <!-- Now Playing indicator for mobile -->
+                        <button class="flex flex-col items-center px-1" onclick="openDJBooth()">
+                            <i class="ph-fill ph-music-notes text-cyan-400 text-xs animate-pulse"></i>
+                            <span class="text-[8px] text-cyan-400 truncate max-w-[40px]" id="ui-track-name-mobile">🎵</span>
+                        </button>
+                        <div class="w-px h-4 bg-white/20"></div>
                         <div class="flex flex-col items-center" id="stock-box-mobile">
                             <i class="ph-fill ph-martini text-orange-400 text-xs"></i>
                             <span class="text-[10px] font-bold text-white" id="stock-display-mobile">100%</span>
@@ -959,6 +984,14 @@
                             <i class="ph-fill ph-globe-hemisphere-west text-lg sm:text-xl text-white"></i>
                         </div>
                         <span class="text-[6px] sm:text-[8px] font-bold opacity-70 mt-0.5">WORLD</span>
+                    </button>
+
+                    <!-- Mobile-only: Edit button -->
+                    <button class="dock-btn md:hidden flex flex-col items-center group px-1 hover:-translate-y-1 transition-all flex-shrink-0" onclick="game.toggleMode()">
+                        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-purple-700 flex items-center justify-center shadow-md">
+                            <i class="ph-fill ph-pencil-simple text-lg text-white"></i>
+                        </div>
+                        <span class="text-[6px] font-bold opacity-70 mt-0.5">EDIT</span>
                     </button>
 
                     <!-- Mobile-only: Settings/More button -->

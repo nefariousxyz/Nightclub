@@ -1475,6 +1475,8 @@ function createFurnitureActionButtons() {
     // Expose functions to window for onclick handlers
     window.furnitureMove = startMovingFurniture;
     window.furnitureRotate = rotateFurniture;
+    window.furnitureMoveUp = moveFurnitureUp;
+    window.furnitureMoveDown = moveFurnitureDown;
     window.furnitureDelete = deleteFurniture;
     window.furnitureCancel = cancelFurnitureEdit;
 }
@@ -1630,6 +1632,34 @@ function rotateFurniture() {
     if (selectedFurniture.length > 0) {
         highlightBox.setFromObject(selectedFurniture[0]);
     }
+}
+
+// Move furniture up (for lights and ceiling items)
+function moveFurnitureUp() {
+    if (selectedFurniture.length === 0) return;
+    
+    selectedFurniture.forEach(obj => {
+        obj.position.y += 0.5; // Move up by 0.5 units
+    });
+    
+    if (selectedFurniture.length > 0) {
+        highlightBox.setFromObject(selectedFurniture[0]);
+    }
+    game.autoSave();
+}
+
+// Move furniture down (for lights and ceiling items)
+function moveFurnitureDown() {
+    if (selectedFurniture.length === 0) return;
+    
+    selectedFurniture.forEach(obj => {
+        obj.position.y = Math.max(0, obj.position.y - 0.5); // Move down, minimum 0
+    });
+    
+    if (selectedFurniture.length > 0) {
+        highlightBox.setFromObject(selectedFurniture[0]);
+    }
+    game.autoSave();
 }
 
 // Store offsets for multi-move
