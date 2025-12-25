@@ -367,7 +367,7 @@ async function validateEarnings(userId, currency, amount, reason) {
     const validReasons = [
         'drink_served', 'guest_tip', 'cover_charge', 'event_bonus',
         'friend_visit', 'daily_reward', 'achievement', 'gift_code',
-        'admin_grant', 'compensation'
+        'admin_grant', 'compensation', 'game_action'  // Added for general gameplay earnings
     ];
 
     if (!validReasons.includes(reason)) {
