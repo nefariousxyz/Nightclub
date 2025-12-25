@@ -10,6 +10,7 @@ import { vipSystem } from './vip.js';
 import { challengeSystem } from './challenges.js';
 import { timeSystem } from './timeSystem.js';
 import { statisticsSystem } from './statistics.js';
+import { serverAPI } from './serverAPI.js'; // Server-side validation
 
 // Furniture Catalog - comprehensive list of all purchasable items
 // This will be updated from Firebase if available
@@ -21,14 +22,14 @@ export let FURNITURE_CATALOG = {
     tile_carpet: { name: 'Red Carpet', icon: '🟥', cost: 80, currency: 'cash', category: 'floors', desc: 'VIP red carpet' },
     tile_concrete: { name: 'Concrete Floor', icon: '⬛', cost: 40, currency: 'cash', category: 'floors', desc: 'Industrial style' },
     tile_disco: { name: 'Disco Tile', icon: '🪩', cost: 150, currency: 'cash', category: 'floors', desc: 'Light-up disco floor' },
-    
+
     // === PREMIUM FLOOR TILES (Diamonds) ===
     tile_gold: { name: 'Golden Floor', icon: '🟨', cost: 2, currency: 'diamonds', category: 'floors', desc: 'Luxurious gold tiles', premium: true },
     tile_neon: { name: 'Neon Floor', icon: '💜', cost: 3, currency: 'diamonds', category: 'floors', desc: 'Glowing neon tiles', premium: true },
     tile_hologram: { name: 'Hologram Floor', icon: '🌈', cost: 5, currency: 'diamonds', category: 'floors', desc: 'Animated holographic', premium: true },
     tile_lava: { name: 'Lava Floor', icon: '🔥', cost: 4, currency: 'diamonds', category: 'floors', desc: 'Animated lava effect', premium: true },
     tile_galaxy: { name: 'Galaxy Floor', icon: '🌌', cost: 6, currency: 'diamonds', category: 'floors', desc: 'Starry galaxy pattern', premium: true },
-    
+
     // === BASIC FURNITURE (Cash) ===
     table: { name: 'Cocktail Table', icon: '🪑', cost: 100, currency: 'cash', category: 'furniture', desc: 'Small table for drinks' },
     booth: { name: 'VIP Booth', icon: '🛋️', cost: 500, currency: 'cash', category: 'furniture', desc: 'Cozy VIP seating', unlockLevel: 2 },
@@ -36,34 +37,34 @@ export let FURNITURE_CATALOG = {
     speaker: { name: 'Speaker', icon: '🔊', cost: 200, currency: 'cash', category: 'furniture', desc: 'Pumps up the music' },
     plant: { name: 'Potted Plant', icon: '🌿', cost: 75, currency: 'cash', category: 'furniture', desc: 'Add some greenery' },
     pooltable: { name: 'Pool Table', icon: '🎱', cost: 600, currency: 'cash', category: 'furniture', desc: 'Entertainment zone', unlockLevel: 3 },
-    
+
     // === DANCE & ENTERTAINMENT (Cash) ===
     dancefloor: { name: 'Dance Floor', icon: '💃', cost: 1000, currency: 'cash', category: 'entertainment', desc: 'LED dance floor', unlockLevel: 1 },
     dj: { name: 'DJ Booth', icon: '🎧', cost: 1500, currency: 'cash', category: 'entertainment', desc: 'Drop the beat!', unlockLevel: 2 },
     stage: { name: 'Stage', icon: '🎤', cost: 2000, currency: 'cash', category: 'entertainment', desc: 'Performance stage', unlockLevel: 4 },
     discoball: { name: 'Disco Ball', icon: '🪩', cost: 300, currency: 'cash', category: 'lights', desc: 'Classic disco vibes' },
     laser: { name: 'Moving Head Laser', icon: '✨', cost: 750, currency: 'cash', category: 'lights', desc: 'Beam light show', unlockLevel: 3 },
-    
+
     // === DECORATIONS (Cash) ===
     statue: { name: 'Statue', icon: '🗿', cost: 350, currency: 'cash', category: 'decor', desc: 'Artistic decoration' },
     fountain: { name: 'Fountain', icon: '⛲', cost: 700, currency: 'cash', category: 'decor', desc: 'Water feature', unlockLevel: 3 },
     neon_sign: { name: 'Neon Sign', icon: '💡', cost: 250, currency: 'cash', category: 'decor', desc: 'Glowing signage' },
     palm_tree: { name: 'Palm Tree', icon: '🌴', cost: 150, currency: 'cash', category: 'decor', desc: 'Tropical vibes' },
     rope_barrier: { name: 'VIP Rope', icon: '🚧', cost: 100, currency: 'cash', category: 'decor', desc: 'VIP area barrier' },
-    
+
     // === CLUB LIGHTS (Cash) ===
     multi_laser: { name: 'Multi Laser Array', icon: '🌈', cost: 1500, currency: 'cash', category: 'lights', desc: '5-beam RGB laser', unlockLevel: 4 },
     strobe: { name: 'Strobe Light', icon: '⚡', cost: 600, currency: 'cash', category: 'lights', desc: 'Intense flash effects', unlockLevel: 2 },
     effects_light: { name: 'Derby Effects Light', icon: '🎨', cost: 1200, currency: 'cash', category: 'lights', desc: 'Multi-color party beams', unlockLevel: 5 },
     wall_light: { name: 'LED Wall Sconce', icon: '💡', cost: 400, currency: 'cash', category: 'lights', desc: 'RGB wall accent light', unlockLevel: 1 },
     moving_head: { name: 'Moving Head Spotlight', icon: '🔦', cost: 900, currency: 'cash', category: 'lights', desc: 'Pan/tilt stage light', unlockLevel: 3 },
-    
+
     // === SEATING (Cash) ===
     sofa: { name: 'Sofa', icon: '🛋️', cost: 200, currency: 'cash', category: 'seating', desc: 'Comfortable sofa' },
     barstool: { name: 'Bar Stool', icon: '🪑', cost: 50, currency: 'cash', category: 'seating', desc: 'Bar seating' },
     lounge_chair: { name: 'Lounge Chair', icon: '💺', cost: 150, currency: 'cash', category: 'seating', desc: 'Relaxation zone' },
     bean_bag: { name: 'Bean Bag', icon: '🫘', cost: 80, currency: 'cash', category: 'seating', desc: 'Casual seating' },
-    
+
     // === PREMIUM FURNITURE (Diamonds) ===
     viparea: { name: 'VIP Area', icon: '👑', cost: 5, currency: 'diamonds', category: 'premium', desc: 'Exclusive VIP section', premium: true },
     aquarium: { name: 'Aquarium', icon: '🐠', cost: 8, currency: 'diamonds', category: 'premium', desc: 'Giant fish tank', premium: true },
@@ -93,7 +94,7 @@ class GameState {
         this.selectedObject = null;
         this.eventMultiplier = 1;
         this.level = 1;
-        
+
         // Economy system (from admin)
         this.globalMultiplier = 1;
         this.activeEconomyEvents = {};
@@ -103,7 +104,7 @@ class GameState {
         this.clubTier = 1;
         this.ownerName = "Player";
         this.activeCelebrities = []; // Currently hired celebrities
-        
+
         // Visit mode properties
         this.visitMode = false;
         this.visitingFriendUid = null;
@@ -146,6 +147,17 @@ class GameState {
         this.controls = null;
         this.highlightBox = null;
         this.createFloatingText = null;
+
+        // Server validation system
+        this.validationQueue = [];
+        this.pendingValidations = new Map();
+        this.serverValidationEnabled = true;
+        this.lastServerSync = 0;
+
+        // Start periodic server sync (every 5 minutes)
+        if (typeof window !== 'undefined') {
+            setInterval(() => this.syncWithServer(), 5 * 60 * 1000);
+        }
     }
 
     // Load shop catalog from Firebase
@@ -154,7 +166,7 @@ class GameState {
             if (typeof firebase !== 'undefined' && firebase.database) {
                 const snapshot = await firebase.database().ref('shop/catalog').once('value');
                 const catalog = snapshot.val();
-                
+
                 if (catalog) {
                     // Merge Firebase catalog with default (Firebase takes precedence)
                     // Filter out disabled items
@@ -176,31 +188,31 @@ class GameState {
     // Initialize from save or fresh start
     async init() {
         console.log('=== GAME INIT START ===');
-        
+
         // Load shop catalog from Firebase first
         await this.loadShopCatalog();
-        
+
         // Check for visit mode from URL
         const urlParams = new URLSearchParams(window.location.search);
         const visitFriendUid = urlParams.get('visit');
-        
+
         if (visitFriendUid) {
             console.log('Visit mode detected for friend:', visitFriendUid);
             this.visitMode = true;
             this.visitingFriendUid = visitFriendUid;
-            
+
             // Load friend's club data instead of own
             await this.loadFriendClub(visitFriendUid);
             return;
         }
-        
+
         // Initialize audio
         await audioManager.init();
 
         // Check if this is a brand new account
         const newAccountData = localStorage.getItem('nightclub_new_account');
         const isNewAccount = newAccountData || window.authSystem?.isNewRegistration;
-        
+
         if (isNewAccount) {
             console.log('New account - starting fresh with custom club name');
             try {
@@ -219,7 +231,7 @@ class GameState {
             try {
                 console.log('Loading from cloud for user:', window.authSystem.userId);
                 const cloudData = await window.cloudSave.loadGame();
-                
+
                 if (cloudData) {
                     console.log('Cloud data found - loading save');
                     this.loadFromSave(cloudData);
@@ -244,7 +256,7 @@ class GameState {
 
         // Start auto-save (to cloud only)
         setInterval(() => this.autoSave(), this.autoSaveInterval);
-        
+
         // Initialize economy system (admin multipliers & events)
         this.initEconomySystem();
     }
@@ -252,7 +264,7 @@ class GameState {
     loadFromSave(data) {
         console.log('=== LOADING SAVE DATA ===');
         console.log('data.clubTier from save:', data.clubTier);
-        
+
         this.cash = data.cash || CONFIG.INITIAL_CASH;
         this.diamonds = data.diamonds || 5;
         this.hype = data.hype || CONFIG.INITIAL_HYPE;
@@ -262,9 +274,9 @@ class GameState {
         this.clubName = data.clubName || "My Club";
         this.clubTier = data.clubTier || 1;
         this.ownerName = data.ownerName || "Player";
-        
+
         console.log('Set game.clubTier to:', this.clubTier);
-        
+
         // Sync club tier with capacity level (every 3 levels = 1 tier)
         if (data.stats?.capacityLevel) {
             const expectedTier = Math.min(6, Math.floor(data.stats.capacityLevel / 3) + 1);
@@ -273,16 +285,16 @@ class GameState {
                 this.clubTier = expectedTier;
             }
         }
-        
+
         this.maxVisitors = data.maxVisitors || CONFIG.INITIAL_MAX_VISITORS;
         this.spawnRate = data.spawnRate || CONFIG.INITIAL_SPAWN_RATE;
-        
+
         if (data.stats) this.stats = { ...this.stats, ...data.stats };
         if (data.staff) {
             this.staff = { ...this.staff, ...data.staff };
             staffManager.loadStaff(data.staff);
         }
-        
+
         this.totalEarnings = data.totalEarnings || 0;
         this.totalDrinksServed = data.totalDrinksServed || 0;
         this.totalVisitors = data.totalVisitors || 0;
@@ -299,10 +311,10 @@ class GameState {
 
         // Furniture will be restored by scene.js
         this.savedFurniture = data.furniture || [];
-        
+
         // Visitors will be restored by scene.js
         this.savedVisitors = data.visitors || [];
-        
+
         // Load premium data
         if (window.premiumSystem) {
             if (data.coins !== undefined) window.premiumSystem.coins = data.coins;
@@ -311,7 +323,7 @@ class GameState {
             if (data.purchasedItems) window.premiumSystem.purchasedItems = data.purchasedItems;
             window.premiumSystem.updateUI();
         }
-        
+
         // Load challenges/daily rewards data
         if (data.challenges) {
             challengeSystem.load(data.challenges);
@@ -319,7 +331,7 @@ class GameState {
         } else {
             challengeSystem.init();
         }
-        
+
         // Update displays
         if (window.updateClubDisplay) window.updateClubDisplay();
         if (window.updateProfileModal) window.updateProfileModal();
@@ -329,12 +341,12 @@ class GameState {
         this.staff = staffManager.staff;
         this.achievements = achievementSystem.unlocked;
         storage.save(this);
-        
+
         // Also trigger cloud save (non-blocking)
         if (window.cloudSave && window.cloudSave.autoSave) {
             window.cloudSave.autoSave();
         }
-        
+
         // Sync stats to Firebase for chat system
         if (window.chatSystem && window.chatSystem.syncUserProfile) {
             const user = window.chatSystem.auth?.currentUser;
@@ -343,52 +355,52 @@ class GameState {
             }
         }
     }
-    
+
     // Load a friend's club for visiting
     async loadFriendClub(friendUid) {
         console.log('Loading friend club for visit:', friendUid);
-        
+
         try {
             // Get visit info from sessionStorage
             const visitInfo = JSON.parse(sessionStorage.getItem('visitMode') || '{}');
             this.visitingFriendName = visitInfo.friendName || 'Friend';
-            
+
             // Initialize audio in visit mode too
             await audioManager.init();
-            
+
             // Load friend's club data from Firestore (where saves are stored)
             const db = firebase.firestore();
             const doc = await db.collection('saves').doc(friendUid).get();
             const friendData = doc.exists ? doc.data() : null;
-            
+
             if (!friendData) {
                 ui.notify('Could not load friend\'s club data', 'error');
                 window.location.href = 'index.html';
                 return;
             }
-            
+
             // Load the friend's data
             this.loadFromSave(friendData);
-            
+
             // Override club name display
             this.clubName = visitInfo.clubName || friendData.clubName || `${this.visitingFriendName}'s Club`;
             this.ownerName = this.visitingFriendName;
-            
+
             // Show visit mode banner
             this.showVisitModeBanner();
-            
+
             // Disable auto-save in visit mode
             this.autoSaveInterval = Infinity;
-            
+
             ui.notify(`👀 Visiting ${this.visitingFriendName}'s Club`, 'success');
-            
+
         } catch (e) {
             console.error('Failed to load friend club:', e);
             ui.notify('Failed to load club', 'error');
             window.location.href = 'index.html';
         }
     }
-    
+
     // Show visit mode UI banner
     showVisitModeBanner() {
         const banner = document.createElement('div');
@@ -425,7 +437,7 @@ class GameState {
             box-shadow: 0 4px 20px rgba(139, 92, 246, 0.4);
         `;
         document.body.appendChild(banner);
-        
+
         // Add styles
         const style = document.createElement('style');
         style.textContent = `
@@ -524,7 +536,7 @@ class GameState {
         `;
         document.head.appendChild(style);
         document.body.classList.add('visit-mode');
-        
+
         // Function to hide all UI elements
         const hideVisitModeUI = () => {
             // Hide specific elements by ID
@@ -549,19 +561,19 @@ class GameState {
                     }
                 }
             });
-            
+
             // Hide all fixed position elements except visit banner
             document.querySelectorAll('.fixed').forEach(el => {
                 if (!el.closest('#visit-mode-banner')) {
                     el.style.setProperty('display', 'none', 'important');
                 }
             });
-            
+
             // Hide the bottom dock
             document.querySelectorAll('.glass-panel.rounded-2xl').forEach(el => {
                 el.style.setProperty('display', 'none', 'important');
             });
-            
+
             // Hide entire ui-layer children except club badge parent
             const uiLayer = document.getElementById('ui-layer');
             if (uiLayer) {
@@ -570,7 +582,7 @@ class GameState {
                         el.style.setProperty('display', 'none', 'important');
                     }
                 });
-                
+
                 // Re-show club badge
                 const clubBadge = document.getElementById('club-badge');
                 if (clubBadge) {
@@ -583,7 +595,7 @@ class GameState {
                 }
             }
         };
-        
+
         // Run immediately and after delays to catch dynamically created elements
         hideVisitModeUI();
         setTimeout(hideVisitModeUI, 100);
@@ -592,15 +604,15 @@ class GameState {
         setTimeout(hideVisitModeUI, 2000);
         setTimeout(hideVisitModeUI, 3000);
     }
-    
+
     // Send gift while in visit mode
     sendGiftFromVisit() {
         if (!this.visitingFriendUid) return;
-        
+
         // Get visit info
         const visitInfo = JSON.parse(sessionStorage.getItem('visitMode') || '{}');
         const friendName = visitInfo.friendName || 'Friend';
-        
+
         // Open gift modal if friendsSystem has it
         if (window.friendsSystem && typeof window.friendsSystem.openGiftModal === 'function') {
             window.friendsSystem.openGiftModal(this.visitingFriendUid, friendName);
@@ -608,7 +620,7 @@ class GameState {
             ui.notify('Gift system not available', 'info');
         }
     }
-    
+
     // Exit visit mode and return to index
     exitVisitMode() {
         sessionStorage.removeItem('visitMode');
@@ -625,23 +637,23 @@ class GameState {
             barStock: this.barStock,
             level: this.level,
             xp: this.xp,
-            
+
             // Club info
             clubName: this.clubName,
             clubTier: this.clubTier,
             ownerName: this.ownerName,
-            
+
             // Capacity & spawn
             maxVisitors: this.maxVisitors,
             spawnRate: this.spawnRate,
-            
+
             // Upgrades (capacity, marketing, profit levels)
-            stats: { 
+            stats: {
                 capacityLevel: this.stats.capacityLevel || 1,
                 marketingLevel: this.stats.marketingLevel || 1,
                 profitLevel: this.stats.profitLevel || 1
             },
-            
+
             // Staff counts
             staff: {
                 bartenders: staffManager.staff.bartenders || 0,
@@ -650,22 +662,22 @@ class GameState {
                 promoters: staffManager.staff.promoters || 0,
                 managers: staffManager.staff.managers || 0
             },
-            
+
             // Statistics
             totalEarnings: this.totalEarnings,
             totalDrinksServed: this.totalDrinksServed,
             totalVisitors: this.totalVisitors,
             eventsHosted: this.eventsHosted,
             playTime: this.playTime,
-            
+
             // Progress
             achievements: achievementSystem.unlocked || [],
             tutorialComplete: this.tutorialComplete,
-            
+
             // Settings
             soundEnabled: this.soundEnabled,
             musicEnabled: this.musicEnabled,
-            
+
             // Furniture with full details (type, position, rotation)
             furniture: this.furniture.map(f => ({
                 type: f.userData?.type,
@@ -674,7 +686,7 @@ class GameState {
                 z: Math.round((f.position?.z || 0) * 100) / 100,
                 rotationY: Math.round((f.rotation?.y || 0) * 100) / 100
             })).filter(f => f.type),
-            
+
             // Visitors in club (persist them!)
             visitors: (this.visitors || []).filter(v => v && !v.isLeaving).map(v => ({
                 x: Math.round((v.mesh?.position?.x || 0) * 100) / 100,
@@ -685,21 +697,21 @@ class GameState {
                 timeInClub: Math.round(v.timeInClub || 0),
                 frustration: Math.round(v.frustration || 0)
             })).slice(0, 50), // Max 50 visitors saved
-            
+
             // Premium data
             coins: window.premiumSystem?.coins || 0,
             isVIP: window.premiumSystem?.isVIP || false,
             vipExpiry: window.premiumSystem?.vipExpiry || null,
             purchasedItems: window.premiumSystem?.purchasedItems || [],
-            
+
             // Daily Rewards/Challenges data
             challenges: challengeSystem.save(),
-            
+
             // Timestamp
             savedAt: Date.now()
         };
     }
-    
+
     // Rename club
     renameClub(newName) {
         if (!newName || newName.trim().length < 2) {
@@ -710,10 +722,10 @@ class GameState {
             ui.notify('Club name too long (max 30 characters)', 'error');
             return false;
         }
-        
+
         this.clubName = newName.trim();
         ui.notify(`Club renamed to "${this.clubName}"!`, 'success');
-        
+
         // Update displays
         if (window.updateClubDisplay) {
             window.updateClubDisplay();
@@ -721,7 +733,7 @@ class GameState {
         if (window.updateProfileModal) {
             window.updateProfileModal();
         }
-        
+
         this.autoSave();
         return true;
     }
@@ -735,7 +747,7 @@ class GameState {
     // ============================
     // GIFT CODE REDEMPTION SYSTEM
     // ============================
-    
+
     openRedeemModal() {
         this.closeModals();
         const modal = document.getElementById('redeem-modal');
@@ -750,109 +762,109 @@ class GameState {
             if (status) status.classList.add('hidden');
         }
     }
-    
+
     closeRedeemModal() {
         const modal = document.getElementById('redeem-modal');
         if (modal) modal.classList.add('hidden');
     }
-    
+
     async redeemCode() {
         const input = document.getElementById('redeem-code-input');
         const status = document.getElementById('redeem-status');
         const btn = document.getElementById('redeem-btn');
-        
+
         if (!input || !status || !btn) return;
-        
+
         const code = input.value.trim().toUpperCase().replace(/[^A-Z0-9-]/g, '');
         if (!code || code.length < 4) {
             this.showRedeemStatus('Please enter a valid code', 'error');
             return;
         }
-        
+
         // Check if user is logged in
         const user = firebase.auth().currentUser;
         if (!user) {
             this.showRedeemStatus('Please log in to redeem codes', 'error');
             return;
         }
-        
+
         // Disable button
         btn.disabled = true;
         btn.innerHTML = '<i class="ph-bold ph-spinner animate-spin"></i> Checking...';
-        
+
         try {
             const db = firebase.database();
             const codeRef = db.ref(`giftCodes/${code}`);
             const snap = await codeRef.once('value');
-            
+
             if (!snap.exists()) {
                 this.showRedeemStatus('Invalid code. Please check and try again.', 'error');
                 this.resetRedeemBtn();
                 return;
             }
-            
+
             const coupon = snap.val();
             const now = Date.now();
-            
+
             // Check if active
             if (!coupon.active) {
                 this.showRedeemStatus('This code has been disabled.', 'error');
                 this.resetRedeemBtn();
                 return;
             }
-            
+
             // Check expiry
             if (coupon.expiresAt > 0 && coupon.expiresAt < now) {
                 this.showRedeemStatus('This code has expired.', 'error');
                 this.resetRedeemBtn();
                 return;
             }
-            
+
             // Check max uses
             if (coupon.usedCount >= coupon.maxUses) {
                 this.showRedeemStatus('This code has reached its maximum uses.', 'error');
                 this.resetRedeemBtn();
                 return;
             }
-            
+
             // Check if user already redeemed
             if (coupon.usedBy && coupon.usedBy[user.uid]) {
                 this.showRedeemStatus('You have already redeemed this code!', 'error');
                 this.resetRedeemBtn();
                 return;
             }
-            
+
             // IMPORTANT: Tell anti-cheat this is a legitimate operation BEFORE changing values
             if (window.antiCheat) {
                 window.antiCheat.allowLegitimateOperation(10000); // 10 seconds
             }
-            
+
             // Apply rewards
             const rewards = coupon.rewards || {};
             let rewardText = [];
-            
+
             // Store current values before adding
             const oldCash = this.cash;
             const oldDiamonds = this.diamonds;
-            
+
             if (rewards.cash > 0) {
                 this.cash = (this.cash || 0) + rewards.cash;
                 rewardText.push(`💰 ${rewards.cash.toLocaleString()} Cash`);
             }
-            
+
             if (rewards.diamonds > 0) {
                 this.diamonds = (this.diamonds || 0) + rewards.diamonds;
                 rewardText.push(`💎 ${rewards.diamonds} Diamonds`);
             }
-            
+
             // Update anti-cheat's tracked values to prevent future false positives
             if (window.antiCheat) {
                 window.antiCheat.lastCash = this.cash;
                 window.antiCheat.lastDiamonds = this.diamonds;
             }
-            
+
             console.log('🎁 Redeem - Before:', oldCash, oldDiamonds, '| After:', this.cash, this.diamonds);
-            
+
             // Update coupon usage in Firebase
             await codeRef.update({
                 usedCount: (coupon.usedCount || 0) + 1,
@@ -861,15 +873,15 @@ class GameState {
                     redeemedAt: firebase.database.ServerValue.TIMESTAMP
                 }
             });
-            
+
             // Get full save data with updated values
             const saveData = this.getSaveData();
             console.log('🎁 SaveData cash:', saveData.cash, 'diamonds:', saveData.diamonds);
-            
+
             // Save to Realtime Database (what admin reads)
             await db.ref(`saves/${user.uid}`).set(saveData);
             console.log('🎁 Saved to Realtime DB');
-            
+
             // Also update Firestore saves collection
             try {
                 await firebase.firestore().collection('saves').doc(user.uid).set({
@@ -877,8 +889,8 @@ class GameState {
                     savedAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
                 console.log('🎁 Saved to Firestore saves');
-            } catch(e) { console.warn('Firestore saves update failed:', e); }
-            
+            } catch (e) { console.warn('Firestore saves update failed:', e); }
+
             // Also update Firestore users collection
             try {
                 await firebase.firestore().collection('users').doc(user.uid).update({
@@ -886,44 +898,44 @@ class GameState {
                     diamonds: this.diamonds
                 });
                 console.log('🎁 Saved to Firestore users');
-            } catch(e) { console.warn('Firestore users update failed:', e); }
-            
+            } catch (e) { console.warn('Firestore users update failed:', e); }
+
             // Also save to local storage
             if (window.storage) {
                 window.storage.save(this);
             }
-            
+
             // Update UI
             this.updateUI();
-            
+
             // Show success
             this.showRedeemStatus(`🎉 Success! You received: ${rewardText.join(' + ')}`, 'success');
             ui.notify(`Code redeemed! +${rewardText.join(' + ')}`, 'success');
             audioManager.play('success');
-            
+
             // Clear input
             input.value = '';
-            
+
             // Create celebration effect
             this.createRedeemCelebration();
-            
+
         } catch (e) {
             console.error('Redeem error:', e);
             this.showRedeemStatus('Error redeeming code. Please try again.', 'error');
         }
-        
+
         this.resetRedeemBtn();
     }
-    
+
     showRedeemStatus(message, type) {
         const status = document.getElementById('redeem-status');
         if (!status) return;
-        
+
         status.classList.remove('hidden', 'text-red-400', 'text-green-400', 'text-yellow-400');
         status.classList.add(type === 'error' ? 'text-red-400' : type === 'success' ? 'text-green-400' : 'text-yellow-400');
         status.innerHTML = message;
     }
-    
+
     resetRedeemBtn() {
         const btn = document.getElementById('redeem-btn');
         if (btn) {
@@ -931,7 +943,7 @@ class GameState {
             btn.innerHTML = '<i class="ph-fill ph-gift"></i> Redeem';
         }
     }
-    
+
     createRedeemCelebration() {
         // Create confetti effect
         const colors = ['#FFD700', '#FFA500', '#FF6B6B', '#4ECDC4', '#A855F7'];
@@ -954,7 +966,7 @@ class GameState {
                 setTimeout(() => confetti.remove(), 2000);
             }, i * 30);
         }
-        
+
         // Add confetti animation if not exists
         if (!document.getElementById('confetti-style')) {
             const style = document.createElement('style');
@@ -973,21 +985,21 @@ class GameState {
     initEconomySystem() {
         if (this.economyListenerActive) return;
         if (typeof firebase === 'undefined' || !firebase.apps?.length) return;
-        
+
         const db = firebase.database();
-        
+
         // Listen for global multiplier
         db.ref('economy/multiplier').on('value', (snap) => {
             this.globalMultiplier = snap.val() || 1;
             console.log('💰 Global multiplier updated:', this.globalMultiplier);
         });
-        
+
         // Listen for economy events
         db.ref('economy/events').on('value', (snap) => {
             const now = Date.now();
             const events = snap.val() || {};
             this.activeEconomyEvents = {};
-            
+
             for (const [key, event] of Object.entries(events)) {
                 if (event.endsAt > now) {
                     this.activeEconomyEvents[key] = event;
@@ -995,27 +1007,27 @@ class GameState {
             }
             console.log('🎉 Active economy events:', Object.keys(this.activeEconomyEvents));
         });
-        
+
         // Listen for economy wipes/resets - force reload from cloud
         db.ref('economy/forceReload').on('value', async (snap) => {
             const reloadTime = snap.val();
             if (!reloadTime) return;
-            
+
             // Only process if this reload is newer than when we loaded
             if (!this.lastEconomyReloadTime) {
                 this.lastEconomyReloadTime = reloadTime;
                 return; // First load, just record the time
             }
-            
+
             if (reloadTime > this.lastEconomyReloadTime) {
                 this.lastEconomyReloadTime = reloadTime;
                 console.log('⚠️ Admin economy action detected - reloading from cloud...');
-                
+
                 // Block saves temporarily to prevent overwriting
                 if (window.cloudSave) {
                     window.cloudSave.blockSaves = true;
                 }
-                
+
                 // Reload from cloud
                 try {
                     const cloudData = await window.cloudSave?.loadGame();
@@ -1028,7 +1040,7 @@ class GameState {
                 } catch (e) {
                     console.error('Failed to reload economy data:', e);
                 }
-                
+
                 // Re-enable saves after a short delay
                 setTimeout(() => {
                     if (window.cloudSave) {
@@ -1037,45 +1049,45 @@ class GameState {
                 }, 2000);
             }
         });
-        
+
         this.economyListenerActive = true;
         console.log('💰 Economy system initialized');
     }
-    
+
     // Get current coin multiplier (global + events)
     getCoinMultiplier() {
         let mult = this.globalMultiplier || 1;
-        
+
         // Double coins event
         if (this.activeEconomyEvents?.double_coins) {
             mult *= 2;
         }
-        
+
         // Happy hour (+50%)
         if (this.activeEconomyEvents?.happy_hour) {
             mult *= 1.5;
         }
-        
+
         return mult;
     }
-    
+
     // Get current XP multiplier
     getXPMultiplier() {
         let mult = 1;
-        
+
         // Triple XP event
         if (this.activeEconomyEvents?.triple_xp) {
             mult *= 3;
         }
-        
+
         // Happy hour (+50%)
         if (this.activeEconomyEvents?.happy_hour) {
             mult *= 1.5;
         }
-        
+
         return mult;
     }
-    
+
     // Check if sale is active (returns discount multiplier)
     getSaleDiscount() {
         if (this.activeEconomyEvents?.sale) {
@@ -1083,30 +1095,71 @@ class GameState {
         }
         return 1; // No discount
     }
-    
+
     // Get sale-adjusted price
     getSalePrice(originalCost) {
         return Math.floor(originalCost * this.getSaleDiscount());
     }
-    
+
     // Check if sale event is active
     isSaleActive() {
         return !!this.activeEconomyEvents?.sale;
     }
-    
+
+    // ========================================
+    // SERVER VALIDATION HELPERS
+    // ========================================
+
+    /**
+     * Sync local state with server periodically
+     */
+    async syncWithServer() {
+        if (!this.serverValidationEnabled || !window.authSystem?.isLoggedIn) return;
+
+        try {
+            const clientState = {
+                cash: this.cash,
+                diamonds: this.diamonds,
+                level: this.level,
+                xp: this.xp
+            };
+
+            const result = await serverAPI.syncState(clientState);
+
+            if (result && !result.synced) {
+                // Server found discrepancies - use server state
+                console.warn('⚠️ State mismatch detected, syncing from server');
+                if (result.serverState.cash !== undefined) this.cash = result.serverState.cash;
+                if (result.serverState.diamonds !== undefined) this.diamonds = result.serverState.diamonds;
+                if (result.serverState.level !== undefined) this.level = result.serverState.level;
+                if (result.serverState.xp !== undefined) this.xp = result.serverState.xp;
+                this.updateUI();
+                ui.notify('Game state synchronized with server', 'warning');
+            }
+
+            this.lastServerSync = Date.now();
+        } catch (error) {
+            console.warn('Server sync failed (offline?):', error.message);
+        }
+    }
+
     // Economy
-    addCash(amt) {
+    addCash(amt, reason = 'game_action') {
         if (isNaN(amt)) amt = 0;
+
+        // Store original for validation
+        const originalAmt = amt;
+
         amt *= this.eventMultiplier;
         amt *= this.getCelebrityMultiplier(); // Apply celebrity booking bonus
         amt *= this.getCoinMultiplier(); // Apply admin economy multiplier + events
         const finalAmt = Math.floor(amt);
         this.cash += finalAmt;
         this.totalEarnings += finalAmt;
-        
+
         // Update celebrity booking timer
         this.updateCelebrityBooking();
-        
+
         if (finalAmt > 0) {
             audioManager.play('cash');
             if (this.createFloatingText) {
@@ -1117,23 +1170,40 @@ class GameState {
                 this.createFloatingText(text, { x: 0, y: 5, z: 0 }, color);
             }
         }
-        
+
         this.checkAchievements();
         this.updateUI();
+
+        // Server validation (background)
+        if (this.serverValidationEnabled && window.authSystem?.isLoggedIn) {
+            serverAPI.validateEarnings('cash', finalAmt, reason).catch(err => {
+                console.warn('Server validation failed:', err.message);
+            });
+        }
     }
 
-    addXP(amount) {
+    addXP(amount, reason = 'game_action') {
+        const originalAmt = amount;
+
         amount *= this.getCelebrityXPMultiplier(); // Apply celebrity XP bonus
         amount *= this.getXPMultiplier(); // Apply admin economy XP events
-        this.xp += Math.floor(amount);
+        const finalAmt = Math.floor(amount);
+        this.xp += finalAmt;
         const xpNeeded = this.getXPForLevel(this.level + 1);
-        
+
         if (this.xp >= xpNeeded) {
             this.levelUp();
         }
         this.updateUI();
+
+        // Server validation (background)
+        if (this.serverValidationEnabled && window.authSystem?.isLoggedIn) {
+            serverAPI.validateEarnings('xp', finalAmt, reason).catch(err => {
+                console.warn('XP validation failed:', err.message);
+            });
+        }
     }
-    
+
     getCelebrityXPMultiplier() {
         if (this.bookedCelebrity && this.celebrities[this.bookedCelebrity]) {
             return this.celebrities[this.bookedCelebrity].xpMultiplier || 1;
@@ -1148,18 +1218,18 @@ class GameState {
     levelUp() {
         this.level++;
         this.xp = 0;
-        
+
         audioManager.play('levelUp');
         ui.notify(`🎉 LEVEL UP! You're now level ${this.level}!`, 'success');
-        
+
         // Level rewards
         const cashBonus = this.level * 100;
         this.cash += cashBonus;
-        
+
         if (this.createFloatingText) {
             this.createFloatingText(`LEVEL ${this.level}!`, { x: 0, y: 8, z: 0 }, '#ffd700');
         }
-        
+
         this.checkAchievements();
     }
 
@@ -1167,50 +1237,50 @@ class GameState {
     getClubTierInfo() {
         return CONFIG.CLUB_TIERS.find(t => t.level === this.clubTier) || CONFIG.CLUB_TIERS[0];
     }
-    
+
     getNextClubTier() {
         return CONFIG.CLUB_TIERS.find(t => t.level === this.clubTier + 1);
     }
-    
+
     canUpgradeClub() {
         const nextTier = this.getNextClubTier();
         if (!nextTier) return false;
         return this.level >= nextTier.unlockLevel && this.cash >= nextTier.cost;
     }
-    
+
     async upgradeClub() {
         const nextTier = this.getNextClubTier();
         if (!nextTier) {
             ui.notify("Your club is already at max size!", "info");
             return false;
         }
-        
+
         if (this.level < nextTier.unlockLevel) {
             ui.notify(`Reach level ${nextTier.unlockLevel} to upgrade!`, "error");
             return false;
         }
-        
+
         if (this.cash < nextTier.cost) {
             ui.notify(`Need $${nextTier.cost.toLocaleString()} to upgrade!`, "error");
             return false;
         }
-        
+
         this.cash -= nextTier.cost;
         this.clubTier = nextTier.level;
         this.maxVisitors = nextTier.maxVisitors;
-        
+
         console.log('Upgrading club to tier:', this.clubTier);
-        
+
         ui.notify(`🎉 Upgrading to ${nextTier.name}... Please wait!`, "success");
         audioManager.play('levelUp');
-        
+
         this.updateUI();
-        
+
         // Save to cloud and WAIT for it to complete
         try {
             const saveData = this.getSaveData();
             console.log('Saving clubTier:', saveData.clubTier);
-            
+
             if (window.cloudSave && window.cloudSave.db) {
                 await window.cloudSave.saveGame(saveData, true); // Force save
                 console.log('Cloud save completed!');
@@ -1218,27 +1288,27 @@ class GameState {
         } catch (err) {
             console.error('Save failed:', err);
         }
-        
+
         // Now reload to apply changes
         ui.notify(`🏗️ Reloading to apply expansion...`, "success");
         setTimeout(() => {
             location.reload();
         }, 1000);
-        
+
         return true;
     }
-    
+
     loadFromData(data) {
         this.loadFromSave(data);
         this.updateUI();
     }
-    
+
     // Save to cloud and reload page (for upgrades that change club size)
     async saveAndReload() {
         try {
             const saveData = this.getSaveData();
             console.log('Saving before reload - clubTier:', saveData.clubTier);
-            
+
             if (window.cloudSave && window.cloudSave.db) {
                 await window.cloudSave.saveGame(saveData, true);
                 console.log('Cloud save completed!');
@@ -1246,7 +1316,7 @@ class GameState {
         } catch (err) {
             console.error('Save failed:', err);
         }
-        
+
         setTimeout(() => {
             location.reload();
         }, 1000);
@@ -1298,15 +1368,15 @@ class GameState {
         timeSystem.update(delta);
         vipSystem.update(delta, this);
         statisticsSystem.update(delta, this);
-        
+
         // Sync staff data
         this.staff = staffManager.staff;
-        
+
         // Update challenge progress
         challengeSystem.setProgress('hype', this.hype);
         challengeSystem.setProgress('visitors', this.visitors?.length || 0);
     }
-    
+
     onNewDay() {
         // Reset daily systems
         challengeSystem.resetDaily();
@@ -1319,21 +1389,21 @@ class GameState {
     // Shop & Upgrades
     openModal(type) {
         console.log('openModal called:', type);
-        
+
         try {
             audioManager.play('click');
         } catch (e) {
             console.warn('Audio not ready');
         }
-        
+
         // Close all other modals first to prevent overlapping
         document.querySelectorAll('.modal-overlay').forEach(m => {
             m.classList.add('hidden');
             m.classList.remove('active');
         });
-        
+
         let modalId;
-        switch(type) {
+        switch (type) {
             case 'shop': modalId = 'shop-modal'; break;
             case 'premium-shop': modalId = 'premium-shop-modal'; break;
             case 'upgrade': modalId = 'upgrade-modal'; break;
@@ -1349,21 +1419,21 @@ class GameState {
             case 'badge-shop': modalId = 'badge-shop-modal'; break;
             case 'login': modalId = 'login-modal'; break;
             case 'account': modalId = 'account-modal'; break;
-            default: 
+            default:
                 console.warn('Unknown modal type:', type);
                 return;
         }
-        
+
         // Update profile data when opening profile modal
         if (type === 'profile' && window.updateProfileModal) {
             window.updateProfileModal();
         }
-        
+
         // Populate shop when opening
         if (type === 'shop' && window.populateShop) {
             window.populateShop('floors');
         }
-        
+
         const modal = document.getElementById(modalId);
         console.log('Modal element:', modalId, modal);
         if (modal) {
@@ -1375,7 +1445,7 @@ class GameState {
     closeModals() {
         try {
             audioManager.play('click');
-        } catch (e) {}
+        } catch (e) { }
         document.querySelectorAll('.modal-overlay').forEach(el => {
             el.classList.add('hidden');
             el.classList.remove('active');
@@ -1406,35 +1476,44 @@ class GameState {
         if (this.cash >= cost) {
             this.cash -= cost;
             this.closeModals();
-            
+
             audioManager.play('purchase');
-            
+
             // Will be handled by scene.js
             if (window.createFurnitureCallback) {
                 const item = window.createFurnitureCallback(type, 0, 0);
                 if (this.mode !== 'edit') this.toggleMode();
                 this.selectedObject = item;
                 this.isMovingFurniture = true; // Start following cursor immediately
-                
+
                 // Setup move offsets for the new item
                 if (window.setupMoveOffsets) {
                     window.setupMoveOffsets([item]);
                 }
-                
+
                 if (this.highlightBox) {
                     this.highlightBox.setFromObject(item);
                     this.highlightBox.visible = true;
                     this.highlightBox.material.color.setHex(0x00ff00); // Green = ready to place
                 }
                 if (this.controls) this.controls.enabled = false;
-                
+
                 // Show edit mode visual effect
                 this.showEditModeEffect();
             }
-            
+
             ui.notify("🛋️ Click to place item!", "info");
             this.checkAchievements();
             this.updateUI();
+
+            // Server validation (background)
+            if (this.serverValidationEnabled && window.authSystem?.isLoggedIn) {
+                serverAPI.validatePurchase('furniture', type, {
+                    x: 0, z: 0, rotation: 0
+                }).catch(err => {
+                    console.warn('Purchase validation failed:', err.message);
+                });
+            }
         } else {
             ui.notify("Not enough cash!", "error");
             audioManager.play('error');
@@ -1466,32 +1545,32 @@ class GameState {
         if (this.diamonds >= item.cost) {
             this.diamonds -= item.cost;
             this.closeModals();
-            
+
             audioManager.play('purchase');
-            
+
             // Will be handled by scene.js
             if (window.createFurnitureCallback) {
                 const furniture = window.createFurnitureCallback(type, 0, 0);
                 if (this.mode !== 'edit') this.toggleMode();
                 this.selectedObject = furniture;
                 this.isMovingFurniture = true; // Start following cursor immediately
-                
+
                 // Setup move offsets for the new item
                 if (window.setupMoveOffsets) {
                     window.setupMoveOffsets([furniture]);
                 }
-                
+
                 if (this.highlightBox) {
                     this.highlightBox.setFromObject(furniture);
                     this.highlightBox.visible = true;
                     this.highlightBox.material.color.setHex(0x00ff00); // Green = ready to place
                 }
                 if (this.controls) this.controls.enabled = false;
-                
+
                 // Show edit mode visual effect
                 this.showEditModeEffect();
             }
-            
+
             ui.notify(`💎 Click to place ${item.name}!`, "info");
             this.checkAchievements();
             this.updateUI();
@@ -1534,17 +1613,17 @@ class GameState {
         if (this.cash >= cost) {
             this.cash -= cost;
             audioManager.play('purchase');
-            
+
             if (type === 'capacity') {
                 this.stats.capacityLevel++;
                 this.maxVisitors += 5;
-                
+
                 // Every 3 capacity levels, increase club tier (physical size)
                 const newTier = Math.floor(this.stats.capacityLevel / 3) + 1;
                 if (newTier > this.clubTier && newTier <= 6) {
                     this.clubTier = newTier;
                     ui.notify(`🏗️ Club expanded to tier ${newTier}! Reloading...`, "success");
-                    
+
                     // Force save and reload
                     this.saveAndReload();
                     return;
@@ -1557,7 +1636,7 @@ class GameState {
             if (type === 'profit') {
                 this.stats.profitLevel++;
             }
-            
+
             ui.notify("Upgrade Complete!", "success");
             this.addXP(25);
             this.updateUI();
@@ -1615,7 +1694,7 @@ class GameState {
     updateSettingsUI() {
         const soundBtn = document.getElementById('sound-toggle');
         const musicBtn = document.getElementById('music-toggle');
-        
+
         if (soundBtn) soundBtn.textContent = this.soundEnabled ? '🔊 Sound: ON' : '🔇 Sound: OFF';
         if (musicBtn) musicBtn.textContent = this.musicEnabled ? '🎵 Music: ON' : '🎵 Music: OFF';
     }
@@ -1635,10 +1714,10 @@ class GameState {
     getRandomSpot(type) {
         const items = this.getFurniture(type);
         if (items.length === 0) return null;
-        
+
         const item = items[Math.floor(Math.random() * items.length)];
         const pos = { x: item.position.x, y: item.position.y, z: item.position.z };
-        
+
         if (type === 'bar') pos.z += 2.5;
         if (type === 'dj') pos.z += 4;
         if (type === 'dancefloor') {
@@ -1654,17 +1733,17 @@ class GameState {
     // Mode toggle
     toggleMode() {
         this.mode = this.mode === 'play' ? 'edit' : 'play';
-        
+
         const modeBtn = document.getElementById('btn-mode');
         const editControls = document.getElementById('edit-controls');
-        
+
         if (modeBtn) {
-            modeBtn.innerHTML = this.mode === 'edit' 
+            modeBtn.innerHTML = this.mode === 'edit'
                 ? '<span class="icon">✅</span><span class="label">Done</span>'
                 : '<span class="icon">🔨</span><span class="label">Edit</span>';
             modeBtn.classList.toggle('active', this.mode === 'edit');
         }
-        
+
         if (editControls) {
             editControls.style.display = this.mode === 'edit' ? 'flex' : 'none';
         }
@@ -1736,13 +1815,13 @@ class GameState {
     // Celebrity Booking System
     celebrities = {
         // Filipino Celebrities
-        vice_ganda: { 
-            name: "Vice Ganda", 
-            photo: "🎭", 
+        vice_ganda: {
+            name: "Vice Ganda",
+            photo: "🎭",
             category: "Filipino",
-            cost: 5000, 
-            currency: 'cash', 
-            duration: 300, 
+            cost: 5000,
+            currency: 'cash',
+            duration: 300,
             hypeBoost: 50,
             cashMultiplier: 1.5,
             xpMultiplier: 1.0,
@@ -1751,13 +1830,13 @@ class GameState {
             feature: "Comedy Show",
             benefits: ["💰 1.5x Revenue", "😂 +50 Hype"]
         },
-        sarah_g: { 
-            name: "Sarah Geronimo", 
-            photo: "🎤", 
+        sarah_g: {
+            name: "Sarah Geronimo",
+            photo: "🎤",
             category: "Filipino",
-            cost: 8000, 
-            currency: 'cash', 
-            duration: 300, 
+            cost: 8000,
+            currency: 'cash',
+            duration: 300,
             hypeBoost: 60,
             cashMultiplier: 1.3,
             xpMultiplier: 2.0,
@@ -1766,13 +1845,13 @@ class GameState {
             feature: "Live Concert",
             benefits: ["⭐ 2x XP Gain", "🔥 +60 Hype"]
         },
-        daniel_padilla: { 
-            name: "Daniel Padilla", 
-            photo: "🌟", 
+        daniel_padilla: {
+            name: "Daniel Padilla",
+            photo: "🌟",
             category: "Filipino",
-            cost: 7000, 
-            currency: 'cash', 
-            duration: 240, 
+            cost: 7000,
+            currency: 'cash',
+            duration: 240,
             hypeBoost: 45,
             cashMultiplier: 1.4,
             xpMultiplier: 1.0,
@@ -1781,13 +1860,13 @@ class GameState {
             feature: "Meet & Greet",
             benefits: ["👥 +20% Guests", "💰 1.4x Revenue"]
         },
-        maine_mendoza: { 
-            name: "Maine Mendoza", 
-            photo: "📱", 
+        maine_mendoza: {
+            name: "Maine Mendoza",
+            photo: "📱",
             category: "Filipino",
-            cost: 4000, 
-            currency: 'cash', 
-            duration: 180, 
+            cost: 4000,
+            currency: 'cash',
+            duration: 180,
             hypeBoost: 35,
             cashMultiplier: 1.0,
             xpMultiplier: 3.0,
@@ -1796,13 +1875,13 @@ class GameState {
             feature: "Social Media Takeover",
             benefits: ["⭐ 3x XP Gain", "📱 Viral Buzz"]
         },
-        kathryn: { 
-            name: "Kathryn Bernardo", 
-            photo: "👑", 
+        kathryn: {
+            name: "Kathryn Bernardo",
+            photo: "👑",
             category: "Filipino",
-            cost: 10000, 
-            currency: 'cash', 
-            duration: 360, 
+            cost: 10000,
+            currency: 'cash',
+            duration: 360,
             hypeBoost: 70,
             cashMultiplier: 2.0,
             xpMultiplier: 1.5,
@@ -1812,13 +1891,13 @@ class GameState {
             benefits: ["💰 2x Revenue", "⭐ 1.5x XP", "👥 +15% Guests"]
         },
         // International Celebrities
-        dj_snake: { 
-            name: "DJ Snake", 
-            photo: "🎧", 
+        dj_snake: {
+            name: "DJ Snake",
+            photo: "🎧",
             category: "International",
-            cost: 5, 
-            currency: 'diamonds', 
-            duration: 600, 
+            cost: 5,
+            currency: 'diamonds',
+            duration: 600,
             hypeBoost: 100,
             cashMultiplier: 2.0,
             xpMultiplier: 1.5,
@@ -1827,13 +1906,13 @@ class GameState {
             feature: "EDM Night",
             benefits: ["💰 2x Revenue", "⭐ 1.5x XP", "🔥 +100 Hype"]
         },
-        drake: { 
-            name: "Drake", 
-            photo: "🎤", 
+        drake: {
+            name: "Drake",
+            photo: "🎤",
             category: "International",
-            cost: 10, 
-            currency: 'diamonds', 
-            duration: 600, 
+            cost: 10,
+            currency: 'diamonds',
+            duration: 600,
             hypeBoost: 150,
             cashMultiplier: 2.5,
             xpMultiplier: 2.0,
@@ -1842,13 +1921,13 @@ class GameState {
             feature: "Hotline Bling",
             benefits: ["💰 2.5x Revenue", "⭐ 2x XP", "👥 +25% Guests"]
         },
-        rihanna: { 
-            name: "Rihanna", 
-            photo: "💎", 
+        rihanna: {
+            name: "Rihanna",
+            photo: "💎",
             category: "International",
-            cost: 15, 
-            currency: 'diamonds', 
-            duration: 600, 
+            cost: 15,
+            currency: 'diamonds',
+            duration: 600,
             hypeBoost: 200,
             cashMultiplier: 3.0,
             xpMultiplier: 2.0,
@@ -1857,13 +1936,13 @@ class GameState {
             feature: "Diamond Night",
             benefits: ["💰 3x Revenue", "⭐ 2x XP", "👥 +30% Guests"]
         },
-        the_weeknd: { 
-            name: "The Weeknd", 
-            photo: "🌙", 
+        the_weeknd: {
+            name: "The Weeknd",
+            photo: "🌙",
             category: "International",
-            cost: 8, 
-            currency: 'diamonds', 
-            duration: 480, 
+            cost: 8,
+            currency: 'diamonds',
+            duration: 480,
             hypeBoost: 120,
             cashMultiplier: 2.0,
             xpMultiplier: 2.5,
@@ -1872,13 +1951,13 @@ class GameState {
             feature: "After Hours",
             benefits: ["💰 2x Revenue", "⭐ 2.5x XP", "🌙 Night Owl Bonus"]
         },
-        dua_lipa: { 
-            name: "Dua Lipa", 
-            photo: "💃", 
+        dua_lipa: {
+            name: "Dua Lipa",
+            photo: "💃",
             category: "International",
-            cost: 7, 
-            currency: 'diamonds', 
-            duration: 420, 
+            cost: 7,
+            currency: 'diamonds',
+            duration: 420,
             hypeBoost: 90,
             cashMultiplier: 1.8,
             xpMultiplier: 2.0,
@@ -1887,13 +1966,13 @@ class GameState {
             feature: "Dance Party",
             benefits: ["💰 1.8x Revenue", "⭐ 2x XP", "👥 +20% Guests"]
         },
-        bruno_mars: { 
-            name: "Bruno Mars", 
-            photo: "🎹", 
+        bruno_mars: {
+            name: "Bruno Mars",
+            photo: "🎹",
             category: "International",
-            cost: 12, 
-            currency: 'diamonds', 
-            duration: 600, 
+            cost: 12,
+            currency: 'diamonds',
+            duration: 600,
             hypeBoost: 180,
             cashMultiplier: 2.5,
             xpMultiplier: 2.5,
@@ -1903,10 +1982,10 @@ class GameState {
             benefits: ["💰 2.5x Revenue", "⭐ 2.5x XP", "👥 +35% Guests"]
         }
     };
-    
+
     bookedCelebrity = null;
     bookingTime = null;
-    
+
     openCelebrityModal() {
         const modal = document.getElementById('celebrity-modal');
         if (modal) {
@@ -1914,22 +1993,22 @@ class GameState {
             this.renderCelebrityBooking();
         }
     }
-    
+
     closeCelebrityModal() {
         const modal = document.getElementById('celebrity-modal');
         if (modal) modal.classList.add('hidden');
     }
-    
+
     renderCelebrityBooking() {
         const content = document.getElementById('celebrity-booking-content');
         if (!content) return;
-        
+
         const currentHour = this.gameHour;
         const diamondDisplay = document.getElementById('diamond-count');
         if (diamondDisplay) diamondDisplay.textContent = this.diamonds;
-        
+
         let html = '';
-        
+
         // Show current booking if any
         if (this.bookedCelebrity) {
             const celeb = this.celebrities[this.bookedCelebrity];
@@ -1944,7 +2023,7 @@ class GameState {
                 </div>
             `;
         }
-        
+
         // Filipino Celebrities
         html += '<h3 class="celeb-section-title">🇵🇭 Filipino Celebrities</h3><div class="celeb-grid">';
         Object.entries(this.celebrities).filter(([k, v]) => v.category === "Filipino").forEach(([key, celeb]) => {
@@ -1952,7 +2031,7 @@ class GameState {
             const canAfford = celeb.currency === 'cash' ? this.cash >= celeb.cost : this.diamonds >= celeb.cost;
             const availableText = isAvailable ? "✓ Available" : `${this.formatAvailability(celeb.availableHours)}`;
             const benefitsHtml = celeb.benefits ? celeb.benefits.map(b => `<span class="celeb-benefit">${b}</span>`).join('') : '';
-            
+
             html += `
                 <div class="celeb-card ${!isAvailable ? 'unavailable' : ''} ${!canAfford ? 'cant-afford' : ''}" onclick="${isAvailable && canAfford ? `game.bookCelebrity('${key}')` : ''}">
                     <div class="celeb-photo-large">${celeb.photo}</div>
@@ -1960,13 +2039,13 @@ class GameState {
                     <div class="celeb-feature">${celeb.feature}</div>
                     <div class="celeb-benefits">${benefitsHtml}</div>
                     <div class="celeb-availability ${isAvailable ? 'available' : ''}">${availableText}</div>
-                    <div class="celeb-duration">${Math.floor(celeb.duration/60)} min</div>
+                    <div class="celeb-duration">${Math.floor(celeb.duration / 60)} min</div>
                     <div class="celeb-cost ${celeb.currency}">${celeb.currency === 'cash' ? '$' + celeb.cost.toLocaleString() : '💎 ' + celeb.cost}</div>
                 </div>
             `;
         });
         html += '</div>';
-        
+
         // International Celebrities
         html += '<h3 class="celeb-section-title">🌍 International Celebrities <span class="diamond-only">💎 Diamonds Only</span></h3><div class="celeb-grid">';
         Object.entries(this.celebrities).filter(([k, v]) => v.category === "International").forEach(([key, celeb]) => {
@@ -1974,7 +2053,7 @@ class GameState {
             const canAfford = celeb.currency === 'cash' ? this.cash >= celeb.cost : this.diamonds >= celeb.cost;
             const availableText = isAvailable ? "✓ Available" : `${this.formatAvailability(celeb.availableHours)}`;
             const benefitsHtml = celeb.benefits ? celeb.benefits.map(b => `<span class="celeb-benefit">${b}</span>`).join('') : '';
-            
+
             html += `
                 <div class="celeb-card premium ${!isAvailable ? 'unavailable' : ''} ${!canAfford ? 'cant-afford' : ''}" onclick="${isAvailable && canAfford ? `game.bookCelebrity('${key}')` : ''}">
                     <div class="celeb-photo-large">${celeb.photo}</div>
@@ -1982,31 +2061,31 @@ class GameState {
                     <div class="celeb-feature">${celeb.feature}</div>
                     <div class="celeb-benefits">${benefitsHtml}</div>
                     <div class="celeb-availability ${isAvailable ? 'available' : ''}">${availableText}</div>
-                    <div class="celeb-duration">${Math.floor(celeb.duration/60)} min</div>
+                    <div class="celeb-duration">${Math.floor(celeb.duration / 60)} min</div>
                     <div class="celeb-cost diamond">💎 ${celeb.cost}</div>
                 </div>
             `;
         });
         html += '</div>';
-        
+
         content.innerHTML = html;
     }
-    
+
     formatAvailability(hours) {
         const start = hours[0];
         return start > 12 ? `${start - 12}PM` : (start === 0 ? '12AM' : `${start}AM`);
     }
-    
+
     bookCelebrity(key) {
         const celeb = this.celebrities[key];
         if (!celeb) return;
-        
+
         const currentHour = this.gameHour;
         if (!celeb.availableHours.includes(currentHour)) {
             ui.notify(`${celeb.name} is not available right now!`, 'error');
             return;
         }
-        
+
         // Check payment
         if (celeb.currency === 'cash') {
             if (this.cash < celeb.cost) {
@@ -2021,30 +2100,30 @@ class GameState {
             }
             this.diamonds -= celeb.cost;
         }
-        
+
         // Book the celebrity
         this.bookedCelebrity = key;
         this.bookingTime = celeb.duration;
         this.hype = Math.min(100, this.hype + celeb.hypeBoost);
-        
+
         ui.notify(`🎉 ${celeb.name} has arrived! ${celeb.feature}`, 'success');
         audioManager.play('success');
-        
+
         this.closeCelebrityModal();
         this.updateUI();
         this.renderCelebrityBooking();
     }
-    
+
     updateCelebrityBooking() {
         if (this.bookedCelebrity && this.bookingTime > 0) {
             this.bookingTime--;
             const celeb = this.celebrities[this.bookedCelebrity];
-            
+
             // Apply celebrity effects
             if (celeb.cashMultiplier > 1) {
                 // Effects applied in profit calculation
             }
-            
+
             if (this.bookingTime <= 0) {
                 ui.notify(`${celeb.name} has left the club. Thanks for coming!`, 'info');
                 this.bookedCelebrity = null;
@@ -2052,14 +2131,14 @@ class GameState {
             }
         }
     }
-    
+
     getCelebrityMultiplier() {
         if (this.bookedCelebrity) {
             return this.celebrities[this.bookedCelebrity].cashMultiplier || 1;
         }
         return 1;
     }
-    
+
     hireCelebrity(type) {
         // Legacy function - redirect to new booking system
         this.bookCelebrity(type);
@@ -2068,18 +2147,18 @@ class GameState {
     // AI Event
     async planEvent() {
         const btn = document.getElementById('btn-event');
-        
+
         // Prevent double-click
         if (btn && btn.disabled) return;
-        
+
         if (btn) {
             btn.disabled = true;
             btn.style.opacity = '0.5';
         }
-        
+
         ui.notify("Planning Event...", "info");
         audioManager.play('notification');
-        
+
         const eventThemes = [
             { title: "Neon Nights", desc: "Glow in the dark party vibes!" },
             { title: "Retro Disco", desc: "70s throwback with funky beats!" },
@@ -2090,9 +2169,9 @@ class GameState {
             { title: "Latin Fever", desc: "Salsa your way to dawn!" },
             { title: "Electric Dreams", desc: "EDM extravaganza until sunrise!" }
         ];
-        
+
         let eventData;
-        
+
         try {
             const prompt = `Generate a cool nightclub theme name and 8 word description. Format JSON: {"title": "X", "desc": "Y"}`;
             let txt = await this.callGemini(prompt);
@@ -2102,29 +2181,29 @@ class GameState {
             // Fallback to random event
             eventData = eventThemes[Math.floor(Math.random() * eventThemes.length)];
         }
-        
+
         document.getElementById('event-title').innerText = eventData.title;
         document.getElementById('event-desc').innerText = eventData.desc;
         document.getElementById('event-bonus').innerText = "💰 2x CASH BONUS FOR 30 SECONDS! 💰";
-        
+
         // Show modal - just remove hidden class (Tailwind flex handles display)
         const eventModal = document.getElementById('event-modal');
         if (eventModal) {
             eventModal.classList.remove('hidden');
         }
-        
+
         this.eventMultiplier = 2;
         this.eventsHosted++;
         this.addXP(CONFIG.XP_PER_EVENT);
         this.checkAchievements();
-        
+
         audioManager.play('achievement');
-        
+
         // Trigger confetti effect
         if (window.triggerConfetti) {
             window.triggerConfetti();
         }
-        
+
         // Re-enable button after 30 seconds (always runs)
         setTimeout(() => {
             this.eventMultiplier = 1;
@@ -2140,15 +2219,15 @@ class GameState {
         if (!CONFIG.GEMINI_API_KEY) {
             throw new Error('No API key');
         }
-        
+
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${CONFIG.GEMINI_API_KEY}`;
-        
+
         const response = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
         });
-        
+
         const data = await response.json();
         return data.candidates?.[0]?.content?.parts?.[0]?.text || "...";
     }
@@ -2171,7 +2250,7 @@ class GameState {
         if (guestsDisplay) guestsDisplay.innerText = `${this.visitors.length}/${this.maxVisitors}`;
         if (guestCount) guestCount.innerText = this.visitors.length;
         if (maxGuests) maxGuests.innerText = this.maxVisitors;
-        
+
         // Mobile displays (sync with desktop)
         const hypeDisplayMobile = document.getElementById('hype-display-mobile');
         const stockDisplayMobile = document.getElementById('stock-display-mobile');
@@ -2182,7 +2261,7 @@ class GameState {
         if (guestCountMobile) guestCountMobile.innerText = this.visitors.length;
         if (maxGuestsMobile) maxGuestsMobile.innerText = this.maxVisitors;
         if (levelDisplay) levelDisplay.innerText = this.level;
-        
+
         // Diamonds display (uses coins-display element)
         const coinsDisplay = document.getElementById('coins-display');
         if (coinsDisplay) coinsDisplay.innerText = this.diamonds;
@@ -2240,7 +2319,7 @@ class GameState {
         staffTypes.forEach(type => {
             const countEl = document.getElementById(`${type}-count`);
             const costEl = document.getElementById(`${type}-cost`);
-            
+
             if (countEl) countEl.innerText = staffManager.getCount(type);
             if (costEl) costEl.innerText = `$${staffManager.getHireCost(type)}`;
         });

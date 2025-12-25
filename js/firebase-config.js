@@ -3,14 +3,14 @@
 // Get these from: https://console.firebase.google.com > Project Settings
 
 export const firebaseConfig = {
-    apiKey: "AIzaSyB9Bx0t7LIrhWiAGULGjhNh1BI-S6qrFC8",
-    authDomain: "nightparty-city.firebaseapp.com",
-    databaseURL: "https://nightparty-city-default-rtdb.asia-southeast1.firebasedatabase.app/",
-    projectId: "nightparty-city",
-    storageBucket: "nightparty-city.firebasestorage.app",
-    messagingSenderId: "816223229032",
-    appId: "1:816223229032:web:63a3c47a2a8310109b57dd",
-    measurementId: "G-K0HDF9XHMR"
+    apiKey: "AIzaSyCx8r8aNwO3qQkMSnxNEkvS05TTqN9Cc9I",
+    authDomain: "hypeclubcity.firebaseapp.com",
+    databaseURL: "https://hypeclubcity-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "hypeclubcity",
+    storageBucket: "hypeclubcity.firebasestorage.app",
+    messagingSenderId: "505309718708",
+    appId: "1:505309718708:web:86d4af4ebadc01dae5cfe1",
+    measurementId: "G-P63SYLP2QE"
 };
 
 // Premium Products Configuration
@@ -34,7 +34,7 @@ export const PREMIUM_PRODUCTS = {
         duration: 365,
         perks: ['2x XP Boost', 'Exclusive Items', 'No Ads', 'VIP Badge', 'Priority Support', '2 Months FREE']
     },
-    
+
     // Coin Packages
     coins_100: { id: 'coins_100', name: '100 Coins', price: 0.99, coins: 100, bonus: 0 },
     coins_500: { id: 'coins_500', name: '550 Coins', price: 4.99, coins: 500, bonus: 50 },
@@ -49,19 +49,19 @@ export const COIN_ITEMS = {
     vip_booth: { id: 'vip_booth', name: 'VIP Booth', cost: 200, type: 'furniture', vipOnly: false },
     gold_dancefloor: { id: 'gold_dancefloor', name: 'Gold Dance Floor', cost: 500, type: 'furniture', vipOnly: false },
     crystal_bar: { id: 'crystal_bar', name: 'Crystal Bar', cost: 800, type: 'furniture', vipOnly: true },
-    
+
     // Boosters
     xp_boost_1h: { id: 'xp_boost_1h', name: '2x XP (1 Hour)', cost: 50, type: 'booster', duration: 3600 },
     cash_boost_1h: { id: 'cash_boost_1h', name: '2x Cash (1 Hour)', cost: 50, type: 'booster', duration: 3600 },
     hype_boost: { id: 'hype_boost', name: '+50 Hype Instant', cost: 30, type: 'instant' },
-    
+
     // Exclusive Staff
     celebrity_dj: { id: 'celebrity_dj', name: 'Celebrity DJ', cost: 1000, type: 'staff', vipOnly: true },
-    
+
     // Cosmetics
     neon_theme: { id: 'neon_theme', name: 'Neon Theme', cost: 300, type: 'theme' },
     retro_theme: { id: 'retro_theme', name: 'Retro 80s Theme', cost: 300, type: 'theme' },
-    
+
     // Time Savers
     instant_restock: { id: 'instant_restock', name: 'Instant Restock', cost: 20, type: 'instant' },
     skip_night: { id: 'skip_night', name: 'Skip to Peak Hours', cost: 40, type: 'instant' }

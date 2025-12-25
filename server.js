@@ -13,8 +13,59 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 
+// Firebase Admin and Game Validator
+const { auth: firebaseAuth, isConfigured } = require('./firebase-admin-config');
+const gameValidator = require('./gameValidator');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Authentication middleware - verify Firebase token
+async function authenticateUser(req, res, next) {
+    try {
+        // Check for development mode (allows testing even with Firebase configured)
+        const isDevelopment = process.env.DEV_MODE === 'true' || process.env.NODE_ENV === 'development';
+        if (isDevelopment) {
+            console.log('⚠️ DEV_MODE: Bypassing authentication for testing');
+            req.userId = req.headers['x-user-id'] || 'dev-user-123';
+            req.userEmail = `${req.userId}@dev.local`;
+            return next();
+        }
+
+        // In development mode without Firebase, allow unauthenticated access
+        if (!isConfigured) {
+            console.log('⚠️ Dev mode: Skipping authentication');
+            req.userId = req.headers['x-user-id'] || 'dev-user-123';
+            req.userEmail = `${req.userId}@dev.local`;
+            return next();
+        }
+
+        const authHeader = req.headers.authorization;
+
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return res.status(401).json({
+                success: false,
+                error: 'UNAUTHORIZED',
+                message: 'No authentication token provided'
+            });
+        }
+
+        const token = authHeader.split('Bearer ')[1];
+
+        // Verify token with Firebase Admin
+        const decodedToken = await firebaseAuth.verifyIdToken(token);
+        req.userId = decodedToken.uid;
+        req.userEmail = decodedToken.email;
+        next();
+    } catch (error) {
+        console.error('Auth error:', error.message);
+        return res.status(401).json({
+            success: false,
+            error: 'INVALID_TOKEN',
+            message: 'Invalid or expired authentication token'
+        });
+    }
+}
 
 // ==========================================
 // SECURITY CONFIGURATION
@@ -42,7 +93,7 @@ const RATE_LIMIT_MAX = 100; // Max requests per window
 app.use((req, res, next) => {
     const ip = req.ip || req.connection.remoteAddress;
     const now = Date.now();
-    
+
     if (!rateLimitStore.has(ip)) {
         rateLimitStore.set(ip, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
     } else {
@@ -53,7 +104,7 @@ app.use((req, res, next) => {
         } else {
             record.count++;
             if (record.count > RATE_LIMIT_MAX) {
-                return res.status(429).json({ 
+                return res.status(429).json({
                     error: 'Too many requests. Please slow down.',
                     retryAfter: Math.ceil((record.resetTime - now) / 1000)
                 });
@@ -91,7 +142,7 @@ app.use((req, res, next) => {
 // CORS middleware - RESTRICTED to allowed origins
 app.use((req, res, next) => {
     const origin = req.headers.origin;
-    
+
     // Check if origin is in allowed list
     if (origin && ALLOWED_ORIGINS.some(allowed => origin.startsWith(allowed))) {
         res.header('Access-Control-Allow-Origin', origin);
@@ -100,11 +151,11 @@ app.use((req, res, next) => {
         res.header('Access-Control-Allow-Origin', ALLOWED_ORIGINS[0]);
     }
     // If origin is not allowed, don't set the header (browser will block)
-    
+
     res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     res.header('Access-Control-Allow-Credentials', 'true');
-    
+
     if (req.method === 'OPTIONS') {
         return res.sendStatus(200);
     }
@@ -131,10 +182,223 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(__dirname));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// ==========================================
+// GAME VALIDATION API ENDPOINTS
+// ==========================================
+
+/**
+ * POST /api/game/validate-purchase
+ * Validate furniture or staff purchase
+ * Body: { itemType: 'furniture'|'staff', itemId: string, metadata: object }
+ */
+app.post('/api/game/validate-purchase', authenticateUser, async (req, res) => {
+    try {
+        const { itemType, itemId, metadata = {} } = req.body;
+
+        if (!itemType || !itemId) {
+            return res.status(400).json({
+                success: false,
+                error: 'MISSING_PARAMS',
+                message: 'itemType and itemId are required'
+            });
+        }
+
+        // Add IP to metadata for logging
+        metadata.ip = req.ip || req.connection.remoteAddress;
+
+        // Validate purchase
+        const result = await gameValidator.validatePurchase(
+            req.userId,
+            itemType,
+            itemId,
+            metadata
+        );
+
+        if (!result.valid) {
+            return res.status(400).json({
+                success: false,
+                ...result
+            });
+        }
+
+        res.json({
+            success: true,
+            ...result
+        });
+
+    } catch (error) {
+        console.error('Validation error (purchase):', error);
+        res.status(500).json({
+            success: false,
+            error: 'SERVER_ERROR',
+            message: 'Failed to validate purchase'
+        });
+    }
+});
+
+/**
+ * POST /api/game/validate-earnings
+ * Validate cash/diamonds/XP earnings
+ * Body: { currency: 'cash'|'diamonds'|'xp', amount: number, reason: string }
+ */
+app.post('/api/game/validate-earnings', authenticateUser, async (req, res) => {
+    try {
+        const { currency, amount, reason } = req.body;
+
+        if (!currency || amount === undefined || !reason) {
+            return res.status(400).json({
+                success: false,
+                error: 'MISSING_PARAMS',
+                message: 'currency, amount, and reason are required'
+            });
+        }
+
+        // Validate earnings
+        const result = await gameValidator.validateEarnings(
+            req.userId,
+            currency,
+            amount,
+            reason
+        );
+
+        if (!result.valid) {
+            return res.status(400).json({
+                success: false,
+                ...result
+            });
+        }
+
+        res.json({
+            success: true,
+            ...result
+        });
+
+    } catch (error) {
+        console.error('Validation error (earnings):', error);
+        res.status(500).json({
+            success: false,
+            error: 'SERVER_ERROR',
+            message: 'Failed to validate earnings'
+        });
+    }
+});
+
+/**
+ * POST /api/game/validate-level-up
+ * Validate level up action
+ */
+app.post('/api/game/validate-level-up', authenticateUser, async (req, res) => {
+    try {
+        // Validate level up
+        const result = await gameValidator.validateLevelUp(req.userId);
+
+        if (!result.valid) {
+            return res.status(400).json({
+                success: false,
+                ...result
+            });
+        }
+
+        res.json({
+            success: true,
+            ...result
+        });
+
+    } catch (error) {
+        console.error('Validation error (level-up):', error);
+        res.status(500).json({
+            success: false,
+            error: 'SERVER_ERROR',
+            message: 'Failed to validate level up'
+        });
+    }
+});
+
+/**
+ * POST /api/game/sync-state
+ * Sync and validate client state against server state
+ * Body: { clientState: object }
+ */
+app.post('/api/game/sync-state', authenticateUser, async (req, res) => {
+    try {
+        const { clientState } = req.body;
+
+        if (!clientState) {
+            return res.status(400).json({
+                success: false,
+                error: 'MISSING_PARAMS',
+                message: 'clientState is required'
+            });
+        }
+
+        // Sync state
+        const result = await gameValidator.syncState(req.userId, clientState);
+
+        res.json({
+            success: true,
+            ...result
+        });
+
+    } catch (error) {
+        console.error('Sync error:', error);
+        res.status(500).json({
+            success: false,
+            error: 'SERVER_ERROR',
+            message: 'Failed to sync state'
+        });
+    }
+});
+
+/**
+ * GET /api/game/state
+ * Get current server-side player state
+ */
+app.get('/api/game/state', authenticateUser, async (req, res) => {
+    try {
+        const state = await gameValidator.getPlayerState(req.userId);
+
+        res.json({
+            success: true,
+            state
+        });
+
+    } catch (error) {
+        console.error('Get state error:', error);
+        res.status(500).json({
+            success: false,
+            error: 'SERVER_ERROR',
+            message: 'Failed to get player state'
+        });
+    }
+});
+
+/**
+ * POST /api/game/invalidate-cache
+ * Invalidate player cache (for admin/testing)
+ */
+app.post('/api/game/invalidate-cache', authenticateUser, async (req, res) => {
+    try {
+        gameValidator.invalidateCache(req.userId);
+
+        res.json({
+            success: true,
+            message: 'Cache invalidated'
+        });
+
+    } catch (error) {
+        console.error('Cache invalidation error:', error);
+        res.status(500).json({
+            success: false,
+            error: 'SERVER_ERROR',
+            message: 'Failed to invalidate cache'
+        });
+    }
+});
+
 // File filter - only allow images
 const imageFilter = (req, file, cb) => {
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-    
+
     if (allowedTypes.includes(file.mimetype)) {
         cb(null, true);
     } else {
@@ -215,9 +479,9 @@ app.post('/api/upload/avatar', (req, res) => {
     uploadAvatar(req, res, (err) => {
         if (err instanceof multer.MulterError) {
             if (err.code === 'LIMIT_FILE_SIZE') {
-                return res.status(400).json({ 
-                    success: false, 
-                    error: 'File too large. Maximum size is 5MB.' 
+                return res.status(400).json({
+                    success: false,
+                    error: 'File too large. Maximum size is 5MB.'
                 });
             }
             return res.status(400).json({ success: false, error: err.message });
@@ -230,7 +494,7 @@ app.post('/api/upload/avatar', (req, res) => {
         if (!req.file) {
             return res.status(400).json({ success: false, error: 'No file uploaded' });
         }
-        
+
         // Log successful upload
         console.log(`Avatar uploaded: ${req.file.filename} for user ${req.body.userId || 'anonymous'}`);
 
@@ -240,7 +504,7 @@ app.post('/api/upload/avatar', (req, res) => {
             // Sanitize path to prevent directory traversal
             const safePath = path.normalize(oldFile).replace(/^(\.\.[\/\\])+/, '');
             const oldPath = path.join(__dirname, safePath);
-            
+
             // Verify the path is still within uploads/avatars
             if (oldPath.startsWith(avatarsDir)) {
                 try {
@@ -255,8 +519,8 @@ app.post('/api/upload/avatar', (req, res) => {
         }
 
         const fileUrl = `/uploads/avatars/${req.file.filename}`;
-        res.json({ 
-            success: true, 
+        res.json({
+            success: true,
             url: fileUrl,
             filename: req.file.filename
         });
@@ -268,9 +532,9 @@ app.post('/api/upload/cover', (req, res) => {
     uploadCover(req, res, (err) => {
         if (err instanceof multer.MulterError) {
             if (err.code === 'LIMIT_FILE_SIZE') {
-                return res.status(400).json({ 
-                    success: false, 
-                    error: 'File too large. Maximum size is 10MB.' 
+                return res.status(400).json({
+                    success: false,
+                    error: 'File too large. Maximum size is 10MB.'
                 });
             }
             return res.status(400).json({ success: false, error: err.message });
@@ -292,8 +556,8 @@ app.post('/api/upload/cover', (req, res) => {
         }
 
         const fileUrl = `/uploads/covers/${req.file.filename}`;
-        res.json({ 
-            success: true, 
+        res.json({
+            success: true,
             url: fileUrl,
             filename: req.file.filename
         });
@@ -305,9 +569,9 @@ app.post('/api/upload/post', (req, res) => {
     uploadPost(req, res, (err) => {
         if (err instanceof multer.MulterError) {
             if (err.code === 'LIMIT_FILE_SIZE') {
-                return res.status(400).json({ 
-                    success: false, 
-                    error: 'File too large. Maximum size is 8MB.' 
+                return res.status(400).json({
+                    success: false,
+                    error: 'File too large. Maximum size is 8MB.'
                 });
             }
             return res.status(400).json({ success: false, error: err.message });
@@ -320,8 +584,8 @@ app.post('/api/upload/post', (req, res) => {
         }
 
         const fileUrl = `/uploads/posts/${req.file.filename}`;
-        res.json({ 
-            success: true, 
+        res.json({
+            success: true,
             url: fileUrl,
             filename: req.file.filename
         });
@@ -352,13 +616,13 @@ async function sendDiscordDeployNotification() {
         }
 
         const versionData = JSON.parse(fs.readFileSync(versionPath, 'utf8'));
-        
+
         // Check if this is the same version (avoid duplicate notifications on restart)
         if (lastDeployedVersion === versionData.build) {
             console.log('ℹ️ Same version, skipping Discord notification');
             return;
         }
-        
+
         lastDeployedVersion = versionData.build;
 
         const embed = {
@@ -453,7 +717,7 @@ app.post('/api/notify-deploy', async (req, res) => {
 // API endpoint to send custom alerts
 app.post('/api/discord-alert', async (req, res) => {
     const { title, message, type, details } = req.body;
-    
+
     const colors = {
         warning: 0xFFA500,
         error: 0xEF4444,
@@ -500,7 +764,7 @@ app.post('/api/discord-alert', async (req, res) => {
 app.listen(PORT, () => {
     console.log(`🎵 Nightclub server running on http://localhost:${PORT}`);
     console.log(`📁 Uploads directory: ${uploadsDir}`);
-    
+
     // Send deploy notification on server start
     sendDiscordDeployNotification();
 });

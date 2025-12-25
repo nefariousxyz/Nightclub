@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Validation API Test Page</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .test-section {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .test-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            border-left: 4px solid #667eea;
+        }
+
+        .test-card h3 {
+            color: #333;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+
+        .test-card p {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+            width: 100%;
+        }
+
+        button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 13px;
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .result.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .result.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .result.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .status-badge.running {
+            background: #28a745;
+            color: white;
+        }
+
+        .status-badge.warning {
+            background: #ffc107;
+            color: #333;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🔐 Server-Side Validation API Test</h1>
+
+        <div class="test-section">
+            <h2>Server Status <span class="status-badge running">RUNNING</span><span class="status-badge warning">DEV
+                    MODE</span></h2>
+            <div class="test-grid">
+                <div class="test-card">
+                    <h3>🔌 Health Check</h3>
+                    <p>Test if server is responding</p>
+                    <button onclick="testHealth()">Test Health</button>
+                    <div id="health-result"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>💳 Purchase Validation Tests</h2>
+            <div class="test-grid">
+                <div class="test-card">
+                    <h3>✅ Valid Purchase</h3>
+                    <p>Buy a sofa ($500)</p>
+                    <button onclick="testValidPurchase()">Test Purchase</button>
+                    <div id="valid-purchase-result"></div>
+                </div>
+
+                <div class="test-card">
+                    <h3>❌ Insufficient Funds</h3>
+                    <p>Try to buy helicopter ($10,000)</p>
+                    <button onclick="testInsufficientFunds()">Test</button>
+                    <div id="insufficient-result"></div>
+                </div>
+
+                <div class="test-card">
+                    <h3>👔 Hire Staff</h3>
+                    <p>Hire a bartender</p>
+                    <button onclick="testHireStaff()">Test Hire</button>
+                    <div id="hire-result"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>💰 Earnings Validation Tests</h2>
+            <div class="test-grid">
+                <div class="test-card">
+                    <h3>💵 Add Cash</h3>
+                    <p>Earn $500 from drink sales</p>
+                    <button onclick="testAddCash()">Test Earnings</button>
+                    <div id="cash-result"></div>
+                </div>
+
+                <div class="test-card">
+                    <h3>💎 Add Diamonds</h3>
+                    <p>Earn 10 diamonds from achievement</p>
+                    <button onclick="testAddDiamonds()">Test</button>
+                    <div id="diamonds-result"></div>
+                </div>
+
+                <div class="test-card">
+                    <h3>⭐ Add XP</h3>
+                    <p>Gain 100 XP from event</p>
+                    <button onclick="testAddXP()">Test</button>
+                    <div id="xp-result"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>📊 State Management Tests</h2>
+            <div class="test-grid">
+                <div class="test-card">
+                    <h3>📥 Get Player State</h3>
+                    <p>Retrieve current server state</p>
+                    <button onclick="testGetState()">Get State</button>
+                    <div id="state-result"></div>
+                </div>
+
+                <div class="test-card">
+                    <h3>🔄 Sync State</h3>
+                    <p>Validate client/server match</p>
+                    <button onclick="testSyncState()">Sync</button>
+                    <div id="sync-result"></div>
+                </div>
+
+                <div class="test-card">
+                    <h3>⬆️ Level Up</h3>
+                    <p>Test level progression</p>
+                    <button onclick="testLevelUp()">Test Level Up</button>
+                    <div id="levelup-result"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>⚡ Rate Limiting Tests</h2>
+            <div class="test-grid">
+                <div class="test-card">
+                    <h3>🔥 Spam Test</h3>
+                    <p>Make 15 rapid purchases (limit: 10/min)</p>
+                    <button onclick="testRateLimit()">Test Rate Limit</button>
+                    <div id="rate-result"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:3000';
+        const DEV_USER_ID = 'test-user-123';
+
+        // Helper function to make API requests
+        async function apiRequest(endpoint, method = 'GET', body = null) {
+            const options = {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    // Dev mode: use custom header instead of Firebase token
+                    'X-User-Id': DEV_USER_ID
+                }
+            };
+
+            if (body) {
+                options.body = JSON.stringify(body);
+            }
+
+            const response = await fetch(`${API_URL}${endpoint}`, options);
+            const data = await response.json();
+
+            return { response, data };
+        }
+
+        // Helper to display results
+        function showResult(elementId, data, isSuccess) {
+            const el = document.getElementById(elementId);
+            el.className = 'result ' + (isSuccess ? 'success' : 'error');
+            el.textContent = JSON.stringify(data, null, 2);
+        }
+
+        // Test 1: Health Check
+        async function testHealth() {
+            try {
+                const { response, data } = await apiRequest('/api/game/state');
+                showResult('health-result', {
+                    status: 'Server is running!',
+                    endpoint: '/api/game/state',
+                    responseCode: response.status,
+                    data: data
+                }, response.ok);
+            } catch (error) {
+                showResult('health-result', { error: error.message }, false);
+            }
+        }
+
+        // Test 2: Valid Purchase
+        async function testValidPurchase() {
+            try {
+                const { response, data } = await apiRequest('/api/game/validate-purchase', 'POST', {
+                    itemType: 'furniture',
+                    itemId: 'sofa',
+                    metadata: { x: 5, z: 5, rotation: 0 }
+                });
+                showResult('valid-purchase-result', data, response.ok);
+            } catch (error) {
+                showResult('valid-purchase-result', { error: error.message }, false);
+            }
+        }
+
+        // Test 3: Insufficient Funds
+        async function testInsufficientFunds() {
+            try {
+                const { response, data } = await apiRequest('/api/game/validate-purchase', 'POST', {
+                    itemType: 'furniture',
+                    itemId: 'helicopter',
+                    metadata: { x: 10, z: 10, rotation: 0 }
+                });
+                showResult('insufficient-result', data, !response.ok); // Expect failure
+            } catch (error) {
+                showResult('insufficient-result', { error: error.message }, false);
+            }
+        }
+
+        // Test 4: Hire Staff
+        async function testHireStaff() {
+            try {
+                const { response, data } = await apiRequest('/api/game/validate-purchase', 'POST', {
+                    itemType: 'staff',
+                    itemId: 'bartender'
+                });
+                showResult('hire-result', data, response.ok);
+            } catch (error) {
+                showResult('hire-result', { error: error.message }, false);
+            }
+        }
+
+        // Test 5: Add Cash
+        async function testAddCash() {
+            try {
+                const { response, data } = await apiRequest('/api/game/validate-earnings', 'POST', {
+                    currency: 'cash',
+                    amount: 500,
+                    reason: 'drink_served'
+                });
+                showResult('cash-result', data, response.ok);
+            } catch (error) {
+                showResult('cash-result', { error: error.message }, false);
+            }
+        }
+
+        // Test 6: Add Diamonds
+        async function testAddDiamonds() {
+            try {
+                const { response, data } = await apiRequest('/api/game/validate-earnings', 'POST', {
+                    currency: 'diamonds',
+                    amount: 10,
+                    reason: 'achievement'
+                });
+                showResult('diamonds-result', data, response.ok);
+            } catch (error) {
+                showResult('diamonds-result', { error: error.message }, false);
+            }
+        }
+
+        // Test 7: Add XP
+        async function testAddXP() {
+            try {
+                const { response, data } = await apiRequest('/api/game/validate-earnings', 'POST', {
+                    currency: 'xp',
+                    amount: 100,
+                    reason: 'event_bonus'
+                });
+                showResult('xp-result', data, response.ok);
+            } catch (error) {
+                showResult('xp-result', { error: error.message }, false);
+            }
+        }
+
+        // Test 8: Get Player State
+        async function testGetState() {
+            try {
+                const { response, data } = await apiRequest('/api/game/state');
+                showResult('state-result', data, response.ok);
+            } catch (error) {
+                showResult('state-result', { error: error.message }, false);
+            }
+        }
+
+        // Test 9: Sync State
+        async function testSyncState() {
+            try {
+                const { response, data } = await apiRequest('/api/game/sync-state', 'POST', {
+                    clientState: {
+                        cash: 5000,
+                        diamonds: 5,
+                        level: 1,
+                        xp: 0
+                    }
+                });
+                showResult('sync-result', data, response.ok);
+            } catch (error) {
+                showResult('sync-result', { error: error.message }, false);
+            }
+        }
+
+        // Test 10: Level Up
+        async function testLevelUp() {
+            try {
+                const { response, data } = await apiRequest('/api/game/validate-level-up', 'POST');
+                showResult('levelup-result', data, !response.ok); // Expect failure (not enough XP)
+            } catch (error) {
+                showResult('levelup-result', { error: error.message }, false);
+            }
+        }
+
+        // Test 11: Rate Limiting
+        async function testRateLimit() {
+            const el = document.getElementById('rate-result');
+            el.className = 'result info';
+            el.textContent = 'Testing... Making 15 rapid purchases...\n\n';
+
+            let successCount = 0;
+            let rateLimitCount = 0;
+
+            for (let i = 0; i < 15; i++) {
+                try {
+                    const { response, data } = await apiRequest('/api/game/validate-purchase', 'POST', {
+                        itemType: 'furniture',
+                        itemId: 'sofa',
+                        metadata: { x: i, z: i }
+                    });
+
+                    if (response.ok) {
+                        successCount++;
+                        el.textContent += `✅ Request ${i + 1}: SUCCESS\n`;
+                    } else if (data.error === 'RATE_LIMIT') {
+                        rateLimitCount++;
+                        el.textContent += `⏱️ Request ${i + 1}: RATE LIMITED!\n`;
+                        el.className = 'result success';
+                    } else {
+                        el.textContent += `❌ Request ${i + 1}: ${data.error}\n`;
+                    }
+                } catch (error) {
+                    el.textContent += `❌ Request ${i + 1}: ${error.message}\n`;
+                }
+
+                // Small delay between requests
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+            el.textContent += `\n📊 Results:\n`;
+            el.textContent += `✅ Successful: ${successCount}\n`;
+            el.textContent += `⏱️ Rate Limited: ${rateLimitCount}\n`;
+            el.textContent += `\n${rateLimitCount > 0 ? '✅ Rate limiting is working!' : '❌ Rate limiting may not be working'}`;
+        }
+
+        // Auto-test on load
+        window.addEventListener('load', () => {
+            console.log('🧪 Test page loaded. Server should be running on', API_URL);
+            console.log('📝 Dev mode: Using X-User-Id header instead of Firebase token');
+        });
+    </script>
+</body>
+
+</html>
