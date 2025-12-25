@@ -6,9 +6,22 @@ import { ui } from './ui.js';
 
 class ServerAPI {
     constructor() {
-        this.baseURL = window.location.origin;
+        // Auto-detect environment and set API base URL
+        const isLocalhost = window.location.hostname === 'localhost' ||
+            window.location.hostname === '127.0.0.1';
+
+        // TODO: Replace 'YOUR-RAILWAY-URL' with your actual Railway domain after deployment
+        // Example: 'https://nightclub-production.up.railway.app'
+        const productionURL = 'https://nightclub-production-bbcf.up.railway.app';  // ← UPDATE THIS AFTER DEPLOYING TO RAILWAY
+
+        this.baseURL = isLocalhost
+            ? 'http://localhost:3000'          // Local development
+            : productionURL;                    // Production (Railway)
+
         this.enabled = true; // Set to false to disable validation (fallback mode)
         this.pendingRequests = new Map();
+
+        console.log(`🔗 Server API configured: ${this.baseURL}`);
     }
 
     /**
