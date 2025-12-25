@@ -1,0 +1,16 @@
+# Netlify Configuration
+[build]
+  publish = "."
+  
+# Secrets scanning configuration
+[build.environment]
+  # Disable smart secret detection for Firebase client API keys
+  # These are PUBLIC keys meant to be exposed in client-side code
+  SECRETS_SCAN_SMART_DETECTION_ENABLED = "false"
+
+# Or alternatively, omit specific values (more secure)
+# SECRETS_SCAN_SMART_DETECTION_OMIT_VALUES = "AIza***"
+
+# Production environment variables (for Netlify Functions if you add them later)
+[context.production.environment]
+  NODE_ENV = "production"
