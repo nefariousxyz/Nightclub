@@ -142,8 +142,8 @@ app.use((req, res, next) => {
 app.use((req, res, next) => {
     const origin = req.headers.origin;
 
-    // Check if origin is in allowed list
-    if (origin && ALLOWED_ORIGINS.some(allowed => origin.startsWith(allowed))) {
+    // Check if origin is in allowed list (exact match)
+    if (origin && ALLOWED_ORIGINS.includes(origin)) {
         res.header('Access-Control-Allow-Origin', origin);
     } else if (!origin) {
         // Allow requests without origin (same-origin, curl, etc.)
