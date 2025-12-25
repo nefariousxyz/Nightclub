@@ -76,8 +76,7 @@ const ALLOWED_ORIGINS = [
     'http://127.0.0.1',
     'http://127.0.0.1:3000',
     'https://hypeclub.city',
-    'https://www.hypeclub.city',
-    // Add more allowed origins if needed
+    'https://www.hypeclub.city'  // ← THIS LINE IS CRITICAL!
 ];
 
 // Rate limiting storage
