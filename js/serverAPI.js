@@ -58,16 +58,24 @@ class ServerAPI {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 }
-            };
+            }
 
             if (body && (method === 'POST' || method === 'PUT')) {
                 options.body = JSON.stringify(body);
             }
 
-            const response = await fetch(`${this.baseURL}${endpoint}`, options);
+            const fullURL = `${this.baseURL}${endpoint}`;
+            console.log(`📡 API Request: ${method} ${fullURL}`);
+
+            const response = await fetch(fullURL, options);
+
+            console.log(`📡 API Response: ${response.status} ${response.statusText}`);
+
             const data = await response.json();
 
             if (!response.ok) {
+                console.error('❌ API Error Response:', data);
+
                 // Handle specific error types
                 if (data.error === 'RATE_LIMIT') {
                     ui.notify('⏱️ Please slow down!', 'warning');
@@ -83,7 +91,13 @@ class ServerAPI {
 
             return data;
         } catch (error) {
-            console.error(`API request failed (${endpoint}):`, error);
+            console.error(`❌ API request failed (${endpoint}):`, error);
+            console.error('Error details:', {
+                message: error.message,
+                stack: error.stack,
+                endpoint,
+                baseURL: this.baseURL
+            });
             throw error;
         }
     }
