@@ -1,12 +1,12 @@
 // Admin Dashboard JavaScript
 const firebaseConfig = {
-    apiKey: "AIzaSyB9Bx0t7LIrhWiAGULGjhNh1BI-S6qrFC8",
-    authDomain: "nightparty-city.firebaseapp.com",
-    databaseURL: "https://nightparty-city-default-rtdb.asia-southeast1.firebasedatabase.app/",
-    projectId: "nightparty-city",
-    storageBucket: "nightparty-city.firebasestorage.app",
-    messagingSenderId: "816223229032",
-    appId: "1:816223229032:web:63a3c47a2a8310109b57dd"
+    apiKey: "AIzaSyCabolished9TpMDYI8cJ0o8I7OegKBYTQs0AOM",
+    authDomain: "hypeclub-c4d7a.firebaseapp.com",
+    databaseURL: "https://hypeclub-c4d7a-default-rtdb.firebaseio.com",
+    projectId: "hypeclub-c4d7a",
+    storageBucket: "hypeclub-c4d7a.firebasestorage.app",
+    messagingSenderId: "834293841850",
+    appId: "1:834293841850:web:9863dfd2e10fa982b78e42"
 };
 
 firebase.initializeApp(firebaseConfig);
