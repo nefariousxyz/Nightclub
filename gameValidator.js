@@ -11,10 +11,10 @@ const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 // Rate limiting storage (per user)
 const rateLimits = new Map();
 const RATE_LIMITS = {
-    purchase: { max: 10, window: 60000 }, // 10 purchases per minute
-    earnings: { max: 60, window: 60000 }, // 60 earnings per minute
-    levelUp: { max: 5, window: 60000 },   // 5 level-ups per minute
-    sync: { max: 10, window: 60000 }      // 10 syncs per minute
+    purchase: { max: 30, window: 60000 },  // 30 purchases per minute (was 10)
+    earnings: { max: 180, window: 60000 }, // 180 earnings per minute = 3/sec (was 60)
+    levelUp: { max: 10, window: 60000 },   // 10 level-ups per minute (was 5)
+    sync: { max: 20, window: 60000 }       // 20 syncs per minute (was 10)
 };
 
 /**
