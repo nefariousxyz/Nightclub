@@ -1231,6 +1231,16 @@ class GameState {
         }
 
         this.checkAchievements();
+
+        // CRITICAL: Save to Firebase immediately to prevent sync rollback
+        this.save();
+
+        // Also validate with server
+        if (this.serverValidationEnabled && window.authSystem?.isLoggedIn) {
+            serverAPI.validateLevelUp(this.level, this.xp).catch(err => {
+                console.warn('Level-up validation failed:', err.message);
+            });
+        }
     }
 
     // Club upgrade system
