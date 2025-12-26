@@ -1,6 +1,7 @@
 // Server-Side Game Validator
 // Validates all economy actions to prevent client-side manipulation
 
+const admin = require('firebase-admin');
 const { db, isConfigured } = require('./firebase-admin-config');
 const analytics = require('./analyticsService');
 
