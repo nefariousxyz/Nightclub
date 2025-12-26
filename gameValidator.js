@@ -191,15 +191,34 @@ async function validatePurchase(userId, itemType, itemId, metadata = {}) {
 
         // If not in Firebase or Firebase not configured, use hardcoded catalog
         if (Object.keys(furnitureCatalog).length === 0) {
-            // Hardcoded furniture catalog for dev mode
+            // Hardcoded furniture catalog for dev mode (matches client-side catalog)
             furnitureCatalog = {
-                sofa: { cost: 500, unlockLevel: 1 },
-                table: { cost: 300, unlockLevel: 1 },
-                bar: { cost: 1500, unlockLevel: 2 },
-                dancefloor: { cost: 2000, unlockLevel: 3 },
-                dj_booth: { cost: 3000, unlockLevel: 4 },
-                vip_booth: { cost: 2500, unlockLevel: 5 },
-                helicopter: { cost: 10000, unlockLevel: 10 }
+                // Floor tiles
+                tile_wood: { cost: 50, unlockLevel: 1 },
+                tile_marble: { cost: 100, unlockLevel: 1 },
+                tile_checker: { cost: 75, unlockLevel: 1 },
+                tile_carpet: { cost: 80, unlockLevel: 1 },
+                tile_concrete: { cost: 40, unlockLevel: 1 },
+                tile_disco: { cost: 150, unlockLevel: 1 },
+
+                // Furniture
+                table: { cost: 100, unlockLevel: 1 },
+                booth: { cost: 500, unlockLevel: 2 },
+                bar: { cost: 800, unlockLevel: 2 },
+                speaker: { cost: 200, unlockLevel: 1 },
+                plant: { cost: 75, unlockLevel: 1 },
+                pooltable: { cost: 600, unlockLevel: 3 },
+
+                // Dance & Entertainment
+                dancefloor: { cost: 1000, unlockLevel: 1 },
+                dj: { cost: 1500, unlockLevel: 2 },
+                stage: { cost: 2000, unlockLevel: 4 },
+                discoball: { cost: 300, unlockLevel: 1 },
+                laser: { cost: 750, unlockLevel: 3 },
+
+                // Decorations
+                statue: { cost: 350, unlockLevel: 1 },
+                fountain: { cost: 700, unlockLevel: 3 }
             };
         }
 
