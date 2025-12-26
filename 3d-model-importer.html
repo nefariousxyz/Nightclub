@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Model Importer - HypeClub</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .upload-zone {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 60px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: #f8f9ff;
+        }
+
+        .upload-zone:hover {
+            border-color: #764ba2;
+            background: #f0f2ff;
+        }
+
+        .upload-zone.dragover {
+            background: #e8eaff;
+            border-color: #764ba2;
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        input,
+        select,
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            width: 100%;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .preview-canvas {
+            width: 100%;
+            height: 400px;
+            background: #1a1a1a;
+            border-radius: 12px;
+            position: relative;
+        }
+
+        .file-info {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+
+        .file-info p {
+            margin: 5px 0;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .success {
+            background: #4caf50;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .error {
+            background: #f44336;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .progress {
+            width: 100%;
+            height: 6px;
+            background: #e0e0e0;
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 15px 0;
+            display: none;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        .instructions {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+
+        .instructions h3 {
+            margin-bottom: 10px;
+            color: #856404;
+        }
+
+        .instructions li {
+            margin: 5px 0;
+            color: #856404;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎨 3D Model Importer</h1>
+            <p>Upload custom GLTF/GLB models for your nightclub furniture</p>
+        </div>
+
+        <div class="success" id="successMsg"></div>
+        <div class="error" id="errorMsg"></div>
+
+        <div class="instructions">
+            <h3>📋 Quick Instructions</h3>
+            <ol>
+                <li>Create your 3D model in <strong>Blender</strong> (free software)</li>
+                <li>Export as <strong>GLB</strong> format (File > Export > glTF 2.0 Binary)</li>
+                <li>Drag & drop the .glb file below OR click to browse</li>
+                <li>Fill in the furniture details</li>
+                <li>Click "Upload & Add to Game" - Done! ✨</li>
+            </ol>
+            <p style="margin-top: 10px;"><strong>Need help?</strong> Check the 3D Furniture Import Guide!</p>
+        </div>
+
+        <div class="grid">
+            <!-- Upload Section -->
+            <div class="card">
+                <h2>📤 Upload Model</h2>
+
+                <div class="upload-zone" id="uploadZone">
+                    <div class="upload-icon">📦</div>
+                    <h3>Drag & Drop GLB File Here</h3>
+                    <p>or click to browse</p>
+                    <input type="file" id="fileInput" accept=".glb,.gltf" style="display: none;">
+                </div>
+
+                <div class="file-info" id="fileInfo" style="display: none;">
+                    <p><strong>File:</strong> <span id="fileName"></span></p>
+                    <p><strong>Size:</strong> <span id="fileSize"></span></p>
+                    <p><strong>Type:</strong> <span id="fileType"></span></p>
+                </div>
+
+                <div class="progress" id="progress">
+                    <div class="progress-bar" id="progressBar"></div>
+                </div>
+            </div>
+
+            <!-- Preview Section -->
+            <div class="card">
+                <h2>👁️ 3D Preview</h2>
+                <canvas id="previewCanvas" class="preview-canvas"></canvas>
+                <p style="margin-top: 10px; text-align: center; color: #666;">
+                    Drag to rotate • Scroll to zoom
+                </p>
+            </div>
+        </div>
+
+        <!-- Details Form -->
+        <div class="card" style="margin-top: 20px;">
+            <h2>ℹ️ Furniture Details</h2>
+            <form id="detailsForm">
+                <div class="grid">
+                    <div class="form-group">
+                        <label>Item ID *</label>
+                        <input type="text" id="itemId" placeholder="e.g., luxury_sofa" required>
+                        <small>Lowercase with underscores only</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Display Name *</label>
+                        <input type="text" id="itemName" placeholder="e.g., Luxury Leather Sofa" required>
+                    </div>
+                </div>
+
+                <div class="grid">
+                    <div class="form-group">
+                        <label>Cost *</label>
+                        <input type="number" id="itemCost" placeholder="500" min="1" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Currency *</label>
+                        <select id="itemCurrency" required>
+                            <option value="cash">💵 Cash</option>
+                            <option value="diamonds">💎 Diamonds</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid">
+                    <div class="form-group">
+                        <label>Category *</label>
+                        <select id="itemCategory" required>
+                            <option value="furniture">Furniture</option>
+                            <option value="seating">Seating</option>
+                            <option value="entertainment">Entertainment</option>
+                            <option value="lights">Lighting</option>
+                            <option value="decor">Decoration</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Unlock Level</label>
+                        <input type="number" id="itemLevel" value="1" min="1" max="100">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Description *</label>
+                    <textarea id="itemDesc" rows="3" placeholder="Describe this furniture item..." required></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-primary" id="submitBtn" disabled>
+                    ✨ Upload & Add to Game
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Three.js for 3D Preview -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getDatabase, ref, set } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+        import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
+
+        // Firebase config
+        const firebaseConfig = {
+            apiKey: "AIzaSyCabolished9TpMDYI8cJ0o8I7OegKBYTQs0AOM",
+            authDomain: "hypeclub-c4d7a.firebaseapp.com",
+            databaseURL: "https://hypeclub-c4d7a-default-rtdb.firebaseio.com",
+            projectId: "hypeclub-c4d7a",
+            storageBucket: "hypeclub-c4d7a.firebasestorage.app",
+            messagingSenderId: "834293841850",
+            appId: "1:834293841850:web:9863dfd2e10fa982b78e42"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+        const storage = getStorage(app);
+
+        // Three.js setup
+        const canvas = document.getElementById('previewCanvas');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x1a1a1a);
+
+        const camera = new THREE.PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
+        camera.position.set(3, 3, 3);
+
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+        renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+
+        const controls = new OrbitControls(camera, canvas);
+        controls.enableDamping = true;
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambientLight);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(5, 10, 5);
+        scene.add(directionalLight);
+
+        // Grid
+        const gridHelper = new THREE.GridHelper(10, 10);
+        scene.add(gridHelper);
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // File handling
+        let currentFile = null;
+        let currentModel = null;
+
+        const uploadZone = document.getElementById('uploadZone');
+        const fileInput = document.getElementById('fileInput');
+        const submitBtn = document.getElementById('submitBtn');
+
+        uploadZone.onclick = () => fileInput.click();
+
+        uploadZone.ondragover = (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('dragover');
+        };
+
+        uploadZone.ondragleave = () => uploadZone.classList.remove('dragover');
+
+        uploadZone.ondrop = (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file) handleFile(file);
+        };
+
+        fileInput.onchange = (e) => {
+            const file = e.target.files[0];
+            if (file) handleFile(file);
+        };
+
+        function handleFile(file) {
+            if (!file.name.endsWith('.glb') && !file.name.endsWith('.gltf')) {
+                showError('Please upload a .glb or .gltf file');
+                return;
+            }
+
+            if (file.size > 5 * 1024 * 1024) {
+                showError('File too large! Please keep under 5MB');
+                return;
+            }
+
+            currentFile = file;
+
+            // Show file info
+            document.getElementById('fileName').textContent = file.name;
+            document.getElementById('fileSize').textContent = (file.size / 1024).toFixed(2) + ' KB';
+            document.getElementById('fileType').textContent = file.type || 'model/gltf-binary';
+            document.getElementById('fileInfo').style.display = 'block';
+
+            // Enable submit button
+            submitBtn.disabled = false;
+
+            // Load preview
+            loadPreview(file);
+
+            // Auto-fill ID from filename
+            const autoId = file.name.replace(/\.(glb|gltf)$/i, '').toLowerCase().replace(/[^a-z0-9_]/g, '_');
+            document.getElementById('itemId').value = autoId;
+        }
+
+        function loadPreview(file) {
+            const url = URL.createObjectURL(file);
+            const loader = new GLTFLoader();
+
+            loader.load(url, (gltf) => {
+                // Remove old model
+                if (currentModel) {
+                    scene.remove(currentModel);
+                }
+
+                currentModel = gltf.scene;
+                scene.add(currentModel);
+
+                // Center and scale model
+                const box = new THREE.Box3().setFromObject(currentModel);
+                const center = box.getCenter(new THREE.Vector3());
+                const size = box.getSize(new THREE.Vector3());
+
+                currentModel.position.sub(center);
+                const maxDim = Math.max(size.x, size.y, size.z);
+                const scale = 2 / maxDim;
+                currentModel.scale.multiplyScalar(scale);
+
+                URL.revokeObjectURL(url);
+            }, undefined, (error) => {
+                console.error('Error loading model:', error);
+                showError('Failed to load 3D model. Check if it\'s a valid GLB file.');
+            });
+        }
+
+        // Form submission
+        document.getElementById('detailsForm').onsubmit = async (e) => {
+            e.preventDefault();
+
+            if (!currentFile) {
+                showError('Please upload a 3D model first!');
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = '⏳ Uploading...';
+            document.getElementById('progress').style.display = 'block';
+
+            try {
+                // Upload to Firebase Storage
+                const filename = `${Date.now()}_${currentFile.name}`;
+                const modelRef = storageRef(storage, `furniture-models/${filename}`);
+
+                await uploadBytes(modelRef, currentFile);
+                const modelURL = await getDownloadURL(modelRef);
+
+                // Update progress
+                document.getElementById('progressBar').style.width = '50%';
+
+                // Save to Firebase Database
+                const itemData = {
+                    name: document.getElementById('itemName').value,
+                    icon: '🎨', // Default icon for 3D models
+                    cost: parseInt(document.getElementById('itemCost').value),
+                    currency: document.getElementById('itemCurrency').value,
+                    category: document.getElementById('itemCategory').value,
+                    desc: document.getElementById('itemDesc').value,
+                    unlockLevel: parseInt(document.getElementById('itemLevel').value) || 1,
+                    modelURL: modelURL,
+                    is3DModel: true
+                };
+
+                const itemId = document.getElementById('itemId').value.toLowerCase().replace(/[^a-z0-9_]/g, '_');
+                await set(ref(database, `config/furnitureCatalog/${itemId}`), itemData);
+
+                document.getElementById('progressBar').style.width = '100%';
+
+                showSuccess(`✅ "${itemData.name}" uploaded successfully! Refresh your game to see it.`);
+
+                // Reset form
+                setTimeout(() => {
+                    document.getElementById('detailsForm').reset();
+                    document.getElementById('fileInfo').style.display = 'none';
+                    document.getElementById('progress').style.display = 'none';
+                    document.getElementById('progressBar').style.width = '0%';
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = '✨ Upload & Add to Game';
+                    currentFile = null;
+                }, 3000);
+
+            } catch (error) {
+                console.error('Upload error:', error);
+                showError(`❌ Upload failed: ${error.message}`);
+                submitBtn.disabled = false;
+                submitBtn.textContent = '✨ Upload & Add to Game';
+            }
+        };
+
+        function showSuccess(msg) {
+            const el = document.getElementById('successMsg');
+            el.textContent = msg;
+            el.style.display = 'block';
+            document.getElementById('errorMsg').style.display = 'none';
+        }
+
+        function showError(msg) {
+            const el = document.getElementById('errorMsg');
+            el.textContent = msg;
+            el.style.display = 'block';
+            document.getElementById('successMsg').style.display = 'none';
+        }
+    </script>
+</body>
+
+</html>
