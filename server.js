@@ -12,10 +12,16 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
+require('dotenv').config();
 
-// Firebase Admin and Game Validator
-const { auth: firebaseAuth, isConfigured } = require('./firebase-admin-config');
+// Firebase Admin SDK
+const { db, isConfigured } = require('./firebase-admin-config');
+
+// Import game validator
 const gameValidator = require('./gameValidator');
+
+// Import analytics service
+const analytics = require('./analyticsService');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -760,9 +766,85 @@ app.post('/api/discord-alert', async (req, res) => {
     }
 });
 
+// ═══════════════════════════════════════════════════════════════════════════
+// ANALYTICS ENDPOINTS
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Get analytics dashboard summary
+ */
+app.get('/api/analytics/dashboard', async (req, res) => {
+    try {
+        const [violations, economy, progression] = await Promise.all([
+            analytics.getMetrics('violations'),
+            analytics.getMetrics('economy'),
+            analytics.getMetrics('progression')
+        ]);
+
+        res.json({
+            success: true,
+            data: {
+                violations,
+                economy,
+                progression,
+                timestamp: Date.now()
+            }
+        });
+    } catch (error) {
+        console.error('Analytics dashboard error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+/**
+ * Get violation metrics
+ */
+app.get('/api/analytics/violations/summary', async (req, res) => {
+    try {
+        const metrics = await analytics.getMetrics('violations');
+        res.json({ success: true, data: metrics });
+    } catch (error) {
+        console.error('Violation metrics error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+/**
+ * Get economy metrics
+ */
+app.get('/api/analytics/economy/snapshot', async (req, res) => {
+    try {
+        const metrics = await analytics.getMetrics('economy');
+        res.json({ success: true, data: metrics });
+    } catch (error) {
+        console.error('Economy metrics error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+/**
+ * Get progression metrics
+ */
+app.get('/api/analytics/progression/summary', async (req, res) => {
+    try {
+        const metrics = await analytics.getMetrics('progression');
+        res.json({ success: true, data: metrics });
+    } catch (error) {
+        console.error('Progression metrics error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SERVER INITIALIZATION
+// ═══════════════════════════════════════════════════════════════════════════
+
 app.listen(PORT, () => {
     console.log(`🎵 Nightclub server running on http://localhost:${PORT}`);
     console.log(`📁 Uploads directory: ${uploadsDir}`);
+
+    // Initialize analytics service
+    analytics.initializeAnalytics();
 
     // Send deploy notification on server start
     sendDiscordDeployNotification();

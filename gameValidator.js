@@ -2,6 +2,7 @@
 // Validates all economy actions to prevent client-side manipulation
 
 const { db, isConfigured } = require('./firebase-admin-config');
+const analytics = require('./analyticsService');
 
 // In-memory cache to reduce Firebase reads
 const playerStateCache = new Map();
@@ -387,6 +388,9 @@ async function validateEarnings(userId, currency, amount, reason) {
         }
     }
 
+    // Track transaction in analytics
+    await analytics.trackTransaction(userId, 'earning', amount, currency, { reason });
+
     // Update Firebase
     await updatePlayerState(userId, newState);
 
@@ -546,25 +550,32 @@ async function logTransaction(userId, action, data) {
 }
 
 /**
- * Log violation to Firebase
+ * Log violation to analytics system
  */
 async function logViolation(userId, type, details) {
-    // Use in-memory store if Firebase not configured
+    // Use analytics service for comprehensive tracking
+    await analytics.trackViolation(userId, type, details);
+
+    // Fallback to in-memory if Firebase isn't configured
     if (!isConfigured) {
         const inMemoryStore = require('./inMemoryStore');
         await inMemoryStore.logViolation(userId, type, details);
         return;
     }
 
-    await db.ref('logs/violations').push({
-        userId,
-        type,
-        details,
-        timestamp: Date.now(),
-        severity: 'high'
-    });
+    try {
+        console.log(`🚨 Violation detected: ${type} for user ${userId}`);
 
-    console.warn(`🚨 Violation detected: ${type} for user ${userId}`);
+        // Log detailed violation with metadata
+        await db.ref(`logs/violations/${userId}`).push({
+            type,
+            details,
+            timestamp: Date.now(),
+            serverTimestamp: db.ref.ServerValue.TIMESTAMP
+        });
+    } catch (error) {
+        console.error('Failed to log violation:', error);
+    }
 }
 
 module.exports = {
