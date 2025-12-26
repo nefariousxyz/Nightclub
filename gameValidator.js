@@ -571,7 +571,7 @@ async function logViolation(userId, type, details) {
             type,
             details,
             timestamp: Date.now(),
-            serverTimestamp: db.ref.ServerValue.TIMESTAMP
+            serverTimestamp: admin.database.ServerValue.TIMESTAMP
         });
     } catch (error) {
         console.error('Failed to log violation:', error);
