@@ -10,7 +10,7 @@ class AuthSystem {
         this.auth = null;
         this.db = null;
     }
-    
+
     async init() {
         try {
             // Check if Firebase SDK is loaded
@@ -19,23 +19,23 @@ class AuthSystem {
                 this.isInitialized = true;
                 return this;
             }
-            
+
             // Initialize Firebase
             if (!firebase.apps.length) {
                 firebase.initializeApp(firebaseConfig);
             }
-            
+
             this.auth = firebase.auth();
-            
+
             // Ensure persistence is set to LOCAL
             await this.auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
-            
+
             this.db = firebase.firestore();
-            
+
             // Listen for auth state changes
             this.auth.onAuthStateChanged(async (user) => {
                 console.log('Auth state changed:', user ? 'Logged In (' + user.uid + ')' : 'Logged Out');
-                
+
                 // Fallback: If user is null but we have saved credentials, try to re-login
                 if (!user) {
                     const savedCreds = localStorage.getItem('nc_auth_fallback');
@@ -52,33 +52,33 @@ class AuthSystem {
                         }
                     }
                 }
-                
+
                 this.user = user;
                 this.isInitialized = true;
                 this.onAuthChangeCallbacks.forEach(cb => cb(user));
                 this.updateUI();
             });
-            
+
             // Set initialized after a short timeout in case onAuthStateChanged doesn't fire
             setTimeout(() => {
                 this.isInitialized = true;
             }, 2000);
-            
+
         } catch (error) {
             console.error('Firebase init error:', error);
             this.isInitialized = true; // Allow game to continue
         }
-        
+
         return this;
     }
-    
+
     onAuthChange(callback) {
         this.onAuthChangeCallbacks.push(callback);
         if (this.isInitialized) {
             callback(this.user);
         }
     }
-    
+
     // Email/Password Registration
     async register(email, password, displayName) {
         try {
@@ -86,28 +86,33 @@ class AuthSystem {
                 ui.notify('Auth not initialized. Please refresh.', 'error');
                 return { success: false, error: 'Auth not initialized' };
             }
-            
+
             const result = await this.auth.createUserWithEmailAndPassword(email, password);
-            
+
             // Update local user reference immediately
             this.user = result.user;
-            
+
             // Update display name
             await result.user.updateProfile({ displayName });
-            
+
             // Create user document in Firestore
             await this.createUserDocument(result.user);
-            
+
             // Save credentials for fallback
             localStorage.setItem('nc_auth_fallback', btoa(JSON.stringify({ e: email, p: password })));
-            
+
+            // Initialize session manager
+            if (window.sessionManager) {
+                await window.sessionManager.initialize(result.user.uid);
+            }
+
             // Clear any existing localStorage data for new account
             localStorage.removeItem('nightclub_city_save');
             console.log('Cleared localStorage for new account');
-            
+
             // Mark this as a new registration
             this.isNewRegistration = true;
-            
+
             ui.notify(`Welcome, ${displayName}! Account created.`, 'success');
             return { success: true, user: result.user, isNewAccount: true };
         } catch (error) {
@@ -118,7 +123,7 @@ class AuthSystem {
             return { success: false, error: error.message };
         }
     }
-    
+
     // Email/Password Login
     async login(email, password) {
         try {
@@ -126,7 +131,12 @@ class AuthSystem {
             this.user = result.user; // Update immediately
             // Save credentials for fallback
             localStorage.setItem('nc_auth_fallback', btoa(JSON.stringify({ e: email, p: password })));
-            
+
+            // Initialize session manager (kicks out other sessions)
+            if (window.sessionManager) {
+                await window.sessionManager.initialize(result.user.uid);
+            }
+
             ui.notify(`Welcome back, ${result.user.displayName || 'Player'}!`, 'success');
             return { success: true, user: result.user };
         } catch (error) {
@@ -137,7 +147,7 @@ class AuthSystem {
             return { success: false, error: error.message };
         }
     }
-    
+
     // Google Sign In
     async loginWithGoogle() {
         try {
@@ -145,13 +155,18 @@ class AuthSystem {
                 ui.notify('Auth not initialized. Please refresh.', 'error');
                 return { success: false, error: 'Auth not initialized' };
             }
-            
+
             const provider = new firebase.auth.GoogleAuthProvider();
             const result = await this.auth.signInWithPopup(provider);
-            
+
             // Update local user reference immediately
             this.user = result.user;
-            
+
+            // Initialize session manager (kicks out other sessions)
+            if (window.sessionManager) {
+                await window.sessionManager.initialize(result.user.uid);
+            }
+
             // Check if new user
             if (result.additionalUserInfo?.isNewUser) {
                 await this.createUserDocument(result.user);
@@ -159,7 +174,7 @@ class AuthSystem {
             } else {
                 ui.notify(`Welcome back, ${result.user.displayName}!`, 'success');
             }
-            
+
             return { success: true, user: result.user };
         } catch (error) {
             console.error('Google login error:', error.code, error.message, error);
@@ -169,13 +184,18 @@ class AuthSystem {
             return { success: false, error: error.message };
         }
     }
-    
+
     // Logout
     async logout() {
         try {
+            // Clean up session
+            if (window.sessionManager) {
+                await window.sessionManager.cleanup();
+            }
+
             // Clear fallback credentials to prevent auto-login loop
             localStorage.removeItem('nc_auth_fallback');
-            
+
             await this.auth.signOut();
             ui.notify('Logged out successfully', 'info');
             return { success: true };
@@ -184,7 +204,7 @@ class AuthSystem {
             return { success: false, error: error.message };
         }
     }
-    
+
     // Create user document in Firestore
     async createUserDocument(user) {
         const userDoc = {
@@ -194,39 +214,39 @@ class AuthSystem {
             photoURL: user.photoURL || null,
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
             lastLogin: firebase.firestore.FieldValue.serverTimestamp(),
-            
+
             // Premium status
             isVIP: false,
             vipExpiry: null,
             coins: 100, // Starting bonus
             totalCoinsSpent: 0,
-            
+
             // Purchases
             purchases: [],
             ownedItems: [],
-            
+
             // Stats
             totalPlayTime: 0,
             highestLevel: 1,
             totalCashEarned: 0
         };
-        
+
         await this.db.collection('users').doc(user.uid).set(userDoc, { merge: true });
         return userDoc;
     }
-    
+
     // Get user data from Firestore
     async getUserData() {
         if (!this.user) return null;
-        
+
         const doc = await this.db.collection('users').doc(this.user.uid).get();
         return doc.exists ? doc.data() : null;
     }
-    
+
     // Update user data
     async updateUserData(data) {
         if (!this.user) return false;
-        
+
         // Use set with merge: true instead of update to prevent "not-found" errors
         // if the document somehow doesn't exist
         await this.db.collection('users').doc(this.user.uid).set({
@@ -235,7 +255,7 @@ class AuthSystem {
         }, { merge: true });
         return true;
     }
-    
+
     // Password reset
     async resetPassword(email) {
         try {
@@ -247,17 +267,17 @@ class AuthSystem {
             return { success: false, error: error.message };
         }
     }
-    
+
     // Update UI based on auth state
     async updateUI() {
         const loginBtn = document.getElementById('account-btn');
         const userInfo = document.getElementById('user-info'); // Legacy container
-        
+
         // Target the specific elements found in index.html
         const accountName = document.getElementById('account-name');
         const accountAvatar = document.getElementById('account-avatar');
         const accountEmail = document.getElementById('account-email');
-        
+
         if (this.user) {
             // Try to get avatar from DB if Auth one is missing or default
             let avatarUrl = this.user.photoURL;
@@ -266,15 +286,15 @@ class AuthSystem {
                     const snap = await this.db.collection('users').doc(this.user.uid).get(); // Try Firestore first as per original design
                     // Or try Realtime DB if that's where we are saving now
                     if (!snap.exists || !snap.data().photoURL) {
-                         // Check Realtime DB profile path
-                         if (firebase.apps.length) {
-                             try {
-                                 const rtdbSnap = await firebase.database().ref(`profiles/${this.user.uid}/avatarUrl`).once('value');
-                                 if (rtdbSnap.exists()) avatarUrl = rtdbSnap.val();
-                             } catch (e) {
-                                 console.warn('RTDB Avatar check failed:', e);
-                             }
-                         }
+                        // Check Realtime DB profile path
+                        if (firebase.apps.length) {
+                            try {
+                                const rtdbSnap = await firebase.database().ref(`profiles/${this.user.uid}/avatarUrl`).once('value');
+                                if (rtdbSnap.exists()) avatarUrl = rtdbSnap.val();
+                            } catch (e) {
+                                console.warn('RTDB Avatar check failed:', e);
+                            }
+                        }
                     }
                 } catch (e) {
                     console.warn('Failed to fetch avatar from DB', e);
@@ -287,13 +307,13 @@ class AuthSystem {
             if (accountAvatar) {
                 accountAvatar.src = avatarUrl || 'assets/logo.png';
                 if (!avatarUrl) {
-                     // Fallback to generated avatar if no photo
-                     accountAvatar.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(accountName?.textContent || 'Player')}&background=random`;
+                    // Fallback to generated avatar if no photo
+                    accountAvatar.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(accountName?.textContent || 'Player')}&background=random`;
                 }
             }
 
             if (loginBtn) loginBtn.style.display = 'none';
-            
+
             // Legacy support just in case
             if (userInfo) {
                 userInfo.style.display = 'flex';
@@ -302,22 +322,22 @@ class AuthSystem {
                 if (avatar) avatar.src = avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(this.user.displayName || 'Player')}&background=random`;
                 if (name) name.textContent = this.user.displayName || 'Player';
             }
-            
+
             // Sync with chat if available
             if (window.chatSystem && typeof window.chatSystem.syncUserProfile === 'function') {
                 window.chatSystem.syncUserProfile(this.user);
             }
-            
+
         } else {
             if (loginBtn) loginBtn.style.display = 'flex';
             if (userInfo) userInfo.style.display = 'none';
-            
+
             // Reset account UI elements to default/hidden state if needed
             if (accountName) accountName.textContent = 'Player';
             if (accountAvatar) accountAvatar.src = 'assets/logo.png';
         }
     }
-    
+
     getErrorMessage(code) {
         const messages = {
             'auth/email-already-in-use': 'Email already registered',
@@ -336,15 +356,15 @@ class AuthSystem {
         };
         return messages[code] || 'An error occurred';
     }
-    
+
     get isLoggedIn() {
         return !!this.user;
     }
-    
+
     get userId() {
         return this.user?.uid || null;
     }
-    
+
     get userName() {
         return this.user?.displayName || 'Guest';
     }
