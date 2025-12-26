@@ -15,7 +15,7 @@ const crypto = require('crypto');
 require('dotenv').config();
 
 // Firebase Admin SDK
-const { db, isConfigured } = require('./firebase-admin-config');
+const { db, auth: firebaseAuth, isConfigured } = require('./firebase-admin-config');
 
 // Import game validator
 const gameValidator = require('./gameValidator');
