@@ -1473,6 +1473,14 @@ class GameState {
             return;
         }
 
+        // Check level requirement BEFORE allowing purchase
+        const item = FURNITURE_CATALOG[type];
+        if (item && item.unlockLevel && this.level < item.unlockLevel) {
+            ui.notify(`You need to be Level ${item.unlockLevel} to unlock this item!`, 'error');
+            audioManager.play('error');
+            return;
+        }
+
         if (this.cash >= cost) {
             this.cash -= cost;
             this.closeModals();
