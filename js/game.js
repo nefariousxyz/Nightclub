@@ -1247,7 +1247,7 @@ class GameState {
         this.checkAchievements();
 
         // CRITICAL: Save to Firebase immediately to prevent sync rollback
-        this.save();
+        this.autoSave();
 
         // Also validate with server
         if (this.serverValidationEnabled && window.authSystem?.isLoggedIn) {
