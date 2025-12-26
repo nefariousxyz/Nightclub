@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Furniture Builder - HypeClub Admin</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2em;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        input,
+        select,
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .emoji-picker {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            gap: 8px;
+            margin-top: 10px;
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .emoji-btn {
+            padding: 10px;
+            font-size: 24px;
+            border: 2px solid transparent;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .emoji-btn:hover {
+            transform: scale(1.2);
+            border-color: #667eea;
+        }
+
+        .btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-secondary {
+            background: #e0e0e0;
+            color: #333;
+            margin-left: 10px;
+        }
+
+        .preview {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 12px;
+            border: 2px solid #e0e0e0;
+        }
+
+        .preview h3 {
+            margin-bottom: 15px;
+            color: #667eea;
+        }
+
+        .preview-item {
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+
+        .preview-item .icon {
+            font-size: 32px;
+            display: inline-block;
+            margin-right: 15px;
+        }
+
+        .success-message {
+            padding: 15px;
+            background: #4caf50;
+            color: white;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .error-message {
+            padding: 15px;
+            background: #f44336;
+            color: white;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🛋️ Furniture Builder</h1>
+        <p class="subtitle">Create custom furniture items for your nightclub</p>
+
+        <div class="success-message" id="successMsg"></div>
+        <div class="error-message" id="errorMsg"></div>
+
+        <form id="furnitureForm">
+            <div class="row">
+                <div class="form-group">
+                    <label for="itemId">Item ID (unique)</label>
+                    <input type="text" id="itemId" placeholder="e.g., golden_sofa" required>
+                    <small>Use lowercase with underscores</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="itemName">Display Name</label>
+                    <input type="text" id="itemName" placeholder="e.g., Golden Sofa" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="itemIcon">Icon (Click to select)</label>
+                <input type="text" id="itemIcon" placeholder="Selected emoji will appear here" readonly required>
+                <div class="emoji-picker" id="emojiPicker"></div>
+            </div>
+
+            <div class="row">
+                <div class="form-group">
+                    <label for="itemCost">Cost</label>
+                    <input type="number" id="itemCost" placeholder="e.g., 500" min="1" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="itemCurrency">Currency</label>
+                    <select id="itemCurrency" required>
+                        <option value="cash">💵 Cash</option>
+                        <option value="diamonds">💎 Diamonds</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="form-group">
+                    <label for="itemCategory">Category</label>
+                    <select id="itemCategory" required>
+                        <option value="furniture">Furniture</option>
+                        <option value="seating">Seating</option>
+                        <option value="floors">Floor Tiles</option>
+                        <option value="lights">Lighting</option>
+                        <option value="entertainment">Entertainment</option>
+                        <option value="decor">Decoration</option>
+                        <option value="premium">Premium</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="itemLevel">Unlock Level</label>
+                    <input type="number" id="itemLevel" placeholder="1" min="1" max="100" value="1">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="itemDesc">Description</label>
+                <textarea id="itemDesc" rows="3" placeholder="Short description of the item" required></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="itemPremium">
+                    Premium Item (exclusive/special)
+                </label>
+            </div>
+
+            <div style="margin-top: 30px;">
+                <button type="submit" class="btn btn-primary">✨ Create Furniture</button>
+                <button type="button" class="btn btn-secondary" onclick="resetForm()">🔄 Reset</button>
+            </div>
+        </form>
+
+        <div class="preview" id="preview" style="display: none;">
+            <h3>Preview</h3>
+            <div class="preview-item" id="previewContent"></div>
+        </div>
+    </div>
+
+    <!-- Firebase -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getDatabase, ref, set, get } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+
+        // Firebase config (same as your game)
+        const firebaseConfig = {
+            apiKey: "AIzaSyCabolished9TpMDYI8cJ0o8I7OegKBYTQs0AOM",
+            authDomain: "hypeclub-c4d7a.firebaseapp.com",
+            databaseURL: "https://hypeclub-c4d7a-default-rtdb.firebaseio.com",
+            projectId: "hypeclub-c4d7a",
+            storageBucket: "hypeclub-c4d7a.firebasestorage.app",
+            messagingSenderId: "834293841850",
+            appId: "1:834293841850:web:9863dfd2e10fa982b78e42"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        // Common emojis for furniture
+        const emojis = [
+            '🛋️', '🪑', '🛏️', '🚪', '🪟', '💡', '🕯️', '🔦', '💎', '👑',
+            '🎨', '🖼️', '🪞', '🗿', '⛲', '🌿', '🌴', '🌵', '🪴', '🌺',
+            '🎪', '🎭', '🎬', '🎤', '🎧', '🎸', '🥁', '🎹', '🎺', '🎻',
+            '🍾', '🍷', '🍸', '🍹', '🍺', '🥂', '🔥', '💨', '⚡', '✨',
+            '🌈', '🌟', '💫', '🪩', '🎆', '🎇', '🎉', '🎊', '🏆', '🥇',
+            '🚁', '🏎️', '🛩️', '⛵', '🚤', '🎡', '🎢', '🎠', '🎰', '🎲',
+            '🏁', '🎯', '🎱', '🏀', '⚽', '🏈', '🎾', '🏐', '🥊', '🥋',
+            '📺', '📻', '📱', '💻', '🖥️', '⌨️', '🖱️', '🖨️', '📷', '📸',
+            '🧊', '🫘', '🪨', '🧱', '🪵', '🛢️', '⬛', '⬜', '🟥', '🟦'
+        ];
+
+        // Populate emoji picker
+        const emojiPicker = document.getElementById('emojiPicker');
+        emojis.forEach(emoji => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'emoji-btn';
+            btn.textContent = emoji;
+            btn.onclick = () => {
+                document.getElementById('itemIcon').value = emoji;
+                updatePreview();
+            };
+            emojiPicker.appendChild(btn);
+        });
+
+        // Form handler
+        document.getElementById('furnitureForm').onsubmit = async (e) => {
+            e.preventDefault();
+
+            const itemData = {
+                name: document.getElementById('itemName').value,
+                icon: document.getElementById('itemIcon').value,
+                cost: parseInt(document.getElementById('itemCost').value),
+                currency: document.getElementById('itemCurrency').value,
+                category: document.getElementById('itemCategory').value,
+                desc: document.getElementById('itemDesc').value,
+                unlockLevel: parseInt(document.getElementById('itemLevel').value) || 1,
+                premium: document.getElementById('itemPremium').checked || undefined
+            };
+
+            const itemId = document.getElementById('itemId').value.toLowerCase().replace(/[^a-z0-9_]/g, '_');
+
+            try {
+                // Save to Firebase
+                await set(ref(db, `config/furnitureCatalog/${itemId}`), itemData);
+
+                showSuccess(`✅ "${itemData.name}" created successfully!`);
+                setTimeout(resetForm, 2000);
+            } catch (error) {
+                showError(`❌ Error: ${error.message}`);
+            }
+        };
+
+        // Update preview
+        function updatePreview() {
+            const preview = document.getElementById('preview');
+            const content = document.getElementById('previewContent');
+
+            const icon = document.getElementById('itemIcon').value;
+            const name = document.getElementById('itemName').value;
+            const cost = document.getElementById('itemCost').value;
+            const currency = document.getElementById('itemCurrency').value;
+            const desc = document.getElementById('itemDesc').value;
+
+            if (icon && name) {
+                preview.style.display = 'block';
+                content.innerHTML = `
+                    <span class="icon">${icon}</span>
+                    <strong>${name}</strong><br>
+                    <small>${desc || 'No description'}</small><br>
+                    <strong>Cost:</strong> ${cost || '0'} ${currency === 'diamonds' ? '💎' : '💵'}
+                `;
+            }
+        }
+
+        // Add input listeners for live preview
+        ['itemIcon', 'itemName', 'itemCost', 'itemCurrency', 'itemDesc'].forEach(id => {
+            document.getElementById(id).oninput = updatePreview;
+        });
+
+        window.resetForm = function () {
+            document.getElementById('furnitureForm').reset();
+            document.getElementById('preview').style.display = 'none';
+            hideMessages();
+        };
+
+        function showSuccess(msg) {
+            const el = document.getElementById('successMsg');
+            el.textContent = msg;
+            el.style.display = 'block';
+            hideError();
+        }
+
+        function showError(msg) {
+            const el = document.getElementById('errorMsg');
+            el.textContent = msg;
+            el.style.display = 'block';
+            hideSuccess();
+        }
+
+        function hideSuccess() {
+            document.getElementById('successMsg').style.display = 'none';
+        }
+
+        function hideError() {
+            document.getElementById('errorMsg').style.display = 'none';
+        }
+
+        function hideMessages() {
+            hideSuccess();
+            hideError();
+        }
+
+        window.showSuccess = showSuccess;
+        window.showError = showError;
+    </script>
+</body>
+
+</html>
