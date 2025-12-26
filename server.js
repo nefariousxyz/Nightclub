@@ -232,11 +232,18 @@ app.post('/api/game/validate-purchase', authenticateUser, async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Validation error (purchase):', error);
+        console.error('===== Purchase Validation Error =====');
+        console.error('User ID:', req.userId);
+        console.error('Request Body:', req.body);
+        console.error('Error:', error.message);
+        console.error('Stack:', error.stack);
+        console.error('====================================');
+
         res.status(500).json({
             success: false,
             error: 'SERVER_ERROR',
-            message: 'Failed to validate purchase'
+            message: error.message || 'Failed to validate purchase',
+            details: process.env.NODE_ENV === 'development' ? error.stack : undefined
         });
     }
 });
