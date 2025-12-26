@@ -645,7 +645,10 @@ body {
     z-index: 100;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 12px;
+    width: 90%;
+    max-width: 600px;
+    align-items: center;
 }
 
 .notification {
@@ -662,6 +665,9 @@ body {
     -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    margin-bottom: 8px;
+    width: fit-content;
+    max-width: 90%;
 }
 
 .notification.error {
@@ -680,12 +686,12 @@ body {
 }
 
 @keyframes notifyIn {
-    from { transform: translateY(-20px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
+    from { transform: translateY(-20px) scale(0.95); opacity: 0; }
+    to { transform: translateY(0) scale(1); opacity: 1; }
 }
 
 @keyframes notifyOut {
-    to { transform: translateY(-30px); opacity: 0; }
+    to { transform: translateY(-30px) scale(0.9); opacity: 0; }
 }
 
 /* ================== MODALS - Modern ================== */
