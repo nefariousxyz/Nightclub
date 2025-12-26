@@ -317,9 +317,13 @@
                 currency: document.getElementById('itemCurrency').value,
                 category: document.getElementById('itemCategory').value,
                 desc: document.getElementById('itemDesc').value,
-                unlockLevel: parseInt(document.getElementById('itemLevel').value) || 1,
-                premium: document.getElementById('itemPremium').checked || undefined
+                unlockLevel: parseInt(document.getElementById('itemLevel').value) || 1
             };
+
+            // Only add premium if checked (Firebase doesn't like undefined values)
+            if (document.getElementById('itemPremium').checked) {
+                itemData.premium = true;
+            }
 
             const itemId = document.getElementById('itemId').value.toLowerCase().replace(/[^a-z0-9_]/g, '_');
 
