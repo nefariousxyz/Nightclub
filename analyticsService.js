@@ -2,6 +2,7 @@
 // Tracks violations, economy metrics, player progression, and experiments
 
 const { db, isConfigured } = require('./firebase-admin-config');
+const admin = require('firebase-admin');
 
 // In-memory buffers for batched writes
 const analyticsBuffer = {
@@ -215,15 +216,15 @@ async function flushViolations() {
 
         // Build update object
         Object.entries(dailyCounts).forEach(([type, count]) => {
-            updates[`analytics/violations/daily/${dateStr}/${type}`] = db.ref.ServerValue.increment(count);
+            updates[`analytics/violations/daily/${dateStr}/${type}`] = admin.database.ServerValue.increment(count);
         });
 
         Object.entries(userCounts).forEach(([userId, data]) => {
-            updates[`analytics/violations/by_user/${userId}/total`] = db.ref.ServerValue.increment(data.total);
+            updates[`analytics/violations/by_user/${userId}/total`] = admin.database.ServerValue.increment(data.total);
             updates[`analytics/violations/by_user/${userId}/last_violation`] = data.last;
 
             Object.entries(data.types).forEach(([type, count]) => {
-                updates[`analytics/violations/by_user/${userId}/types/${type}`] = db.ref.ServerValue.increment(count);
+                updates[`analytics/violations/by_user/${userId}/types/${type}`] = admin.database.ServerValue.increment(count);
             });
         });
 
@@ -261,11 +262,11 @@ async function flushTransactions() {
             currencyTotals[t.currency] += t.amount;
         });
 
-        updates[`analytics/economy/transactions/${dateStr}/purchases`] = db.ref.ServerValue.increment(totalPurchases);
-        updates[`analytics/economy/transactions/${dateStr}/earnings`] = db.ref.ServerValue.increment(totalEarnings);
+        updates[`analytics/economy/transactions/${dateStr}/purchases`] = admin.database.ServerValue.increment(totalPurchases);
+        updates[`analytics/economy/transactions/${dateStr}/earnings`] = admin.database.ServerValue.increment(totalEarnings);
 
         Object.entries(currencyTotals).forEach(([currency, amount]) => {
-            updates[`analytics/economy/transactions/${dateStr}/total_${currency}`] = db.ref.ServerValue.increment(amount);
+            updates[`analytics/economy/transactions/${dateStr}/total_${currency}`] = admin.database.ServerValue.increment(amount);
         });
 
         await db.ref().update(updates);
@@ -298,7 +299,7 @@ async function flushProgression() {
         });
 
         Object.entries(eventCounts).forEach(([event, count]) => {
-            updates[`analytics/progression/events/${dateStr}/${event}`] = db.ref.ServerValue.increment(count);
+            updates[`analytics/progression/events/${dateStr}/${event}`] = admin.database.ServerValue.increment(count);
         });
 
         await db.ref().update(updates);
@@ -331,7 +332,7 @@ async function flushEvents() {
         });
 
         Object.entries(eventCounts).forEach(([name, count]) => {
-            updates[`analytics/events/${dateStr}/${name}`] = db.ref.ServerValue.increment(count);
+            updates[`analytics/events/${dateStr}/${name}`] = admin.database.ServerValue.increment(count);
         });
 
         await db.ref().update(updates);
