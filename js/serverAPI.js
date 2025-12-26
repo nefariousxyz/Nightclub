@@ -82,7 +82,7 @@ class ServerAPI {
                 } else if (data.error === 'INSUFFICIENT_FUNDS') {
                     ui.notify(`💰 Not enough ${data.message}`, 'error');
                 } else if (data.error === 'LEVEL_LOCKED') {
-                    ui.notify(`🔒 Requires Level ${data.required} (You: Lv ${data.current})`, 'error');
+                    ui.notify(`You need to be Level ${data.required} to unlock this item!`, 'error');
                 } else if (data.error === 'INVALID_ITEM') {
                     ui.notify('❌ Item not found', 'error');
                 } else if (data.error === 'MAX_REACHED') {
