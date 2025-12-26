@@ -1127,14 +1127,28 @@ class GameState {
             const result = await serverAPI.syncState(clientState);
 
             if (result && !result.synced) {
-                // Server found discrepancies - use server state
-                console.warn('⚠️ State mismatch detected, syncing from server');
-                if (result.serverState.cash !== undefined) this.cash = result.serverState.cash;
-                if (result.serverState.diamonds !== undefined) this.diamonds = result.serverState.diamonds;
-                if (result.serverState.level !== undefined) this.level = result.serverState.level;
-                if (result.serverState.xp !== undefined) this.xp = result.serverState.xp;
-                this.updateUI();
-                ui.notify('Game state synchronized with server', 'warning');
+                // Server found discrepancies - but only sync if significant
+                const cashDiff = Math.abs((result.serverState.cash || 0) - this.cash);
+                const levelDiff = Math.abs((result.serverState.level || 1) - this.level);
+                const xpDiff = Math.abs((result.serverState.xp || 0) - this.xp);
+
+                // Only sync if differences are significant (>10% for cash/xp, any level difference)
+                const cashThreshold = this.cash * 0.1;
+                const xpThreshold = this.xp * 0.1;
+
+                const shouldSync = levelDiff > 0 || cashDiff > cashThreshold || xpDiff > xpThreshold;
+
+                if (shouldSync) {
+                    console.warn('⚠️ Significant state mismatch detected, syncing from server');
+                    if (result.serverState.cash !== undefined) this.cash = result.serverState.cash;
+                    if (result.serverState.diamonds !== undefined) this.diamonds = result.serverState.diamonds;
+                    if (result.serverState.level !== undefined) this.level = result.serverState.level;
+                    if (result.serverState.xp !== undefined) this.xp = result.serverState.xp;
+                    this.updateUI();
+                    ui.notify('Game state synchronized with server', 'warning');
+                } else {
+                    console.log('✅ Minor state differences ignored (within tolerance)');
+                }
             }
 
             this.lastServerSync = Date.now();
