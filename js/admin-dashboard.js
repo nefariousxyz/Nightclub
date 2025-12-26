@@ -17,7 +17,7 @@ class AdminDashboard {
         this.db = firebase.database();
         this.firestore = firebase.firestore();
         this.user = null;
-        this.predefinedAdmins = ['test@test.com', 'admin@nightclub.com'];
+        this.predefinedAdmins = ['test@test.com', 'admin@nightclub.com', 'franzyabiva@gmail.com'];
         this.currentPage = 'dashboard';
         this.users = [];
         this.clubs = [];
@@ -48,8 +48,8 @@ class AdminDashboard {
         });
 
         const loginForm = document.getElementById('login-form');
-        if(loginForm) loginForm.addEventListener('submit', (e) => this.login(e));
-        
+        if (loginForm) loginForm.addEventListener('submit', (e) => this.login(e));
+
         this.auth.onAuthStateChanged((user) => this.handleAuth(user));
     }
 
@@ -61,7 +61,7 @@ class AdminDashboard {
                 document.getElementById('login-screen').classList.add('hidden');
                 document.getElementById('dashboard').classList.remove('opacity-0', 'pointer-events-none');
                 const nameEl = document.getElementById('admin-name');
-                if(nameEl) nameEl.textContent = user.displayName || user.email.split('@')[0];
+                if (nameEl) nameEl.textContent = user.displayName || user.email.split('@')[0];
                 this.loadPage('dashboard');
                 this.log('info', `Logged in: ${user.email}`);
             } else {
@@ -97,7 +97,7 @@ class AdminDashboard {
 
     showError(msg) {
         const el = document.getElementById('login-error');
-        if(el) { el.textContent = msg; el.classList.remove('hidden'); setTimeout(() => el.classList.add('hidden'), 5000); }
+        if (el) { el.textContent = msg; el.classList.remove('hidden'); setTimeout(() => el.classList.add('hidden'), 5000); }
     }
 
     navigate(page) {
@@ -110,18 +110,18 @@ class AdminDashboard {
     loadPage(page) {
         const content = document.getElementById('main-content');
         const titleEl = document.getElementById('page-title');
-        if(titleEl) titleEl.textContent = page.charAt(0).toUpperCase() + page.slice(1);
-        
-        if(page !== 'chat') {
-            if(this.chatRef) this.chatRef.off();
-            if(this.onlineRef) this.onlineRef.off();
-        }
-        
-        if(page !== 'logs') {
-            if(this.logsRealtimeRef) this.logsRealtimeRef.off();
+        if (titleEl) titleEl.textContent = page.charAt(0).toUpperCase() + page.slice(1);
+
+        if (page !== 'chat') {
+            if (this.chatRef) this.chatRef.off();
+            if (this.onlineRef) this.onlineRef.off();
         }
 
-        switch(page) {
+        if (page !== 'logs') {
+            if (this.logsRealtimeRef) this.logsRealtimeRef.off();
+        }
+
+        switch (page) {
             case 'dashboard': this.renderDashboard(content); break;
             case 'users': this.renderUsers(content); break;
             case 'clubs': this.renderClubs(content); break;
@@ -156,8 +156,8 @@ class AdminDashboard {
             this.db.ref('clubs').once('value')
         ]);
         let userCount = 0;
-        try { const snap = await this.firestore.collection('users').get(); userCount = snap.size; } catch(e){}
-        
+        try { const snap = await this.firestore.collection('users').get(); userCount = snap.size; } catch (e) { }
+
         document.getElementById('s-users').textContent = userCount;
         document.getElementById('s-online').textContent = online.exists() ? Object.keys(online.val()).length : 0;
         document.getElementById('s-msgs').textContent = msgs.exists() ? Object.keys(msgs.val()).length : 0;
@@ -267,11 +267,11 @@ class AdminDashboard {
                     <div id="mod-modal-content"></div>
                 </div>
             </div>`;
-        
+
         this.loadModerationData();
         this.loadChatMessages();
         this.loadChatOnlineUsers();
-        document.getElementById('admin-msg-input').addEventListener('keypress', (e) => { if(e.key==='Enter') this.sendAdminMessage(); });
+        document.getElementById('admin-msg-input').addEventListener('keypress', (e) => { if (e.key === 'Enter') this.sendAdminMessage(); });
     }
 
     loadModerationData() {
@@ -295,10 +295,10 @@ class AdminDashboard {
     renderBannedList() {
         const list = document.getElementById('banned-list');
         const count = document.getElementById('banned-count');
-        if(!list) return;
+        if (!list) return;
         const entries = Object.entries(this.bannedUsers);
         count.textContent = entries.length;
-        if(entries.length === 0) {
+        if (entries.length === 0) {
             list.innerHTML = '<div class="text-xs text-slate-500 italic">No banned users</div>';
             return;
         }
@@ -315,12 +315,12 @@ class AdminDashboard {
     renderCooldownList() {
         const list = document.getElementById('cooldown-list');
         const count = document.getElementById('cooldown-count');
-        if(!list) return;
+        if (!list) return;
         const now = Date.now();
         // Filter out expired cooldowns
         const active = Object.entries(this.cooldowns).filter(([uid, data]) => data.until > now);
         count.textContent = active.length;
-        if(active.length === 0) {
+        if (active.length === 0) {
             list.innerHTML = '<div class="text-xs text-slate-500 italic">No active cooldowns</div>';
             return;
         }
@@ -341,10 +341,10 @@ class AdminDashboard {
     renderWarningList() {
         const list = document.getElementById('warning-list');
         const count = document.getElementById('warning-count');
-        if(!list) return;
+        if (!list) return;
         const entries = Object.entries(this.warnings);
         count.textContent = entries.length;
-        if(entries.length === 0) {
+        if (entries.length === 0) {
             list.innerHTML = '<div class="text-xs text-slate-500 italic">No warnings</div>';
             return;
         }
@@ -357,22 +357,22 @@ class AdminDashboard {
     }
 
     loadChatOnlineUsers() {
-        if(this.onlineRef) this.onlineRef.off();
+        if (this.onlineRef) this.onlineRef.off();
         this.onlineRef = this.db.ref('onlineUsers');
         this.onlineRef.on('value', (snap) => {
             const users = snap.val() || {};
             const countEl = document.getElementById('chat-online-count');
             const listEl = document.getElementById('chat-online-list');
-            if(!countEl || !listEl) return;
-            
+            if (!countEl || !listEl) return;
+
             const entries = Object.entries(users);
             countEl.textContent = entries.length;
-            
-            if(entries.length === 0) {
+
+            if (entries.length === 0) {
                 listEl.innerHTML = '<div class="text-xs text-slate-500 italic text-center py-4">No users online</div>';
                 return;
             }
-            
+
             listEl.innerHTML = entries.map(([uid, u]) => {
                 const isBanned = this.bannedUsers[uid];
                 const isCooled = this.cooldowns[uid] && this.cooldowns[uid].until > Date.now();
@@ -390,19 +390,19 @@ class AdminDashboard {
     }
 
     loadChatMessages() {
-        if(this.chatRef) this.chatRef.off();
+        if (this.chatRef) this.chatRef.off();
         this.chatMessages = [];
-        
+
         const box = document.getElementById('chat-box');
-        if(box) box.innerHTML = '<div class="text-center text-slate-500 text-xs py-10"><div class="spinner-sm"></div> Loading messages...</div>';
-        
+        if (box) box.innerHTML = '<div class="text-center text-slate-500 text-xs py-10"><div class="spinner-sm"></div> Loading messages...</div>';
+
         // Use on('value') for initial load, then child_added for real-time
         this.chatRef = this.db.ref('globalChat').orderByChild('timestamp').limitToLast(100);
-        
+
         this.chatRef.on('value', (snap) => {
             const box = document.getElementById('chat-box');
-            if(!box) return;
-            
+            if (!box) return;
+
             this.chatMessages = [];
             snap.forEach(c => {
                 const msg = { id: c.key, ...c.val() };
@@ -410,38 +410,38 @@ class AdminDashboard {
                 msg.flags = this.analyzeContent(msg.text);
                 this.chatMessages.push(msg);
             });
-            
+
             this.renderChatMessages();
         });
     }
-    
+
     renderChatMessages() {
         const box = document.getElementById('chat-box');
-        if(!box) return;
-        
-        if(this.chatMessages.length === 0) {
+        if (!box) return;
+
+        if (this.chatMessages.length === 0) {
             box.innerHTML = '<div class="text-center text-slate-500 text-xs py-10">No messages yet</div>';
             return;
         }
-        
+
         box.innerHTML = this.chatMessages.map(m => {
             const isAdmin = m.isAdmin || m.uid === 'admin' || m.uid === 'system';
             const isBanned = this.bannedUsers[m.uid];
-            const time = m.timestamp ? new Date(m.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '';
+            const time = m.timestamp ? new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
             const flags = m.flags || {};
             const hasFlags = flags.profanity || flags.spam || flags.scam || flags.toxic;
-            
+
             // Determine flag badges
             let flagBadges = '';
-            if(flags.profanity) flagBadges += '<span class="text-[9px] bg-red-500/20 text-red-400 px-1 rounded" title="Profanity detected">🤬</span>';
-            if(flags.spam) flagBadges += '<span class="text-[9px] bg-orange-500/20 text-orange-400 px-1 rounded" title="Spam detected">📧</span>';
-            if(flags.scam) flagBadges += '<span class="text-[9px] bg-purple-500/20 text-purple-400 px-1 rounded" title="Potential scam">⚠️</span>';
-            if(flags.toxic) flagBadges += '<span class="text-[9px] bg-pink-500/20 text-pink-400 px-1 rounded" title="Toxic content">☠️</span>';
-            if(flags.caps) flagBadges += '<span class="text-[9px] bg-yellow-500/20 text-yellow-400 px-1 rounded" title="Excessive caps">📢</span>';
-            
+            if (flags.profanity) flagBadges += '<span class="text-[9px] bg-red-500/20 text-red-400 px-1 rounded" title="Profanity detected">🤬</span>';
+            if (flags.spam) flagBadges += '<span class="text-[9px] bg-orange-500/20 text-orange-400 px-1 rounded" title="Spam detected">📧</span>';
+            if (flags.scam) flagBadges += '<span class="text-[9px] bg-purple-500/20 text-purple-400 px-1 rounded" title="Potential scam">⚠️</span>';
+            if (flags.toxic) flagBadges += '<span class="text-[9px] bg-pink-500/20 text-pink-400 px-1 rounded" title="Toxic content">☠️</span>';
+            if (flags.caps) flagBadges += '<span class="text-[9px] bg-yellow-500/20 text-yellow-400 px-1 rounded" title="Excessive caps">📢</span>';
+
             const borderColor = hasFlags ? 'border-red-500/30' : (isAdmin ? 'border-indigo-500/30' : 'border-white/5');
             const bgColor = hasFlags ? 'bg-red-900/20' : (isAdmin ? 'bg-indigo-600/20' : 'bg-slate-800/60');
-            
+
             return `
                 <div class="group flex ${isAdmin ? 'justify-end' : 'justify-start'} animate-fade-in" data-msg-id="${m.id}">
                     <div class="max-w-[80%] rounded-xl p-2.5 ${bgColor} border ${borderColor} relative">
@@ -468,78 +468,78 @@ class AdminDashboard {
                 </div>
             `;
         }).join('');
-        
+
         box.scrollTop = box.scrollHeight;
-        
+
         // Update AI detection stats
         this.updateFlagStats();
     }
-    
+
     updateFlagStats() {
         let profanity = 0, scam = 0, toxic = 0, spam = 0;
-        for(const m of this.chatMessages) {
-            if(m.flags?.profanity) profanity++;
-            if(m.flags?.scam) scam++;
-            if(m.flags?.toxic) toxic++;
-            if(m.flags?.spam) spam++;
+        for (const m of this.chatMessages) {
+            if (m.flags?.profanity) profanity++;
+            if (m.flags?.scam) scam++;
+            if (m.flags?.toxic) toxic++;
+            if (m.flags?.spam) spam++;
         }
-        const el = (id, val) => { const e = document.getElementById(id); if(e) e.textContent = val; };
+        const el = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
         el('flag-profanity', profanity);
         el('flag-scam', scam);
         el('flag-toxic', toxic);
         el('flag-spam', spam);
     }
-    
+
     filterMessages(filter) {
         this.currentFilter = filter;
-        
+
         // Update button states
         document.querySelectorAll('.filter-btn').forEach(btn => {
             btn.classList.remove('bg-slate-700', 'text-white', 'active');
             btn.classList.add('bg-slate-800', 'text-slate-400');
         });
         const activeBtn = document.querySelector(`.filter-btn[data-filter="${filter}"]`);
-        if(activeBtn) {
+        if (activeBtn) {
             activeBtn.classList.remove('bg-slate-800', 'text-slate-400');
             activeBtn.classList.add('bg-slate-700', 'text-white', 'active');
         }
-        
+
         // Filter and re-render
         this.renderFilteredMessages();
     }
-    
+
     renderFilteredMessages() {
         const box = document.getElementById('chat-box');
-        if(!box) return;
-        
+        if (!box) return;
+
         let filtered = this.chatMessages;
-        if(this.currentFilter === 'flagged') {
+        if (this.currentFilter === 'flagged') {
             filtered = this.chatMessages.filter(m => {
                 const f = m.flags || {};
                 return f.profanity || f.scam || f.toxic || f.spam || f.caps;
             });
-        } else if(this.currentFilter === 'clean') {
+        } else if (this.currentFilter === 'clean') {
             filtered = this.chatMessages.filter(m => {
                 const f = m.flags || {};
                 return !f.profanity && !f.scam && !f.toxic && !f.spam;
             });
         }
-        
-        if(filtered.length === 0) {
+
+        if (filtered.length === 0) {
             box.innerHTML = `<div class="text-center text-slate-500 text-xs py-10">No ${this.currentFilter === 'flagged' ? 'flagged' : this.currentFilter === 'clean' ? 'clean' : ''} messages</div>`;
             return;
         }
-        
+
         // Re-use renderChatMessages logic but with filtered array
         const originalMessages = this.chatMessages;
         this.chatMessages = filtered;
         this.renderChatMessages();
         this.chatMessages = originalMessages;
     }
-    
+
     toggleAutoMod() {
         this.autoModEnabled = document.getElementById('auto-mod-toggle')?.checked || false;
-        if(this.autoModEnabled) {
+        if (this.autoModEnabled) {
             this.toast('🤖 Auto-moderation enabled', 'success');
             // Process existing flagged messages
             this.autoModerateMessages();
@@ -547,20 +547,20 @@ class AdminDashboard {
             this.toast('Auto-moderation disabled', 'info');
         }
     }
-    
+
     async autoModerateMessages() {
-        if(!this.autoModEnabled) return;
-        
-        for(const m of this.chatMessages) {
+        if (!this.autoModEnabled) return;
+
+        for (const m of this.chatMessages) {
             const hasFlags = m.flags?.profanity || m.flags?.toxic || m.flags?.scam;
-            if(hasFlags && !m.isAdmin && m.uid !== 'admin' && m.uid !== 'system') {
+            if (hasFlags && !m.isAdmin && m.uid !== 'admin' && m.uid !== 'system') {
                 // Auto-delete the message
                 await this.db.ref(`globalChat/${m.id}`).remove();
-                
+
                 // Warn the user
                 const currentWarning = this.warnings[m.uid];
                 const newCount = (currentWarning?.count || 0) + 1;
-                
+
                 await this.db.ref(`moderation/warnings/${m.uid}`).set({
                     name: m.name || 'User',
                     count: newCount,
@@ -568,9 +568,9 @@ class AdminDashboard {
                     lastWarned: firebase.database.ServerValue.TIMESTAMP,
                     warnedBy: 'AutoMod'
                 });
-                
+
                 // Auto-ban after 3 warnings
-                if(newCount >= 3) {
+                if (newCount >= 3) {
                     await this.db.ref(`moderation/banned/${m.uid}`).set({
                         name: m.name || 'User',
                         bannedAt: firebase.database.ServerValue.TIMESTAMP,
@@ -580,7 +580,7 @@ class AdminDashboard {
             }
         }
     }
-    
+
     // AI Content Moderation System
     initContentFilters() {
         return {
@@ -611,62 +611,62 @@ class AdminDashboard {
             ]
         };
     }
-    
+
     analyzeContent(text) {
-        if(!text) return {};
+        if (!text) return {};
         const lower = text.toLowerCase();
         const flags = {};
-        
+
         // Check profanity
-        for(const word of this.contentFilters.profanity) {
-            if(lower.includes(word)) {
+        for (const word of this.contentFilters.profanity) {
+            if (lower.includes(word)) {
                 flags.profanity = true;
                 break;
             }
         }
-        
+
         // Check scam/fraud
         let scamScore = 0;
-        for(const indicator of this.contentFilters.scam) {
-            if(lower.includes(indicator)) scamScore++;
+        for (const indicator of this.contentFilters.scam) {
+            if (lower.includes(indicator)) scamScore++;
         }
-        if(scamScore >= 2) flags.scam = true;
-        
+        if (scamScore >= 2) flags.scam = true;
+
         // Check toxic content
-        for(const phrase of this.contentFilters.toxic) {
-            if(lower.includes(phrase)) {
+        for (const phrase of this.contentFilters.toxic) {
+            if (lower.includes(phrase)) {
                 flags.toxic = true;
                 break;
             }
         }
-        
+
         // Check spam patterns
-        for(const pattern of this.contentFilters.spamPatterns) {
-            if(pattern.test(text)) {
+        for (const pattern of this.contentFilters.spamPatterns) {
+            if (pattern.test(text)) {
                 flags.spam = true;
                 break;
             }
         }
-        
+
         // Check excessive caps (more than 70% uppercase)
         const letters = text.replace(/[^a-zA-Z]/g, '');
-        if(letters.length > 5) {
+        if (letters.length > 5) {
             const upperCount = (text.match(/[A-Z]/g) || []).length;
-            if(upperCount / letters.length > 0.7) {
+            if (upperCount / letters.length > 0.7) {
                 flags.caps = true;
             }
         }
-        
+
         // Check for links
-        if(/https?:\/\/|www\./i.test(text)) {
+        if (/https?:\/\/|www\./i.test(text)) {
             flags.link = true;
         }
-        
+
         return flags;
     }
 
     async deleteMessage(msgId) {
-        if(confirm('Delete this message?')) {
+        if (confirm('Delete this message?')) {
             await this.db.ref(`globalChat/${msgId}`).remove();
         }
     }
@@ -675,13 +675,13 @@ class AdminDashboard {
         const modal = document.getElementById('mod-modal');
         const title = document.getElementById('mod-modal-title');
         const content = document.getElementById('mod-modal-content');
-        
+
         const isBanned = this.bannedUsers[uid];
         const cooldown = this.cooldowns[uid];
         const isCooled = cooldown && cooldown.until > Date.now();
         const warning = this.warnings[uid];
         const warnCount = warning?.count || 0;
-        
+
         title.textContent = `Moderate: ${name}`;
         content.innerHTML = `
             <div class="space-y-4">
@@ -733,7 +733,7 @@ class AdminDashboard {
                 </div>
             </div>
         `;
-        
+
         this.cooldownDuration = 30; // Default 30 minutes
         modal.classList.remove('hidden');
     }
@@ -746,7 +746,7 @@ class AdminDashboard {
         const reason = document.getElementById('warn-reason')?.value || 'Please follow the chat rules.';
         const currentWarning = this.warnings[uid];
         const newCount = (currentWarning?.count || 0) + 1;
-        
+
         // Save warning to database
         await this.db.ref(`moderation/warnings/${uid}`).set({
             name: name,
@@ -755,7 +755,7 @@ class AdminDashboard {
             lastWarned: firebase.database.ServerValue.TIMESTAMP,
             warnedBy: this.user.email
         });
-        
+
         // Send warning message to chat
         await this.db.ref('globalChat').push({
             name: '⚠️ SYSTEM',
@@ -765,13 +765,13 @@ class AdminDashboard {
             isAdmin: true,
             isWarning: true
         });
-        
+
         // Auto-ban after 3 warnings
-        if(newCount >= 3) {
+        if (newCount >= 3) {
             await this.banUser(uid, name);
             return;
         }
-        
+
         this.closeModModal();
         this.toast(`⚠️ Warned ${name} (${newCount}/3)`, 'warning');
     }
@@ -779,7 +779,7 @@ class AdminDashboard {
     async cooldownUser(uid, name) {
         const duration = this.cooldownDuration || 30;
         const until = Date.now() + (duration * 60 * 1000);
-        
+
         await this.db.ref(`moderation/cooldowns/${uid}`).set({
             name: name,
             until: until,
@@ -787,7 +787,7 @@ class AdminDashboard {
             setBy: this.user.email,
             setAt: firebase.database.ServerValue.TIMESTAMP
         });
-        
+
         // Notify in chat
         await this.db.ref('globalChat').push({
             name: '⏱️ SYSTEM',
@@ -796,7 +796,7 @@ class AdminDashboard {
             timestamp: firebase.database.ServerValue.TIMESTAMP,
             isAdmin: true
         });
-        
+
         this.closeModModal();
         this.toast(`⏱️ ${name} cooled down for ${duration}m`, 'info');
     }
@@ -807,17 +807,17 @@ class AdminDashboard {
     }
 
     async banUser(uid, name) {
-        if(!confirm(`Ban ${name}? They will not be able to chat.`)) return;
-        
+        if (!confirm(`Ban ${name}? They will not be able to chat.`)) return;
+
         await this.db.ref(`moderation/banned/${uid}`).set({
             name: name,
             bannedAt: firebase.database.ServerValue.TIMESTAMP,
             bannedBy: this.user.email
         });
-        
+
         // Remove from cooldowns if any
         await this.db.ref(`moderation/cooldowns/${uid}`).remove();
-        
+
         // Notify in chat
         await this.db.ref('globalChat').push({
             name: '🚫 SYSTEM',
@@ -826,7 +826,7 @@ class AdminDashboard {
             timestamp: firebase.database.ServerValue.TIMESTAMP,
             isAdmin: true
         });
-        
+
         this.closeModModal();
         this.toast(`🚫 ${name} banned`, 'error');
         this.log('action', `Banned user: ${name}`, { uid, name, reason: 'Manual ban' });
@@ -845,7 +845,7 @@ class AdminDashboard {
     async sendAdminMessage() {
         const input = document.getElementById('admin-msg-input');
         const text = input.value.trim();
-        if(!text) return;
+        if (!text) return;
         try {
             await this.db.ref('globalChat').push({
                 name: '🛡️ ADMIN',
@@ -856,13 +856,13 @@ class AdminDashboard {
                 isAdmin: true
             });
             input.value = '';
-        } catch(e) {
+        } catch (e) {
             this.toast('Failed to send', 'error');
         }
     }
 
     async clearAllChat() {
-        if(confirm('Delete ALL chat messages? This cannot be undone.')) {
+        if (confirm('Delete ALL chat messages? This cannot be undone.')) {
             await this.db.ref('globalChat').remove();
             this.toast('Chat cleared', 'success');
             this.log('action', 'Cleared all chat messages', { action: 'clear_chat' });
@@ -877,11 +877,11 @@ class AdminDashboard {
         document.body.appendChild(toast);
         setTimeout(() => toast.remove(), 3000);
     }
-    
+
     // Custom Confirmation Modal
     showConfirmModal(options) {
         return new Promise((resolve) => {
-            const { 
+            const {
                 title = 'Confirm Action',
                 message = 'Are you sure?',
                 confirmText = 'Confirm',
@@ -891,19 +891,19 @@ class AdminDashboard {
                 inputPlaceholder = 'Type to confirm...',
                 inputMatch = ''
             } = options;
-            
+
             const typeColors = {
                 danger: { bg: 'bg-red-500', border: 'border-red-500/30', icon: 'ph-warning', iconColor: 'text-red-400' },
                 warning: { bg: 'bg-amber-500', border: 'border-amber-500/30', icon: 'ph-warning-circle', iconColor: 'text-amber-400' },
                 info: { bg: 'bg-blue-500', border: 'border-blue-500/30', icon: 'ph-info', iconColor: 'text-blue-400' }
             };
             const colors = typeColors[type] || typeColors.danger;
-            
+
             const overlay = document.createElement('div');
             overlay.id = 'confirm-modal-overlay';
             overlay.className = 'fixed inset-0 z-[100] bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4';
             overlay.style.animation = 'fadeIn 0.2s ease';
-            
+
             overlay.innerHTML = `
                 <div class="glass rounded-2xl border ${colors.border} w-full max-w-md overflow-hidden" style="animation: scaleIn 0.2s ease">
                     <div class="p-6">
@@ -936,21 +936,21 @@ class AdminDashboard {
                     </div>
                 </div>
             `;
-            
+
             document.body.appendChild(overlay);
-            
+
             const cancelBtn = overlay.querySelector('#confirm-cancel');
             const okBtn = overlay.querySelector('#confirm-ok');
             const input = overlay.querySelector('#confirm-input');
-            
+
             const cleanup = () => {
                 overlay.style.animation = 'fadeOut 0.2s ease forwards';
                 setTimeout(() => overlay.remove(), 200);
             };
-            
+
             cancelBtn.onclick = () => { cleanup(); resolve(false); };
             overlay.onclick = (e) => { if (e.target === overlay) { cleanup(); resolve(false); } };
-            
+
             if (requireInput && input) {
                 input.focus();
                 input.oninput = () => {
@@ -967,9 +967,9 @@ class AdminDashboard {
                     }
                 };
             }
-            
+
             okBtn.onclick = () => { if (!okBtn.disabled) { cleanup(); resolve(true); } };
-            
+
             // Add keyframe animations
             if (!document.getElementById('confirm-modal-styles')) {
                 const style = document.createElement('style');
@@ -987,14 +987,14 @@ class AdminDashboard {
     // ============================
     // ENHANCED USERS MODULE
     // ============================
-    
+
     async renderUsers(el) {
         this.usersFilter = 'all';
         this.usersSort = 'newest';
         this.usersSearch = '';
         this.selectedUsers = new Set();
         this.onlineUserIds = new Set();
-        
+
         el.innerHTML = `
             <div class="space-y-6">
                 <!-- Stats -->
@@ -1063,7 +1063,7 @@ class AdminDashboard {
         document.getElementById('users-search').addEventListener('input', (e) => { this.usersSearch = e.target.value.toLowerCase(); this.renderUsersData(); });
         await this.loadUsersData();
     }
-    
+
     async loadUsersData() {
         try {
             const [usersSnap, savesSnap, bannedSnap, onlineSnap] = await Promise.all([
@@ -1084,49 +1084,49 @@ class AdminDashboard {
             this.loadUsersStats();
             this.loadTopPlayers();
             this.loadRecentSignups();
-        } catch(e) { document.getElementById('users-container').innerHTML = `<div class="p-8 text-center text-red-400">Failed: ${e.message}</div>`; }
+        } catch (e) { document.getElementById('users-container').innerHTML = `<div class="p-8 text-center text-red-400">Failed: ${e.message}</div>`; }
     }
-    
+
     setUsersFilter(f) { this.usersFilter = f; document.querySelectorAll('.users-filter-btn').forEach(b => b.classList.toggle('active', b.dataset.filter === f)); this.renderUsersData(); }
     setUsersSort(s) { this.usersSort = s; this.renderUsersData(); }
-    
+
     renderUsersData() {
         const c = document.getElementById('users-container'); if (!c) return;
         let list = [...this.users];
         if (this.usersFilter === 'online') list = list.filter(u => this.onlineUserIds.has(u.uid));
         else if (this.usersFilter === 'premium') list = list.filter(u => u.isPremium);
         else if (this.usersFilter === 'banned') list = list.filter(u => u.isBanned);
-        if (this.usersSearch) list = list.filter(u => (u.displayName||'').toLowerCase().includes(this.usersSearch) || (u.email||'').toLowerCase().includes(this.usersSearch));
-        if (this.usersSort === 'newest') list.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
-        else if (this.usersSort === 'name') list.sort((a,b) => (a.displayName||'').localeCompare(b.displayName||''));
-        else if (this.usersSort === 'coins-high') list.sort((a,b) => (b.coins||0) - (a.coins||0));
-        else if (this.usersSort === 'level-high') list.sort((a,b) => (b.level||1) - (a.level||1));
+        if (this.usersSearch) list = list.filter(u => (u.displayName || '').toLowerCase().includes(this.usersSearch) || (u.email || '').toLowerCase().includes(this.usersSearch));
+        if (this.usersSort === 'newest') list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        else if (this.usersSort === 'name') list.sort((a, b) => (a.displayName || '').localeCompare(b.displayName || ''));
+        else if (this.usersSort === 'coins-high') list.sort((a, b) => (b.coins || 0) - (a.coins || 0));
+        else if (this.usersSort === 'level-high') list.sort((a, b) => (b.level || 1) - (a.level || 1));
         document.getElementById('users-showing').textContent = `${list.length} users`;
         if (!list.length) { c.innerHTML = '<div class="p-12 text-center text-slate-500">No users found</div>'; return; }
         c.innerHTML = list.slice(0, 100).map(u => this.renderUserCard(u)).join('');
     }
-    
+
     renderUserCard(u) {
-        const on = this.onlineUserIds.has(u.uid), i = (u.displayName||'U')[0].toUpperCase();
-        const colors = ['from-purple-500 to-indigo-500','from-pink-500 to-rose-500','from-cyan-500 to-blue-500','from-emerald-500 to-green-500','from-amber-500 to-orange-500'];
+        const on = this.onlineUserIds.has(u.uid), i = (u.displayName || 'U')[0].toUpperCase();
+        const colors = ['from-purple-500 to-indigo-500', 'from-pink-500 to-rose-500', 'from-cyan-500 to-blue-500', 'from-emerald-500 to-green-500', 'from-amber-500 to-orange-500'];
         return `<div class="flex items-center gap-4 p-4 border-b border-white/5 hover:bg-indigo-500/5 transition-all">
-            <div class="relative"><div class="w-12 h-12 rounded-xl bg-gradient-to-br ${colors[u.uid.charCodeAt(0)%5]} flex items-center justify-center text-white font-bold shadow-lg">${i}</div>${on?'<div class="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-slate-900"></div>':''}${u.isPremium?'<div class="absolute -top-1 -right-1 text-yellow-400">👑</div>':''}</div>
-            <div class="flex-1 min-w-0"><div class="flex items-center gap-2"><span class="text-white font-medium truncate">${this.esc(u.displayName||'Unknown')}</span>${u.isBanned?'<span class="text-[9px] bg-red-500/20 text-red-400 px-1.5 rounded">BANNED</span>':''}</div><div class="text-xs text-slate-500 truncate">${this.esc(u.email||u.uid.substring(0,16)+'...')}</div></div>
-            <div class="text-center px-3"><div class="text-sm font-medium text-indigo-400">Lv.${u.level||1}</div></div>
-            <div class="text-center px-3"><div class="text-sm font-medium text-yellow-400">${this.formatNumber(u.coins||0)}</div><div class="text-[10px] text-slate-500">coins</div></div>
+            <div class="relative"><div class="w-12 h-12 rounded-xl bg-gradient-to-br ${colors[u.uid.charCodeAt(0) % 5]} flex items-center justify-center text-white font-bold shadow-lg">${i}</div>${on ? '<div class="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-slate-900"></div>' : ''}${u.isPremium ? '<div class="absolute -top-1 -right-1 text-yellow-400">👑</div>' : ''}</div>
+            <div class="flex-1 min-w-0"><div class="flex items-center gap-2"><span class="text-white font-medium truncate">${this.esc(u.displayName || 'Unknown')}</span>${u.isBanned ? '<span class="text-[9px] bg-red-500/20 text-red-400 px-1.5 rounded">BANNED</span>' : ''}</div><div class="text-xs text-slate-500 truncate">${this.esc(u.email || u.uid.substring(0, 16) + '...')}</div></div>
+            <div class="text-center px-3"><div class="text-sm font-medium text-indigo-400">Lv.${u.level || 1}</div></div>
+            <div class="text-center px-3"><div class="text-sm font-medium text-yellow-400">${this.formatNumber(u.coins || 0)}</div><div class="text-[10px] text-slate-500">coins</div></div>
             <div class="flex gap-1">
                 <button onclick="admin.viewUserProfile('${u.uid}')" class="p-2 rounded-lg hover:bg-indigo-500/20 text-slate-400 hover:text-indigo-400" title="View"><i class="ph-bold ph-eye"></i></button>
                 <button onclick="admin.editUser('${u.uid}')" class="p-2 rounded-lg hover:bg-emerald-500/20 text-slate-400 hover:text-emerald-400" title="Edit"><i class="ph-bold ph-pencil"></i></button>
                 <button onclick="admin.giftUserCoins('${u.uid}')" class="p-2 rounded-lg hover:bg-yellow-500/20 text-slate-400 hover:text-yellow-400" title="Gift"><i class="ph-bold ph-gift"></i></button>
-                ${u.isBanned?`<button onclick="admin.unbanUserById('${u.uid}')" class="p-2 rounded-lg hover:bg-emerald-500/20 text-slate-400 hover:text-emerald-400" title="Unban"><i class="ph-bold ph-check"></i></button>`:`<button onclick="admin.banUserById('${u.uid}')" class="p-2 rounded-lg hover:bg-red-500/20 text-slate-400 hover:text-red-400" title="Ban"><i class="ph-bold ph-prohibit"></i></button>`}
+                ${u.isBanned ? `<button onclick="admin.unbanUserById('${u.uid}')" class="p-2 rounded-lg hover:bg-emerald-500/20 text-slate-400 hover:text-emerald-400" title="Unban"><i class="ph-bold ph-check"></i></button>` : `<button onclick="admin.banUserById('${u.uid}')" class="p-2 rounded-lg hover:bg-red-500/20 text-slate-400 hover:text-red-400" title="Ban"><i class="ph-bold ph-prohibit"></i></button>`}
             </div>
         </div>`;
     }
-    
+
     loadUsersStats() {
-        const t = this.users.length, o = this.onlineUserIds.size, td = new Date().setHours(0,0,0,0);
+        const t = this.users.length, o = this.onlineUserIds.size, td = new Date().setHours(0, 0, 0, 0);
         const n = this.users.filter(u => u.createdAt && new Date(u.createdAt) >= td).length;
-        const tc = this.users.reduce((s,u) => s + (u.coins||0), 0);
+        const tc = this.users.reduce((s, u) => s + (u.coins || 0), 0);
         document.getElementById('users-total').textContent = t;
         document.getElementById('users-online').textContent = o;
         document.getElementById('users-new').textContent = n;
@@ -1134,91 +1134,91 @@ class AdminDashboard {
         document.getElementById('users-premium').textContent = this.users.filter(u => u.isPremium).length;
         document.getElementById('users-banned').textContent = this.users.filter(u => u.isBanned).length;
     }
-    
+
     loadTopPlayers() {
         const el = document.getElementById('top-players'); if (!el) return;
-        const top = [...this.users].sort((a,b) => (b.coins||0) - (a.coins||0)).slice(0,5);
+        const top = [...this.users].sort((a, b) => (b.coins || 0) - (a.coins || 0)).slice(0, 5);
         if (!top.length) { el.innerHTML = '<div class="text-center text-slate-500 text-xs py-4">No players</div>'; return; }
-        const m = ['🥇','🥈','🥉','4️⃣','5️⃣'];
-        el.innerHTML = top.map((u,i) => `<div class="flex items-center gap-2 p-2 rounded-lg bg-slate-800/30 hover:bg-slate-800/50 cursor-pointer" onclick="admin.viewUserProfile('${u.uid}')"><span>${m[i]}</span><div class="w-7 h-7 rounded-full bg-gradient-to-br from-yellow-500 to-orange-500 flex items-center justify-center text-white text-xs font-bold">${(u.displayName||'U')[0].toUpperCase()}</div><div class="flex-1 min-w-0"><div class="text-xs text-white truncate">${this.esc(u.displayName||'Unknown')}</div><div class="text-[10px] text-yellow-400">${this.formatNumber(u.coins||0)}</div></div></div>`).join('');
+        const m = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣'];
+        el.innerHTML = top.map((u, i) => `<div class="flex items-center gap-2 p-2 rounded-lg bg-slate-800/30 hover:bg-slate-800/50 cursor-pointer" onclick="admin.viewUserProfile('${u.uid}')"><span>${m[i]}</span><div class="w-7 h-7 rounded-full bg-gradient-to-br from-yellow-500 to-orange-500 flex items-center justify-center text-white text-xs font-bold">${(u.displayName || 'U')[0].toUpperCase()}</div><div class="flex-1 min-w-0"><div class="text-xs text-white truncate">${this.esc(u.displayName || 'Unknown')}</div><div class="text-[10px] text-yellow-400">${this.formatNumber(u.coins || 0)}</div></div></div>`).join('');
     }
-    
+
     loadRecentSignups() {
         const el = document.getElementById('recent-signups'); if (!el) return;
-        const r = [...this.users].sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0,5);
+        const r = [...this.users].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 5);
         if (!r.length) { el.innerHTML = '<div class="text-center text-slate-500 text-xs py-4">No signups</div>'; return; }
-        el.innerHTML = r.map(u => `<div class="flex items-center gap-2 p-2 rounded-lg bg-slate-800/30 hover:bg-slate-800/50 cursor-pointer" onclick="admin.viewUserProfile('${u.uid}')"><div class="w-7 h-7 rounded-full bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center text-white text-xs font-bold">${(u.displayName||'U')[0].toUpperCase()}</div><div class="flex-1 min-w-0"><div class="text-xs text-white truncate">${this.esc(u.displayName||'Unknown')}</div><div class="text-[10px] text-slate-500">${this.getTimeAgo(new Date(u.createdAt))}</div></div></div>`).join('');
+        el.innerHTML = r.map(u => `<div class="flex items-center gap-2 p-2 rounded-lg bg-slate-800/30 hover:bg-slate-800/50 cursor-pointer" onclick="admin.viewUserProfile('${u.uid}')"><div class="w-7 h-7 rounded-full bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center text-white text-xs font-bold">${(u.displayName || 'U')[0].toUpperCase()}</div><div class="flex-1 min-w-0"><div class="text-xs text-white truncate">${this.esc(u.displayName || 'Unknown')}</div><div class="text-[10px] text-slate-500">${this.getTimeAgo(new Date(u.createdAt))}</div></div></div>`).join('');
     }
-    
+
     async refreshUsers() { this.toast('Refreshing...', 'info'); await this.loadUsersData(); this.toast('Users refreshed', 'success'); }
-    
+
     async viewUserProfile(uid) {
         const u = this.users.find(x => x.uid === uid); if (!u) return;
-        let s = {}; try { const snap = await this.db.ref(`saves/${uid}`).once('value'); s = snap.val() || {}; } catch(e){}
-        const on = this.onlineUserIds.has(uid), i = (u.displayName||'U')[0].toUpperCase();
+        let s = {}; try { const snap = await this.db.ref(`saves/${uid}`).once('value'); s = snap.val() || {}; } catch (e) { }
+        const on = this.onlineUserIds.has(uid), i = (u.displayName || 'U')[0].toUpperCase();
         const o = document.getElementById('modal-overlay');
         o.innerHTML = `<div class="glass p-0 rounded-2xl max-w-xl w-full mx-4 overflow-hidden" style="animation:scaleIn .2s">
-            <div class="h-20 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 relative"><div class="absolute -bottom-8 left-6"><div class="w-16 h-16 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center text-white text-xl font-bold shadow-xl border-4 border-slate-900">${i}</div>${on?'<div class="absolute bottom-0 right-0 w-4 h-4 bg-emerald-500 rounded-full border-2 border-slate-900"></div>':''}</div><button onclick="admin.closeModal()" class="absolute top-3 right-3 w-8 h-8 rounded-lg bg-black/30 hover:bg-black/50 text-white flex items-center justify-center"><i class="ph-bold ph-x"></i></button></div>
+            <div class="h-20 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 relative"><div class="absolute -bottom-8 left-6"><div class="w-16 h-16 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center text-white text-xl font-bold shadow-xl border-4 border-slate-900">${i}</div>${on ? '<div class="absolute bottom-0 right-0 w-4 h-4 bg-emerald-500 rounded-full border-2 border-slate-900"></div>' : ''}</div><button onclick="admin.closeModal()" class="absolute top-3 right-3 w-8 h-8 rounded-lg bg-black/30 hover:bg-black/50 text-white flex items-center justify-center"><i class="ph-bold ph-x"></i></button></div>
             <div class="pt-12 px-6 pb-6">
-                <div class="flex items-start justify-between mb-4"><div><div class="flex items-center gap-2"><span class="text-lg font-bold text-white">${this.esc(u.displayName||'Unknown')}</span>${u.isPremium?'<span class="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded-full">👑 Premium</span>':''}${u.isBanned?'<span class="text-xs bg-red-500/20 text-red-400 px-2 py-0.5 rounded-full">🚫 Banned</span>':''}</div><div class="text-sm text-slate-400">${this.esc(u.email||'No email')}</div><div class="text-xs text-slate-500 font-mono mt-1">${uid}</div></div><div class="px-3 py-1.5 rounded-full text-xs ${on?'bg-emerald-500/20 text-emerald-400':'bg-slate-700 text-slate-400'}">${on?'🟢 Online':'⚫ Offline'}</div></div>
-                <div class="grid grid-cols-4 gap-3 mb-4">${[['yellow',u.coins||0,'Coins'],['cyan',u.diamonds||0,'Diamonds'],['indigo',u.level||1,'Level'],['pink',s.hype||0,'Hype']].map(([c,v,l])=>`<div class="bg-slate-800/50 rounded-xl p-3 text-center"><div class="text-lg font-bold text-${c}-400">${this.formatNumber(v)}</div><div class="text-xs text-slate-500">${l}</div></div>`).join('')}</div>
-                <div class="bg-slate-800/30 rounded-xl p-4 mb-4"><h4 class="text-sm text-white mb-2 font-medium">Game Progress</h4><div class="grid grid-cols-2 gap-2 text-sm"><div class="flex justify-between"><span class="text-slate-400">Furniture</span><span class="text-white">${s.furniture?.length||0}</span></div><div class="flex justify-between"><span class="text-slate-400">Max Visitors</span><span class="text-white">${s.maxVisitors||15}</span></div><div class="flex justify-between"><span class="text-slate-400">Bar Stock</span><span class="text-white">${s.barStock||0}</span></div><div class="flex justify-between"><span class="text-slate-400">Club Name</span><span class="text-white">${this.esc(s.clubName||'My Club')}</span></div></div></div>
-                <div class="grid grid-cols-2 gap-2"><button onclick="admin.editUser('${uid}')" class="p-3 rounded-xl bg-indigo-500/20 text-indigo-400 text-sm flex items-center justify-center gap-2"><i class="ph-fill ph-pencil"></i> Edit</button><button onclick="admin.giftUserCoins('${uid}')" class="p-3 rounded-xl bg-yellow-500/20 text-yellow-400 text-sm flex items-center justify-center gap-2"><i class="ph-fill ph-gift"></i> Gift Coins</button><button onclick="admin.resetUserProgress('${uid}')" class="p-3 rounded-xl bg-orange-500/20 text-orange-400 text-sm flex items-center justify-center gap-2"><i class="ph-fill ph-arrow-counter-clockwise"></i> Reset</button>${u.isBanned?`<button onclick="admin.unbanUserById('${uid}')" class="p-3 rounded-xl bg-emerald-500/20 text-emerald-400 text-sm flex items-center justify-center gap-2"><i class="ph-fill ph-check"></i> Unban</button>`:`<button onclick="admin.banUserById('${uid}')" class="p-3 rounded-xl bg-red-500/20 text-red-400 text-sm flex items-center justify-center gap-2"><i class="ph-fill ph-prohibit"></i> Ban</button>`}</div>
+                <div class="flex items-start justify-between mb-4"><div><div class="flex items-center gap-2"><span class="text-lg font-bold text-white">${this.esc(u.displayName || 'Unknown')}</span>${u.isPremium ? '<span class="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded-full">👑 Premium</span>' : ''}${u.isBanned ? '<span class="text-xs bg-red-500/20 text-red-400 px-2 py-0.5 rounded-full">🚫 Banned</span>' : ''}</div><div class="text-sm text-slate-400">${this.esc(u.email || 'No email')}</div><div class="text-xs text-slate-500 font-mono mt-1">${uid}</div></div><div class="px-3 py-1.5 rounded-full text-xs ${on ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-700 text-slate-400'}">${on ? '🟢 Online' : '⚫ Offline'}</div></div>
+                <div class="grid grid-cols-4 gap-3 mb-4">${[['yellow', u.coins || 0, 'Coins'], ['cyan', u.diamonds || 0, 'Diamonds'], ['indigo', u.level || 1, 'Level'], ['pink', s.hype || 0, 'Hype']].map(([c, v, l]) => `<div class="bg-slate-800/50 rounded-xl p-3 text-center"><div class="text-lg font-bold text-${c}-400">${this.formatNumber(v)}</div><div class="text-xs text-slate-500">${l}</div></div>`).join('')}</div>
+                <div class="bg-slate-800/30 rounded-xl p-4 mb-4"><h4 class="text-sm text-white mb-2 font-medium">Game Progress</h4><div class="grid grid-cols-2 gap-2 text-sm"><div class="flex justify-between"><span class="text-slate-400">Furniture</span><span class="text-white">${s.furniture?.length || 0}</span></div><div class="flex justify-between"><span class="text-slate-400">Max Visitors</span><span class="text-white">${s.maxVisitors || 15}</span></div><div class="flex justify-between"><span class="text-slate-400">Bar Stock</span><span class="text-white">${s.barStock || 0}</span></div><div class="flex justify-between"><span class="text-slate-400">Club Name</span><span class="text-white">${this.esc(s.clubName || 'My Club')}</span></div></div></div>
+                <div class="grid grid-cols-2 gap-2"><button onclick="admin.editUser('${uid}')" class="p-3 rounded-xl bg-indigo-500/20 text-indigo-400 text-sm flex items-center justify-center gap-2"><i class="ph-fill ph-pencil"></i> Edit</button><button onclick="admin.giftUserCoins('${uid}')" class="p-3 rounded-xl bg-yellow-500/20 text-yellow-400 text-sm flex items-center justify-center gap-2"><i class="ph-fill ph-gift"></i> Gift Coins</button><button onclick="admin.resetUserProgress('${uid}')" class="p-3 rounded-xl bg-orange-500/20 text-orange-400 text-sm flex items-center justify-center gap-2"><i class="ph-fill ph-arrow-counter-clockwise"></i> Reset</button>${u.isBanned ? `<button onclick="admin.unbanUserById('${uid}')" class="p-3 rounded-xl bg-emerald-500/20 text-emerald-400 text-sm flex items-center justify-center gap-2"><i class="ph-fill ph-check"></i> Unban</button>` : `<button onclick="admin.banUserById('${uid}')" class="p-3 rounded-xl bg-red-500/20 text-red-400 text-sm flex items-center justify-center gap-2"><i class="ph-fill ph-prohibit"></i> Ban</button>`}</div>
             </div></div>`;
         o.classList.remove('hidden'); o.classList.add('flex'); setTimeout(() => o.classList.add('opacity-100'), 10);
     }
-    
+
     async editUser(uid) {
         const u = this.users.find(x => x.uid === uid) || {};
         const o = document.getElementById('modal-overlay');
-        o.innerHTML = `<div class="glass p-6 rounded-2xl max-w-lg w-full mx-4" style="animation:scaleIn .2s"><button onclick="admin.closeModal()" class="absolute top-4 right-4 w-8 h-8 rounded-lg bg-slate-700 text-white flex items-center justify-center"><i class="ph-bold ph-x"></i></button><h3 class="text-xl font-bold text-white mb-6"><i class="ph-fill ph-user-gear text-indigo-400 mr-2"></i>Edit User</h3><div class="space-y-4"><div><label class="text-xs text-slate-400 uppercase mb-2 block">Name</label><input type="text" id="e-name" value="${this.esc(u.displayName||'')}" class="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500"></div><div class="grid grid-cols-2 gap-4"><div><label class="text-xs text-slate-400 uppercase mb-2 block">Coins</label><input type="number" id="e-coins" value="${u.coins||0}" class="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-3 text-white"></div><div><label class="text-xs text-slate-400 uppercase mb-2 block">Diamonds</label><input type="number" id="e-diamonds" value="${u.diamonds||0}" class="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-3 text-white"></div></div><div class="grid grid-cols-2 gap-4"><div><label class="text-xs text-slate-400 uppercase mb-2 block">Level</label><input type="number" id="e-level" value="${u.level||1}" class="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-3 text-white"></div><div class="flex items-center pt-6"><label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="e-premium" ${u.isPremium?'checked':''}><span class="text-yellow-400">👑 Premium</span></label></div></div><button onclick="admin.saveUser('${uid}')" class="w-full bg-indigo-600 hover:bg-indigo-500 py-3 rounded-xl text-white font-medium"><i class="ph-fill ph-floppy-disk mr-2"></i>Save</button></div></div>`;
+        o.innerHTML = `<div class="glass p-6 rounded-2xl max-w-lg w-full mx-4" style="animation:scaleIn .2s"><button onclick="admin.closeModal()" class="absolute top-4 right-4 w-8 h-8 rounded-lg bg-slate-700 text-white flex items-center justify-center"><i class="ph-bold ph-x"></i></button><h3 class="text-xl font-bold text-white mb-6"><i class="ph-fill ph-user-gear text-indigo-400 mr-2"></i>Edit User</h3><div class="space-y-4"><div><label class="text-xs text-slate-400 uppercase mb-2 block">Name</label><input type="text" id="e-name" value="${this.esc(u.displayName || '')}" class="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500"></div><div class="grid grid-cols-2 gap-4"><div><label class="text-xs text-slate-400 uppercase mb-2 block">Coins</label><input type="number" id="e-coins" value="${u.coins || 0}" class="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-3 text-white"></div><div><label class="text-xs text-slate-400 uppercase mb-2 block">Diamonds</label><input type="number" id="e-diamonds" value="${u.diamonds || 0}" class="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-3 text-white"></div></div><div class="grid grid-cols-2 gap-4"><div><label class="text-xs text-slate-400 uppercase mb-2 block">Level</label><input type="number" id="e-level" value="${u.level || 1}" class="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-3 text-white"></div><div class="flex items-center pt-6"><label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="e-premium" ${u.isPremium ? 'checked' : ''}><span class="text-yellow-400">👑 Premium</span></label></div></div><button onclick="admin.saveUser('${uid}')" class="w-full bg-indigo-600 hover:bg-indigo-500 py-3 rounded-xl text-white font-medium"><i class="ph-fill ph-floppy-disk mr-2"></i>Save</button></div></div>`;
         o.classList.remove('hidden'); o.classList.add('flex');
     }
-    
+
     async saveUser(uid) {
         try {
-            const upd = { displayName: document.getElementById('e-name').value, coins: parseInt(document.getElementById('e-coins').value)||0, diamonds: parseInt(document.getElementById('e-diamonds').value)||0, level: parseInt(document.getElementById('e-level').value)||1, isPremium: document.getElementById('e-premium').checked };
+            const upd = { displayName: document.getElementById('e-name').value, coins: parseInt(document.getElementById('e-coins').value) || 0, diamonds: parseInt(document.getElementById('e-diamonds').value) || 0, level: parseInt(document.getElementById('e-level').value) || 1, isPremium: document.getElementById('e-premium').checked };
             await this.firestore.collection('users').doc(uid).update(upd);
             await this.db.ref(`saves/${uid}`).update({ cash: upd.coins, diamonds: upd.diamonds, level: upd.level });
             this.closeModal(); this.toast('User saved', 'success'); this.log('action', `Updated user: ${upd.displayName}`, { uid }); await this.loadUsersData();
-        } catch(e) { this.toast('Failed: ' + e.message, 'error'); }
+        } catch (e) { this.toast('Failed: ' + e.message, 'error'); }
     }
-    
+
     async giftUserCoins(uid) {
         const u = this.users.find(x => x.uid === uid);
-        const amt = prompt(`Gift coins to ${u?.displayName||'user'}:`, '1000'); if (!amt) return;
+        const amt = prompt(`Gift coins to ${u?.displayName || 'user'}:`, '1000'); if (!amt) return;
         const c = parseInt(amt); if (isNaN(c) || c <= 0) { this.toast('Invalid amount', 'error'); return; }
         try {
             await this.firestore.collection('users').doc(uid).update({ coins: firebase.firestore.FieldValue.increment(c) });
-            await this.db.ref(`saves/${uid}/cash`).transaction(x => (x||0) + c);
+            await this.db.ref(`saves/${uid}/cash`).transaction(x => (x || 0) + c);
             this.toast(`Gifted ${this.formatNumber(c)} coins`, 'success'); this.log('action', `Gifted ${c} coins to ${u?.displayName}`, { uid }); await this.loadUsersData();
-        } catch(e) { this.toast('Failed: ' + e.message, 'error'); }
+        } catch (e) { this.toast('Failed: ' + e.message, 'error'); }
     }
-    
+
     async banUserById(uid) {
         const u = this.users.find(x => x.uid === uid); if (!confirm(`Ban ${u?.displayName}?`)) return;
         try {
-            await this.db.ref(`moderation/banned/${uid}`).set({ name: u?.displayName||'Unknown', email: u?.email||'', bannedAt: firebase.database.ServerValue.TIMESTAMP, bannedBy: this.user?.email });
+            await this.db.ref(`moderation/banned/${uid}`).set({ name: u?.displayName || 'Unknown', email: u?.email || '', bannedAt: firebase.database.ServerValue.TIMESTAMP, bannedBy: this.user?.email });
             this.closeModal(); this.toast(`${u?.displayName} banned`, 'success'); this.log('action', `Banned: ${u?.displayName}`, { uid }); await this.loadUsersData();
-        } catch(e) { this.toast('Failed: ' + e.message, 'error'); }
+        } catch (e) { this.toast('Failed: ' + e.message, 'error'); }
     }
-    
+
     async unbanUserById(uid) {
         const u = this.users.find(x => x.uid === uid);
         try {
             await this.db.ref(`moderation/banned/${uid}`).remove();
-            this.closeModal(); this.toast(`${u?.displayName||'User'} unbanned`, 'success'); this.log('action', `Unbanned: ${u?.displayName}`, { uid }); await this.loadUsersData();
-        } catch(e) { this.toast('Failed: ' + e.message, 'error'); }
+            this.closeModal(); this.toast(`${u?.displayName || 'User'} unbanned`, 'success'); this.log('action', `Unbanned: ${u?.displayName}`, { uid }); await this.loadUsersData();
+        } catch (e) { this.toast('Failed: ' + e.message, 'error'); }
     }
-    
+
     async resetUserProgress(uid) {
         if (!confirm('Reset all progress for this user?')) return;
         try {
             await this.db.ref(`saves/${uid}`).remove();
             this.closeModal(); this.toast('Progress reset', 'success'); this.log('action', `Reset progress for user`, { uid });
-        } catch(e) { this.toast('Failed: ' + e.message, 'error'); }
+        } catch (e) { this.toast('Failed: ' + e.message, 'error'); }
     }
-    
+
     closeModal() {
         const o = document.getElementById('modal-overlay');
         o.classList.add('hidden'); o.classList.remove('flex', 'opacity-100');
@@ -1320,48 +1320,48 @@ class AdminDashboard {
                     </div>
                 </div>
             </div>`;
-        
+
         this.broadcastType = 'announcement';
         this.loadBroadcastHistory();
         this.setupBroadcastPreview();
     }
-    
+
     setBroadcastType(type) {
         this.broadcastType = type;
-        
+
         // Update button styles
         document.querySelectorAll('.broadcast-type-btn').forEach(btn => {
             btn.classList.remove('bg-indigo-600', 'text-white', 'active');
             btn.classList.add('bg-slate-700', 'text-slate-300');
         });
         const activeBtn = document.querySelector(`.broadcast-type-btn[data-type="${type}"]`);
-        if(activeBtn) {
+        if (activeBtn) {
             activeBtn.classList.remove('bg-slate-700', 'text-slate-300');
             activeBtn.classList.add('bg-indigo-600', 'text-white', 'active');
         }
-        
+
         // Update preview icon and color
         this.updateBroadcastPreview();
     }
-    
+
     setupBroadcastPreview() {
         const titleInput = document.getElementById('broadcast-title');
         const msgInput = document.getElementById('broadcast-message');
-        
+
         titleInput?.addEventListener('input', () => this.updateBroadcastPreview());
         msgInput?.addEventListener('input', () => this.updateBroadcastPreview());
     }
-    
+
     updateBroadcastPreview() {
         const title = document.getElementById('broadcast-title')?.value || this.getBroadcastTypeLabel();
         const message = document.getElementById('broadcast-message')?.value || 'Your message will appear here...';
         const previewTitle = document.getElementById('preview-title');
         const previewMessage = document.getElementById('preview-message');
         const preview = document.getElementById('broadcast-preview');
-        
-        if(previewTitle) previewTitle.textContent = title || this.getBroadcastTypeLabel();
-        if(previewMessage) previewMessage.textContent = message;
-        
+
+        if (previewTitle) previewTitle.textContent = title || this.getBroadcastTypeLabel();
+        if (previewMessage) previewMessage.textContent = message;
+
         // Update colors based on type
         const colors = {
             announcement: 'from-indigo-600/20 to-purple-600/20 border-indigo-500/30',
@@ -1370,12 +1370,12 @@ class AdminDashboard {
             maintenance: 'from-yellow-600/20 to-orange-600/20 border-yellow-500/30',
             reward: 'from-emerald-600/20 to-teal-600/20 border-emerald-500/30'
         };
-        
-        if(preview) {
+
+        if (preview) {
             preview.className = `bg-gradient-to-r ${colors[this.broadcastType] || colors.announcement} rounded-lg p-4`;
         }
     }
-    
+
     getBroadcastTypeLabel() {
         const labels = {
             announcement: 'Announcement',
@@ -1386,17 +1386,17 @@ class AdminDashboard {
         };
         return labels[this.broadcastType] || 'Announcement';
     }
-    
+
     async sendBroadcast() {
         const title = document.getElementById('broadcast-title')?.value.trim();
         const message = document.getElementById('broadcast-message')?.value.trim();
         const duration = parseInt(document.getElementById('broadcast-duration')?.value || '30');
-        
-        if(!message) {
+
+        if (!message) {
             this.toast('Please enter a message', 'error');
             return;
         }
-        
+
         const broadcast = {
             type: this.broadcastType,
             title: title || this.getBroadcastTypeLabel(),
@@ -1406,47 +1406,47 @@ class AdminDashboard {
             sentBy: this.user?.email || 'Admin',
             active: true
         };
-        
+
         try {
             // Save to broadcasts collection
             await this.db.ref('broadcasts').push(broadcast);
-            
+
             // Set as active broadcast (overwrites previous)
             await this.db.ref('activeBroadcast').set({
                 ...broadcast,
                 sentAt: Date.now(),
                 expiresAt: duration > 0 ? Date.now() + (duration * 1000) : 0
             });
-            
+
             this.toast('📢 Broadcast sent successfully!', 'success');
             this.log('action', `Broadcast sent: ${title || message.substring(0, 50)}`, { type: broadcastType, title, duration });
-            
+
             // Clear inputs
             document.getElementById('broadcast-title').value = '';
             document.getElementById('broadcast-message').value = '';
             this.updateBroadcastPreview();
             this.loadBroadcastHistory();
-            
-        } catch(error) {
+
+        } catch (error) {
             this.toast('Failed to send broadcast: ' + error.message, 'error');
         }
     }
-    
+
     async loadBroadcastHistory() {
         const historyEl = document.getElementById('broadcast-history');
-        if(!historyEl) return;
-        
+        if (!historyEl) return;
+
         try {
             const snap = await this.db.ref('broadcasts').orderByChild('sentAt').limitToLast(20).once('value');
-            
-            if(!snap.exists()) {
+
+            if (!snap.exists()) {
                 historyEl.innerHTML = '<div class="text-center text-slate-500 text-sm py-10">No broadcasts yet</div>';
                 return;
             }
-            
+
             const broadcasts = [];
             snap.forEach(child => broadcasts.unshift({ id: child.key, ...child.val() }));
-            
+
             const typeIcons = {
                 announcement: '<i class="ph-fill ph-megaphone text-indigo-400"></i>',
                 alert: '<i class="ph-fill ph-warning text-red-400"></i>',
@@ -1454,7 +1454,7 @@ class AdminDashboard {
                 maintenance: '<i class="ph-fill ph-wrench text-yellow-400"></i>',
                 reward: '<i class="ph-fill ph-gift text-emerald-400"></i>'
             };
-            
+
             const typeBgs = {
                 announcement: 'bg-indigo-500/10 border-indigo-500/20',
                 alert: 'bg-red-500/10 border-red-500/20',
@@ -1462,12 +1462,12 @@ class AdminDashboard {
                 maintenance: 'bg-yellow-500/10 border-yellow-500/20',
                 reward: 'bg-emerald-500/10 border-emerald-500/20'
             };
-            
+
             historyEl.innerHTML = broadcasts.map(b => {
                 const time = b.sentAt ? new Date(b.sentAt).toLocaleString() : 'Unknown';
                 const icon = typeIcons[b.type] || typeIcons.announcement;
                 const bg = typeBgs[b.type] || typeBgs.announcement;
-                
+
                 return `
                     <div class="p-3 rounded-lg border ${bg}">
                         <div class="flex items-start gap-2">
@@ -1484,29 +1484,29 @@ class AdminDashboard {
                     </div>
                 `;
             }).join('');
-            
-        } catch(error) {
+
+        } catch (error) {
             historyEl.innerHTML = '<div class="text-center text-red-400 text-sm py-10">Error loading history</div>';
         }
     }
-    
+
     async resendBroadcast(id) {
         try {
             const snap = await this.db.ref(`broadcasts/${id}`).once('value');
-            if(!snap.exists()) return;
-            
+            if (!snap.exists()) return;
+
             const broadcast = snap.val();
             document.getElementById('broadcast-title').value = broadcast.title || '';
             document.getElementById('broadcast-message').value = broadcast.message || '';
             this.setBroadcastType(broadcast.type || 'announcement');
             this.updateBroadcastPreview();
-            
+
             this.toast('Broadcast loaded - edit and send again', 'info');
-        } catch(error) {
+        } catch (error) {
             this.toast('Failed to load broadcast', 'error');
         }
     }
-    
+
     async clearActiveBroadcast() {
         await this.db.ref('activeBroadcast').remove();
         this.toast('Active broadcast cleared', 'success');
@@ -1706,14 +1706,14 @@ class AdminDashboard {
                     </div>
                 </div>
             </div>`;
-        
+
         this.loadEconomyStats();
         this.loadActiveEvents();
         this.loadEconomyTransactions();
         this.loadTopEarners();
         this.setupGiftRecipientToggle();
     }
-    
+
     setupGiftRecipientToggle() {
         const select = document.getElementById('gift-recipient');
         const specificInput = document.getElementById('specific-user-input');
@@ -1721,14 +1721,14 @@ class AdminDashboard {
             specificInput.classList.toggle('hidden', select.value !== 'specific');
         });
     }
-    
+
     async loadEconomyStats() {
         try {
             const usersSnap = await this.firestore.collection('users').get();
             let totalCoins = 0;
             let richestUser = { name: 'N/A', coins: 0 };
             let userCount = 0;
-            
+
             usersSnap.forEach(doc => {
                 const data = doc.data();
                 const coins = data.coins || 0;
@@ -1738,65 +1738,65 @@ class AdminDashboard {
                     richestUser = { name: data.displayName || data.email?.split('@')[0] || 'Unknown', coins };
                 }
             });
-            
+
             const avgWealth = userCount > 0 ? Math.round(totalCoins / userCount) : 0;
-            
+
             document.getElementById('eco-total-coins').textContent = this.formatNumber(totalCoins);
             document.getElementById('eco-avg-wealth').textContent = this.formatNumber(avgWealth);
             document.getElementById('eco-richest').textContent = `${richestUser.name} (${this.formatNumber(richestUser.coins)})`;
-            
+
             // Load multiplier
             const multSnap = await this.db.ref('economy/multiplier').once('value');
             const multiplier = multSnap.val() || 1;
             document.getElementById('eco-multiplier').textContent = `${multiplier}x`;
             document.getElementById('multiplier-slider').value = multiplier;
             document.getElementById('multiplier-preview').textContent = `${multiplier}x`;
-            
-        } catch(e) {
+
+        } catch (e) {
             console.error('Failed to load economy stats:', e);
         }
     }
-    
+
     formatNumber(num) {
         if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
         if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
         return num.toString();
     }
-    
+
     async loadActiveEvents() {
         const listEl = document.getElementById('active-events-list');
         if (!listEl) return;
-        
+
         try {
             const snap = await this.db.ref('economy/events').once('value');
             if (!snap.exists()) {
                 listEl.innerHTML = '<div class="text-center text-slate-500 text-sm py-4">No active events</div>';
                 return;
             }
-            
+
             const events = snap.val();
             const now = Date.now();
             const activeEvents = Object.entries(events).filter(([k, v]) => v.endsAt > now);
-            
+
             if (activeEvents.length === 0) {
                 listEl.innerHTML = '<div class="text-center text-slate-500 text-sm py-4">No active events</div>';
                 return;
             }
-            
+
             const eventIcons = {
                 double_coins: '💰',
                 triple_xp: '⭐',
                 happy_hour: '🎉',
                 sale: '🏷️'
             };
-            
+
             const eventColors = {
                 double_coins: 'border-yellow-500/30 bg-yellow-500/10',
                 triple_xp: 'border-purple-500/30 bg-purple-500/10',
                 happy_hour: 'border-pink-500/30 bg-pink-500/10',
                 sale: 'border-emerald-500/30 bg-emerald-500/10'
             };
-            
+
             listEl.innerHTML = activeEvents.map(([key, event]) => {
                 const remaining = Math.max(0, Math.ceil((event.endsAt - now) / 60000));
                 const icon = eventIcons[event.type] || '🎮';
@@ -1816,26 +1816,26 @@ class AdminDashboard {
                     </div>
                 `;
             }).join('');
-            
-        } catch(e) {
+
+        } catch (e) {
             listEl.innerHTML = '<div class="text-center text-red-400 text-sm py-4">Error loading events</div>';
         }
     }
-    
+
     async loadEconomyTransactions() {
         const listEl = document.getElementById('eco-transactions');
         if (!listEl) return;
-        
+
         try {
             const snap = await this.db.ref('economy/transactions').orderByChild('timestamp').limitToLast(20).once('value');
             if (!snap.exists()) {
                 listEl.innerHTML = '<div class="text-center text-slate-500 text-sm py-4">No transactions yet</div>';
                 return;
             }
-            
+
             const transactions = [];
             snap.forEach(child => transactions.unshift({ id: child.key, ...child.val() }));
-            
+
             listEl.innerHTML = transactions.map(t => {
                 const time = t.timestamp ? new Date(t.timestamp).toLocaleString() : 'Unknown';
                 const icon = t.type === 'gift' ? '🎁' : t.type === 'event' ? '🎉' : t.type === 'reset' ? '🔄' : '💫';
@@ -1849,28 +1849,28 @@ class AdminDashboard {
                     </div>
                 `;
             }).join('');
-            
-        } catch(e) {
+
+        } catch (e) {
             listEl.innerHTML = '<div class="text-center text-red-400 text-sm py-4">Error loading</div>';
         }
     }
-    
+
     async loadTopEarners() {
         const listEl = document.getElementById('top-earners');
         if (!listEl) return;
-        
+
         try {
             const usersSnap = await this.firestore.collection('users').orderBy('coins', 'desc').limit(5).get();
-            
+
             if (usersSnap.empty) {
                 listEl.innerHTML = '<div class="text-center text-slate-500 text-sm py-4">No users</div>';
                 return;
             }
-            
+
             const medals = ['🥇', '🥈', '🥉', '4.', '5.'];
             let html = '';
             let i = 0;
-            
+
             usersSnap.forEach(doc => {
                 const data = doc.data();
                 html += `
@@ -1882,14 +1882,14 @@ class AdminDashboard {
                 `;
                 i++;
             });
-            
+
             listEl.innerHTML = html;
-            
-        } catch(e) {
+
+        } catch (e) {
             listEl.innerHTML = '<div class="text-center text-red-400 text-sm py-4">Error loading</div>';
         }
     }
-    
+
     updateMultiplierPreview() {
         const slider = document.getElementById('multiplier-slider');
         const preview = document.getElementById('multiplier-preview');
@@ -1897,53 +1897,53 @@ class AdminDashboard {
             preview.textContent = `${slider.value}x`;
         }
     }
-    
+
     async setGlobalMultiplier() {
         const slider = document.getElementById('multiplier-slider');
         const value = parseFloat(slider?.value || 1);
-        
+
         try {
             await this.db.ref('economy/multiplier').set(value);
             document.getElementById('eco-multiplier').textContent = `${value}x`;
-            
+
             await this.logTransaction('multiplier', `Set global multiplier to ${value}x`);
             this.toast(`✨ Multiplier set to ${value}x`, 'success');
-            
-        } catch(e) {
+
+        } catch (e) {
             this.toast('Failed to set multiplier', 'error');
         }
     }
-    
+
     async sendGiftCoins() {
         const recipient = document.getElementById('gift-recipient')?.value;
         const amount = parseInt(document.getElementById('gift-amount')?.value);
         const specificUser = document.getElementById('gift-user-id')?.value?.trim();
-        
+
         if (!amount || amount <= 0) {
             this.toast('Please enter a valid amount', 'error');
             return;
         }
-        
+
         if (recipient === 'specific' && !specificUser) {
             this.toast('Please enter a user email or ID', 'error');
             return;
         }
-        
+
         try {
             if (recipient === 'all') {
                 // Gift to all users
                 const usersSnap = await this.firestore.collection('users').get();
                 const batch = this.firestore.batch();
                 let count = 0;
-                
+
                 usersSnap.forEach(doc => {
                     batch.update(doc.ref, { coins: firebase.firestore.FieldValue.increment(amount) });
                     count++;
                 });
-                
+
                 await batch.commit();
                 await this.logTransaction('gift', `Gifted ${amount} coins to ALL ${count} users`);
-                
+
                 // Broadcast the gift
                 await this.db.ref('activeBroadcast').set({
                     type: 'reward',
@@ -1953,9 +1953,9 @@ class AdminDashboard {
                     sentAt: Date.now(),
                     expiresAt: Date.now() + 30000
                 });
-                
+
                 this.toast(`🎁 Gifted ${amount} coins to ${count} users!`, 'success');
-                
+
             } else if (recipient === 'online') {
                 // Gift to online users only
                 const onlineSnap = await this.db.ref('onlineUsers').once('value');
@@ -1963,18 +1963,18 @@ class AdminDashboard {
                     this.toast('No users online', 'error');
                     return;
                 }
-                
+
                 const onlineUsers = Object.keys(onlineSnap.val());
                 const batch = this.firestore.batch();
-                
+
                 for (const uid of onlineUsers) {
                     const userRef = this.firestore.collection('users').doc(uid);
                     batch.update(userRef, { coins: firebase.firestore.FieldValue.increment(amount) });
                 }
-                
+
                 await batch.commit();
                 await this.logTransaction('gift', `Gifted ${amount} coins to ${onlineUsers.length} online users`);
-                
+
                 await this.db.ref('activeBroadcast').set({
                     type: 'reward',
                     title: '🎁 GIFT',
@@ -1983,13 +1983,13 @@ class AdminDashboard {
                     sentAt: Date.now(),
                     expiresAt: Date.now() + 30000
                 });
-                
+
                 this.toast(`🎁 Gifted ${amount} coins to ${onlineUsers.length} online users!`, 'success');
-                
+
             } else if (recipient === 'specific') {
                 // Gift to specific user
                 let userDoc;
-                
+
                 // Try by email first
                 const byEmail = await this.firestore.collection('users').where('email', '==', specificUser).get();
                 if (!byEmail.empty) {
@@ -2001,35 +2001,35 @@ class AdminDashboard {
                         userDoc = byUid;
                     }
                 }
-                
+
                 if (!userDoc) {
                     this.toast('User not found', 'error');
                     return;
                 }
-                
+
                 await userDoc.ref.update({ coins: firebase.firestore.FieldValue.increment(amount) });
                 await this.logTransaction('gift', `Gifted ${amount} coins to ${userDoc.data().displayName || specificUser}`);
-                
+
                 this.toast(`🎁 Gifted ${amount} coins to ${userDoc.data().displayName || specificUser}!`, 'success');
             }
-            
+
             // Clear inputs and refresh
             document.getElementById('gift-amount').value = '';
             document.getElementById('gift-user-id').value = '';
             this.loadEconomyStats();
             this.loadEconomyTransactions();
             this.loadTopEarners();
-            
-        } catch(e) {
+
+        } catch (e) {
             console.error('Gift error:', e);
             this.toast('Failed to send gift: ' + e.message, 'error');
         }
     }
-    
+
     async previewGift() {
         const recipient = document.getElementById('gift-recipient')?.value;
         const amount = parseInt(document.getElementById('gift-amount')?.value) || 0;
-        
+
         let targetCount = 0;
         try {
             if (recipient === 'all') {
@@ -2041,22 +2041,22 @@ class AdminDashboard {
             } else {
                 targetCount = 1;
             }
-        } catch(e) {}
-        
+        } catch (e) { }
+
         const total = amount * targetCount;
         this.toast(`Preview: ${this.formatNumber(amount)} coins × ${targetCount} users = ${this.formatNumber(total)} total`, 'info');
     }
-    
+
     async startEconomyEvent(eventType) {
         const duration = parseInt(document.getElementById('event-duration')?.value || 60);
-        
+
         const eventNames = {
             double_coins: '2x Coins',
             triple_xp: '3x XP',
             happy_hour: 'Happy Hour',
             sale: '50% Sale'
         };
-        
+
         const eventData = {
             type: eventType,
             name: eventNames[eventType] || eventType,
@@ -2064,11 +2064,11 @@ class AdminDashboard {
             endsAt: Date.now() + (duration * 60 * 1000),
             startedBy: this.user?.email || 'Admin'
         };
-        
+
         try {
             await this.db.ref(`economy/events/${eventType}`).set(eventData);
             await this.logTransaction('event', `Started ${eventNames[eventType]} event for ${duration} minutes`);
-            
+
             // Broadcast the event
             const eventIcons = { double_coins: '💰', triple_xp: '⭐', happy_hour: '🎉', sale: '🏷️' };
             await this.db.ref('activeBroadcast').set({
@@ -2079,39 +2079,39 @@ class AdminDashboard {
                 sentAt: Date.now(),
                 expiresAt: Date.now() + 30000
             });
-            
+
             this.toast(`🎉 Started ${eventNames[eventType]} event!`, 'success');
             this.loadActiveEvents();
-            
-        } catch(e) {
+
+        } catch (e) {
             this.toast('Failed to start event', 'error');
         }
     }
-    
+
     async stopEvent(eventKey) {
         try {
             await this.db.ref(`economy/events/${eventKey}`).remove();
             await this.logTransaction('event', `Stopped ${eventKey} event`);
             this.toast('Event stopped', 'success');
             this.loadActiveEvents();
-        } catch(e) {
+        } catch (e) {
             this.toast('Failed to stop event', 'error');
         }
     }
-    
+
     async stopAllEvents() {
         if (!confirm('Stop all active events?')) return;
-        
+
         try {
             await this.db.ref('economy/events').remove();
             await this.logTransaction('event', 'Stopped all events');
             this.toast('All events stopped', 'success');
             this.loadActiveEvents();
-        } catch(e) {
+        } catch (e) {
             this.toast('Failed to stop events', 'error');
         }
     }
-    
+
     async resetAllCoins() {
         const confirmed = await this.showConfirmModal({
             title: 'Reset All Cash',
@@ -2122,39 +2122,39 @@ class AdminDashboard {
             inputPlaceholder: 'Type RESET',
             inputMatch: 'RESET'
         });
-        
+
         if (!confirmed) {
             this.toast('Reset cancelled', 'info');
             return;
         }
-        
+
         try {
             // Update SAVES collection (where game data is stored)
             const savesSnap = await this.firestore.collection('saves').get();
             const batch = this.firestore.batch();
             let count = 0;
-            
+
             savesSnap.forEach(doc => {
                 batch.update(doc.ref, { cash: 1000 });
                 count++;
             });
-            
+
             await batch.commit();
-            
+
             // Trigger force reload on all clients
             await this.db.ref('economy/forceReload').set(Date.now());
-            
+
             await this.logTransaction('reset', `Reset all ${count} game saves to 1000 cash`);
-            
+
             this.toast(`🔄 Reset ${count} users to 1000 cash`, 'success');
             this.loadEconomyStats();
             this.loadTopEarners();
-            
-        } catch(e) {
+
+        } catch (e) {
             this.toast('Failed to reset: ' + e.message, 'error');
         }
     }
-    
+
     async resetAllDiamonds() {
         const confirmed = await this.showConfirmModal({
             title: 'Reset All Diamonds',
@@ -2165,52 +2165,52 @@ class AdminDashboard {
             inputPlaceholder: 'Type RESET',
             inputMatch: 'RESET'
         });
-        
+
         if (!confirmed) {
             this.toast('Reset cancelled', 'info');
             return;
         }
-        
+
         try {
             // Update SAVES collection (where game data is stored)
             const savesSnap = await this.firestore.collection('saves').get();
             const batch = this.firestore.batch();
             let count = 0;
-            
+
             savesSnap.forEach(doc => {
                 batch.update(doc.ref, { diamonds: 5 });
                 count++;
             });
-            
+
             await batch.commit();
-            
+
             // Trigger force reload on all clients
             await this.db.ref('economy/forceReload').set(Date.now());
-            
+
             await this.logTransaction('reset', `Reset all ${count} game saves to 5 diamonds`);
-            
+
             this.toast(`💎 Reset ${count} users to 5 diamonds`, 'success');
             this.loadEconomyStats();
             this.loadTopEarners();
-            
-        } catch(e) {
+
+        } catch (e) {
             this.toast('Failed to reset: ' + e.message, 'error');
         }
     }
-    
+
     async wipeEconomy(type = 'both') {
         const typeLabels = {
             cash: 'CASH',
-            diamonds: 'DIAMONDS', 
+            diamonds: 'DIAMONDS',
             both: 'CASH AND DIAMONDS'
         };
-        
+
         const typeIcons = {
             cash: '💰',
             diamonds: '💎',
             both: '⚠️'
         };
-        
+
         const confirmed = await this.showConfirmModal({
             title: `Wipe All ${typeLabels[type]}`,
             message: `This will set EVERYONE's ${typeLabels[type].toLowerCase()} to ZERO. This is IRREVERSIBLE!`,
@@ -2220,18 +2220,18 @@ class AdminDashboard {
             inputPlaceholder: 'Type WIPE',
             inputMatch: 'WIPE'
         });
-        
+
         if (!confirmed) {
             this.toast('Wipe cancelled', 'info');
             return;
         }
-        
+
         try {
             // Update SAVES collection (where game data is stored)
             const savesSnap = await this.firestore.collection('saves').get();
             const batch = this.firestore.batch();
             let count = 0;
-            
+
             savesSnap.forEach(doc => {
                 if (type === 'cash') {
                     batch.update(doc.ref, { cash: 0 });
@@ -2242,23 +2242,23 @@ class AdminDashboard {
                 }
                 count++;
             });
-            
+
             await batch.commit();
-            
+
             // Trigger force reload on all clients
             await this.db.ref('economy/forceReload').set(Date.now());
-            
+
             await this.logTransaction('reset', `WIPED ${typeLabels[type].toLowerCase()} for ${count} users to 0`);
-            
+
             this.toast(`💀 Wiped ${typeLabels[type].toLowerCase()} for ${count} users to 0`, 'success');
             this.loadEconomyStats();
             this.loadTopEarners();
-            
-        } catch(e) {
+
+        } catch (e) {
             this.toast('Failed to wipe: ' + e.message, 'error');
         }
     }
-    
+
     async logTransaction(type, description) {
         await this.db.ref('economy/transactions').push({
             type,
@@ -2268,11 +2268,11 @@ class AdminDashboard {
         });
         this.loadEconomyTransactions();
     }
-    
+
     // ============================
     // ADVANCED LOGS MODULE
     // ============================
-    
+
     async log(type, message, metadata = {}) {
         try {
             await this.db.ref('adminLogs').push({
@@ -2284,18 +2284,18 @@ class AdminDashboard {
                 userAgent: navigator.userAgent,
                 sessionId: this.sessionId || 'unknown'
             });
-        } catch(e) {
+        } catch (e) {
             console.error('Failed to log:', e);
         }
     }
-    
+
     async renderLogs(el) {
         this.logsFilter = 'all';
         this.logsSearch = '';
         this.logsTimeRange = '24h';
         this.logsData = [];
         this.logsListeners = [];
-        
+
         el.innerHTML = `
             <div class="space-y-6">
                 <!-- Logs Header with Stats -->
@@ -2522,13 +2522,13 @@ class AdminDashboard {
                 }
             </style>
         `;
-        
+
         // Add search listener
         document.getElementById('logs-search').addEventListener('input', (e) => {
             this.logsSearch = e.target.value.toLowerCase();
             this.renderLogsData();
         });
-        
+
         // Load logs data
         this.loadLogs().then(() => {
             this.loadLogsStats();
@@ -2538,7 +2538,7 @@ class AdminDashboard {
         this.loadEconomyLogs();
         this.setupLogsRealtime();
     }
-    
+
     setupLogsRealtime() {
         // Listen for new admin logs in real-time
         if (this.logsRealtimeRef) this.logsRealtimeRef.off();
@@ -2552,11 +2552,11 @@ class AdminDashboard {
             }
         });
     }
-    
+
     loadPeakTimes() {
         const el = document.getElementById('logs-peak-times');
         if (!el) return;
-        
+
         // Analyze logs by hour
         const hourCounts = {};
         this.logsData.forEach(log => {
@@ -2565,19 +2565,19 @@ class AdminDashboard {
                 hourCounts[hour] = (hourCounts[hour] || 0) + 1;
             }
         });
-        
+
         // Get top 5 hours
         const sorted = Object.entries(hourCounts)
             .sort((a, b) => b[1] - a[1])
             .slice(0, 5);
-        
+
         if (sorted.length === 0) {
             el.innerHTML = '<div class="text-center text-slate-500 text-xs py-4">Not enough data</div>';
             return;
         }
-        
+
         const maxCount = sorted[0][1] || 1;
-        
+
         el.innerHTML = sorted.map(([hour, count]) => {
             const pct = Math.round((count / maxCount) * 100);
             const hourLabel = `${hour.toString().padStart(2, '0')}:00`;
@@ -2592,7 +2592,7 @@ class AdminDashboard {
             `;
         }).join('');
     }
-    
+
     setLogsFilter(filter) {
         this.logsFilter = filter;
         document.querySelectorAll('.logs-filter-btn').forEach(btn => {
@@ -2600,15 +2600,15 @@ class AdminDashboard {
         });
         this.renderLogsData();
     }
-    
+
     setLogsTimeRange(range) {
         this.logsTimeRange = range;
         this.loadLogs();
     }
-    
+
     getTimeRangeMs() {
         const now = Date.now();
-        switch(this.logsTimeRange) {
+        switch (this.logsTimeRange) {
             case '1h': return now - (60 * 60 * 1000);
             case '24h': return now - (24 * 60 * 60 * 1000);
             case '7d': return now - (7 * 24 * 60 * 60 * 1000);
@@ -2616,17 +2616,17 @@ class AdminDashboard {
             default: return 0;
         }
     }
-    
+
     async loadLogs() {
         const container = document.getElementById('logs-container');
         if (!container) return;
-        
+
         container.innerHTML = `<div class="p-8 text-center text-slate-500"><div class="spinner mx-auto mb-3"></div>Loading logs...</div>`;
-        
+
         try {
             const allLogs = [];
             const minTime = this.getTimeRangeMs();
-            
+
             // Load admin logs
             const adminLogsSnap = await this.db.ref('adminLogs').orderByChild('timestamp').limitToLast(500).once('value');
             if (adminLogsSnap.exists()) {
@@ -2637,7 +2637,7 @@ class AdminDashboard {
                     }
                 });
             }
-            
+
             // Load economy transactions
             const ecoSnap = await this.db.ref('economy/transactions').orderByChild('timestamp').limitToLast(200).once('value');
             if (ecoSnap.exists()) {
@@ -2656,7 +2656,7 @@ class AdminDashboard {
                     }
                 });
             }
-            
+
             // Load anticheat violations as security logs
             const acSnap = await this.db.ref('anticheat/violations').orderByChild('timestamp').limitToLast(100).once('value');
             if (acSnap.exists()) {
@@ -2675,7 +2675,7 @@ class AdminDashboard {
                     }
                 });
             }
-            
+
             // Load moderation actions
             const modSnap = await this.db.ref('moderationLogs').orderByChild('timestamp').limitToLast(100).once('value');
             if (modSnap.exists()) {
@@ -2694,43 +2694,43 @@ class AdminDashboard {
                     }
                 });
             }
-            
+
             // Sort by timestamp descending
             allLogs.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
             this.logsData = allLogs;
             this.renderLogsData();
-            
-        } catch(e) {
+
+        } catch (e) {
             console.error('Failed to load logs:', e);
             container.innerHTML = `<div class="p-8 text-center text-red-400"><i class="ph-bold ph-warning mr-2"></i>Failed to load logs: ${e.message}</div>`;
         }
     }
-    
+
     renderLogsData() {
         const container = document.getElementById('logs-container');
         if (!container) return;
-        
+
         let filtered = this.logsData;
-        
+
         // Apply type filter
         if (this.logsFilter !== 'all') {
             filtered = filtered.filter(log => log.type === this.logsFilter);
         }
-        
+
         // Apply search filter
         if (this.logsSearch) {
-            filtered = filtered.filter(log => 
+            filtered = filtered.filter(log =>
                 (log.message || '').toLowerCase().includes(this.logsSearch) ||
                 (log.admin || '').toLowerCase().includes(this.logsSearch) ||
                 (log.type || '').toLowerCase().includes(this.logsSearch) ||
                 (log.source || '').toLowerCase().includes(this.logsSearch)
             );
         }
-        
+
         // Update showing count
         const showingEl = document.getElementById('logs-showing');
         if (showingEl) showingEl.textContent = `Showing ${filtered.length} of ${this.logsData.length} logs`;
-        
+
         if (filtered.length === 0) {
             container.innerHTML = `
                 <div class="p-12 text-center">
@@ -2743,10 +2743,10 @@ class AdminDashboard {
             `;
             return;
         }
-        
+
         container.innerHTML = filtered.slice(0, 200).map((log, idx) => this.renderLogEntry(log, idx)).join('');
     }
-    
+
     renderLogEntry(log, idx) {
         const typeConfig = {
             info: { icon: 'ph-info', color: 'emerald', bg: 'bg-emerald-500/10', text: 'text-emerald-400', border: 'border-emerald-500/20' },
@@ -2755,12 +2755,12 @@ class AdminDashboard {
             action: { icon: 'ph-lightning', color: 'indigo', bg: 'bg-indigo-500/10', text: 'text-indigo-400', border: 'border-indigo-500/20' },
             security: { icon: 'ph-shield-warning', color: 'rose', bg: 'bg-rose-500/10', text: 'text-rose-400', border: 'border-rose-500/20' }
         };
-        
+
         const config = typeConfig[log.type] || typeConfig.info;
         const time = log.timestamp ? new Date(log.timestamp) : new Date();
         const timeAgo = this.getTimeAgo(time);
         const formattedTime = time.toLocaleString();
-        
+
         const sourceLabels = {
             admin: { label: 'Admin', color: 'bg-purple-500/20 text-purple-400' },
             economy: { label: 'Economy', color: 'bg-yellow-500/20 text-yellow-400' },
@@ -2768,7 +2768,7 @@ class AdminDashboard {
             moderation: { label: 'Moderation', color: 'bg-orange-500/20 text-orange-400' }
         };
         const source = sourceLabels[log.source] || { label: 'System', color: 'bg-slate-500/20 text-slate-400' };
-        
+
         return `
             <div class="log-entry p-4 cursor-pointer" onclick="admin.toggleLogDetails('log-${idx}')">
                 <div class="flex items-start gap-4">
@@ -2831,14 +2831,14 @@ class AdminDashboard {
             </div>
         `;
     }
-    
+
     toggleLogDetails(id) {
         const el = document.getElementById(id);
         if (el) {
             el.parentElement.parentElement.parentElement.classList.toggle('expanded');
         }
     }
-    
+
     getTimeAgo(date) {
         const seconds = Math.floor((new Date() - date) / 1000);
         if (seconds < 60) return 'Just now';
@@ -2847,43 +2847,43 @@ class AdminDashboard {
         if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
         return date.toLocaleDateString();
     }
-    
+
     async loadLogsStats() {
         try {
             // Count logs by type
             const counts = { total: 0, info: 0, warning: 0, error: 0, action: 0, security: 0 };
             const admins = new Set();
-            
+
             this.logsData.forEach(log => {
                 counts.total++;
                 counts[log.type] = (counts[log.type] || 0) + 1;
                 if (log.admin) admins.add(log.admin);
             });
-            
+
             // Update UI
             const update = (id, val) => {
                 const el = document.getElementById(id);
                 if (el) el.textContent = val;
             };
-            
+
             update('logs-total', counts.total);
             update('logs-info', counts.info);
             update('logs-warning', counts.warning);
             update('logs-error', counts.error);
             update('logs-admins', admins.size);
-            
+
             // Render breakdown
             this.renderLogsBreakdown(counts);
-            
-        } catch(e) {
+
+        } catch (e) {
             console.error('Failed to load logs stats:', e);
         }
     }
-    
+
     renderLogsBreakdown(counts) {
         const el = document.getElementById('logs-breakdown');
         if (!el) return;
-        
+
         const total = counts.total || 1;
         const types = [
             { label: 'Info', count: counts.info || 0, color: 'emerald' },
@@ -2892,7 +2892,7 @@ class AdminDashboard {
             { label: 'Warnings', count: counts.warning || 0, color: 'amber' },
             { label: 'Errors', count: counts.error || 0, color: 'red' }
         ];
-        
+
         el.innerHTML = types.map(t => {
             const pct = Math.round((t.count / total) * 100);
             return `
@@ -2908,11 +2908,11 @@ class AdminDashboard {
             `;
         }).join('');
     }
-    
+
     async loadAdminActivity() {
         const el = document.getElementById('logs-admin-activity');
         if (!el) return;
-        
+
         try {
             // Group by admin
             const adminLogs = {};
@@ -2926,14 +2926,14 @@ class AdminDashboard {
                     adminLogs[log.admin].lastActive = log.timestamp;
                 }
             });
-            
+
             const sorted = Object.entries(adminLogs).sort((a, b) => b[1].lastActive - a[1].lastActive).slice(0, 5);
-            
+
             if (sorted.length === 0) {
                 el.innerHTML = '<div class="text-center text-slate-500 text-xs py-4">No admin activity</div>';
                 return;
             }
-            
+
             el.innerHTML = sorted.map(([admin, data]) => {
                 const initial = admin.charAt(0).toUpperCase();
                 const timeAgo = this.getTimeAgo(new Date(data.lastActive));
@@ -2947,28 +2947,28 @@ class AdminDashboard {
                     </div>
                 `;
             }).join('');
-            
-        } catch(e) {
+
+        } catch (e) {
             el.innerHTML = '<div class="text-center text-red-400 text-xs py-4">Failed to load</div>';
         }
     }
-    
+
     async loadEconomyLogs() {
         const el = document.getElementById('logs-economy');
         if (!el) return;
-        
+
         try {
             const snap = await this.db.ref('economy/transactions').orderByChild('timestamp').limitToLast(10).once('value');
-            
+
             if (!snap.exists()) {
                 el.innerHTML = '<div class="text-center text-slate-500 text-xs py-4">No transactions</div>';
                 return;
             }
-            
+
             const transactions = [];
             snap.forEach(child => transactions.push({ id: child.key, ...child.val() }));
             transactions.reverse();
-            
+
             el.innerHTML = transactions.map(t => {
                 const icons = { gift: '🎁', multiplier: '✨', event: '🎉', reset: '🔄' };
                 const icon = icons[t.type] || '💰';
@@ -2984,12 +2984,12 @@ class AdminDashboard {
                     </div>
                 `;
             }).join('');
-            
-        } catch(e) {
+
+        } catch (e) {
             el.innerHTML = '<div class="text-center text-red-400 text-xs py-4">Failed to load</div>';
         }
     }
-    
+
     async refreshLogs() {
         this.toast('Refreshing logs...', 'info');
         await this.loadLogs();
@@ -2998,7 +2998,7 @@ class AdminDashboard {
         this.loadEconomyLogs();
         this.toast('Logs refreshed', 'success');
     }
-    
+
     copyLog(logId) {
         const log = this.logsData.find(l => l.id === logId);
         if (log) {
@@ -3007,7 +3007,7 @@ class AdminDashboard {
             this.toast('Log copied to clipboard', 'success');
         }
     }
-    
+
     async deleteLog(source, logId) {
         const paths = {
             admin: 'adminLogs',
@@ -3015,21 +3015,21 @@ class AdminDashboard {
             anticheat: 'anticheat/violations',
             moderation: 'moderationLogs'
         };
-        
+
         const path = paths[source];
         if (!path) return;
-        
+
         try {
             await this.db.ref(`${path}/${logId}`).remove();
             this.logsData = this.logsData.filter(l => l.id !== logId);
             this.renderLogsData();
             this.loadLogsStats();
             this.toast('Log deleted', 'success');
-        } catch(e) {
+        } catch (e) {
             this.toast('Failed to delete log', 'error');
         }
     }
-    
+
     async clearAllLogs() {
         const confirmed = await this.showConfirmModal({
             title: 'Clear All Logs',
@@ -3037,30 +3037,30 @@ class AdminDashboard {
             confirmText: 'Clear All',
             type: 'danger'
         });
-        
+
         if (!confirmed) return;
-        
+
         try {
             await Promise.all([
                 this.db.ref('adminLogs').remove(),
                 this.db.ref('moderationLogs').remove()
             ]);
-            
+
             this.logsData = [];
             this.renderLogsData();
             this.loadLogsStats();
             this.toast('All logs cleared', 'success');
-        } catch(e) {
+        } catch (e) {
             this.toast('Failed to clear logs: ' + e.message, 'error');
         }
     }
-    
+
     exportLogs() {
         if (this.logsData.length === 0) {
             this.toast('No logs to export', 'warning');
             return;
         }
-        
+
         const csv = [
             ['Timestamp', 'Type', 'Source', 'Message', 'Admin', 'Metadata'].join(','),
             ...this.logsData.map(log => [
@@ -3072,7 +3072,7 @@ class AdminDashboard {
                 `"${JSON.stringify(log.metadata || {}).replace(/"/g, '""')}"`
             ].join(','))
         ].join('\n');
-        
+
         const blob = new Blob([csv], { type: 'text/csv' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -3080,13 +3080,13 @@ class AdminDashboard {
         a.download = `nightclub-logs-${new Date().toISOString().split('T')[0]}.csv`;
         a.click();
         URL.revokeObjectURL(url);
-        
+
         this.toast('Logs exported successfully', 'success');
     }
-    
+
     async generateTestLogs() {
         this.toast('Generating test logs...', 'info');
-        
+
         const testLogs = [
             { type: 'info', message: 'Admin dashboard accessed' },
             { type: 'info', message: 'User data loaded successfully' },
@@ -3104,7 +3104,7 @@ class AdminDashboard {
             { type: 'info', message: 'System backup completed' },
             { type: 'security', message: 'New device login from admin account' }
         ];
-        
+
         // Generate logs with random timestamps in the last 24 hours
         const now = Date.now();
         const promises = testLogs.map((log, i) => {
@@ -3116,7 +3116,7 @@ class AdminDashboard {
                 metadata: { generated: true, index: i }
             });
         });
-        
+
         try {
             await Promise.all(promises);
             this.toast(`Generated ${testLogs.length} test logs!`, 'success');
@@ -3124,15 +3124,15 @@ class AdminDashboard {
             this.loadLogsStats();
             this.loadAdminActivity();
             this.loadPeakTimes();
-        } catch(e) {
+        } catch (e) {
             this.toast('Failed to generate logs: ' + e.message, 'error');
         }
     }
-    
+
     // ============================
     // GIFT CODES / COUPONS MODULE
     // ============================
-    
+
     async renderCoupons(el) {
         el.innerHTML = `
             <div class="space-y-6">
@@ -3229,7 +3229,7 @@ class AdminDashboard {
         `;
         await this.loadCoupons();
     }
-    
+
     generateCouponCode() {
         const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
         let code = '';
@@ -3239,7 +3239,7 @@ class AdminDashboard {
         }
         document.getElementById('coupon-code').value = code;
     }
-    
+
     async createCoupon() {
         const code = document.getElementById('coupon-code').value.trim().toUpperCase().replace(/[^A-Z0-9-]/g, '');
         const cash = parseInt(document.getElementById('coupon-cash').value) || 0;
@@ -3247,15 +3247,15 @@ class AdminDashboard {
         const maxUses = parseInt(document.getElementById('coupon-max-uses').value) || 100;
         const expiryDays = parseInt(document.getElementById('coupon-expiry').value);
         const description = document.getElementById('coupon-desc').value.trim();
-        
+
         if (!code || code.length < 4) { this.toast('Code must be at least 4 characters', 'error'); return; }
         if (cash <= 0 && diamonds <= 0) { this.toast('Add at least one reward', 'error'); return; }
-        
+
         try {
             // Check if code exists
             const existing = await this.db.ref(`giftCodes/${code}`).once('value');
             if (existing.exists()) { this.toast('Code already exists!', 'error'); return; }
-            
+
             const coupon = {
                 code,
                 rewards: { cash, diamonds },
@@ -3268,63 +3268,63 @@ class AdminDashboard {
                 expiresAt: expiryDays > 0 ? Date.now() + (expiryDays * 24 * 60 * 60 * 1000) : 0,
                 active: true
             };
-            
+
             await this.db.ref(`giftCodes/${code}`).set(coupon);
             this.toast(`Created code: ${code}`, 'success');
             this.log('action', `Created gift code: ${code}`, { code, cash, diamonds, maxUses });
-            
+
             // Clear form
             document.getElementById('coupon-code').value = '';
             document.getElementById('coupon-cash').value = '0';
             document.getElementById('coupon-diamonds').value = '0';
             document.getElementById('coupon-desc').value = '';
-            
+
             await this.loadCoupons();
-        } catch(e) { this.toast('Failed: ' + e.message, 'error'); }
+        } catch (e) { this.toast('Failed: ' + e.message, 'error'); }
     }
-    
+
     async loadCoupons() {
         try {
             const snap = await this.db.ref('giftCodes').once('value');
             const codes = snap.val() || {};
             this.coupons = Object.entries(codes).map(([k, v]) => ({ id: k, ...v }));
-            
+
             // Stats
             const now = Date.now();
             const total = this.coupons.length;
             const active = this.coupons.filter(c => c.active && (c.expiresAt === 0 || c.expiresAt > now) && c.usedCount < c.maxUses).length;
             const totalRedeemed = this.coupons.reduce((s, c) => s + (c.usedCount || 0), 0);
             const expired = this.coupons.filter(c => !c.active || (c.expiresAt > 0 && c.expiresAt < now)).length;
-            
+
             document.getElementById('coupons-total').textContent = total;
             document.getElementById('coupons-active').textContent = active;
             document.getElementById('coupons-redeemed').textContent = totalRedeemed;
             document.getElementById('coupons-expired').textContent = expired;
-            
+
             this.renderCouponsList();
             this.loadRedemptions();
-        } catch(e) { console.error('Failed to load coupons:', e); }
+        } catch (e) { console.error('Failed to load coupons:', e); }
     }
-    
+
     renderCouponsList() {
         const el = document.getElementById('coupons-list');
         if (!el) return;
-        
+
         if (this.coupons.length === 0) {
             el.innerHTML = '<div class="p-8 text-center text-slate-500">No gift codes yet. Create one!</div>';
             return;
         }
-        
+
         const now = Date.now();
         const sorted = [...this.coupons].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-        
+
         el.innerHTML = sorted.map(c => {
             const isExpired = c.expiresAt > 0 && c.expiresAt < now;
             const isUsedUp = c.usedCount >= c.maxUses;
             const isActive = c.active && !isExpired && !isUsedUp;
             const statusColor = isActive ? 'emerald' : isExpired ? 'red' : 'slate';
             const statusText = isExpired ? 'Expired' : isUsedUp ? 'Used Up' : !c.active ? 'Disabled' : 'Active';
-            
+
             return `
                 <div class="p-4 border-b border-white/5 hover:bg-indigo-500/5 transition-all">
                     <div class="flex items-center gap-4">
@@ -3354,11 +3354,11 @@ class AdminDashboard {
             `;
         }).join('');
     }
-    
+
     async loadRedemptions() {
         const el = document.getElementById('redemptions-list');
         if (!el) return;
-        
+
         // Get recent redemptions from all codes
         const redemptions = [];
         this.coupons.forEach(c => {
@@ -3368,15 +3368,15 @@ class AdminDashboard {
                 });
             }
         });
-        
+
         redemptions.sort((a, b) => (b.redeemedAt || 0) - (a.redeemedAt || 0));
         const recent = redemptions.slice(0, 20);
-        
+
         if (recent.length === 0) {
             el.innerHTML = '<div class="text-center text-slate-500 py-4">No redemptions yet</div>';
             return;
         }
-        
+
         el.innerHTML = `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">${recent.map(r => `
             <div class="p-3 rounded-xl bg-slate-800/30 border border-white/5">
                 <div class="flex items-center gap-2 mb-2">
@@ -3393,21 +3393,21 @@ class AdminDashboard {
             </div>
         `).join('')}</div>`;
     }
-    
+
     copyCouponCode(code) {
         navigator.clipboard.writeText(code);
         this.toast(`Copied: ${code}`, 'success');
     }
-    
+
     async toggleCoupon(code, active) {
         try {
             await this.db.ref(`giftCodes/${code}/active`).set(active);
             this.toast(`Code ${active ? 'enabled' : 'disabled'}`, 'success');
             this.log('action', `${active ? 'Enabled' : 'Disabled'} gift code: ${code}`, { code });
             await this.loadCoupons();
-        } catch(e) { this.toast('Failed: ' + e.message, 'error'); }
+        } catch (e) { this.toast('Failed: ' + e.message, 'error'); }
     }
-    
+
     async deleteCoupon(code) {
         if (!confirm(`Delete code ${code}? This cannot be undone.`)) return;
         try {
@@ -3415,15 +3415,15 @@ class AdminDashboard {
             this.toast('Code deleted', 'success');
             this.log('action', `Deleted gift code: ${code}`, { code });
             await this.loadCoupons();
-        } catch(e) { this.toast('Failed: ' + e.message, 'error'); }
+        } catch (e) { this.toast('Failed: ' + e.message, 'error'); }
     }
-    
+
     async refreshCoupons() {
         this.toast('Refreshing...', 'info');
         await this.loadCoupons();
         this.toast('Refreshed', 'success');
     }
-    
+
     // ANTI-CHEAT MODULE
     async renderAnticheat(el) {
         el.innerHTML = `
@@ -3525,26 +3525,26 @@ class AdminDashboard {
                     </div>
                 </div>
             </div>`;
-        
+
         this.loadAnticheatStats();
         this.loadViolations();
         this.loadPunishments();
         this.loadTopOffenders();
         this.loadActiveBans();
     }
-    
+
     async loadActiveBans() {
         const listEl = document.getElementById('ac-bans-list');
         if (!listEl) return;
-        
+
         try {
             const [ipSnap, deviceSnap] = await Promise.all([
                 this.db.ref('bans/ips').once('value'),
                 this.db.ref('bans/devices').once('value')
             ]);
-            
+
             const bans = [];
-            
+
             // IP bans
             if (ipSnap.exists()) {
                 ipSnap.forEach(child => {
@@ -3557,7 +3557,7 @@ class AdminDashboard {
                     });
                 });
             }
-            
+
             // Device bans
             if (deviceSnap.exists()) {
                 deviceSnap.forEach(child => {
@@ -3570,22 +3570,22 @@ class AdminDashboard {
                     });
                 });
             }
-            
+
             if (bans.length === 0) {
                 listEl.innerHTML = '<div class="text-center text-slate-500 text-sm py-4">No active bans</div>';
                 return;
             }
-            
+
             // Sort by ban date
             bans.sort((a, b) => (b.bannedAt || 0) - (a.bannedAt || 0));
-            
+
             listEl.innerHTML = bans.map(ban => {
                 const time = ban.bannedAt ? new Date(ban.bannedAt).toLocaleDateString() : 'Unknown';
                 const isIP = ban.type === 'ip';
                 const icon = isIP ? 'ph-globe' : 'ph-fingerprint';
                 const color = isIP ? 'text-blue-400 bg-blue-500/10' : 'text-purple-400 bg-purple-500/10';
                 const displayValue = isIP ? ban.value : (ban.value || '').substring(0, 12) + '...';
-                
+
                 return `
                     <div class="p-2 rounded-lg bg-slate-800/50 border border-white/5">
                         <div class="flex items-center gap-2">
@@ -3603,13 +3603,13 @@ class AdminDashboard {
                     </div>
                 `;
             }).join('');
-            
-        } catch(e) {
+
+        } catch (e) {
             console.error('Failed to load bans:', e);
             listEl.innerHTML = '<div class="text-center text-red-400 text-sm py-4">Failed to load bans</div>';
         }
     }
-    
+
     async unban(type, id) {
         const confirmed = await this.showConfirmModal({
             title: 'Remove Ban',
@@ -3617,65 +3617,65 @@ class AdminDashboard {
             confirmText: 'Unban',
             type: 'warning'
         });
-        
+
         if (!confirmed) return;
-        
+
         try {
             await this.db.ref(`bans/${type}s/${id}`).remove();
             this.toast(`${type.toUpperCase()} ban removed`, 'success');
             this.loadActiveBans();
-        } catch(e) {
+        } catch (e) {
             this.toast('Failed to remove ban: ' + e.message, 'error');
         }
     }
-    
+
     async loadAnticheatStats() {
         try {
             const violationsSnap = await this.db.ref('anticheat/violations').once('value');
             const punishmentsSnap = await this.db.ref('anticheat/punishments').once('value');
-            
+
             const violations = violationsSnap.val() || {};
             const punishments = punishmentsSnap.val() || {};
-            
+
             const violationCount = Object.keys(violations).length;
             const punishmentCount = Object.keys(punishments).length;
-            
+
             // Count unique cheaters
             const cheaters = new Set();
             Object.values(violations).forEach(v => cheaters.add(v.odeum));
-            
+
             // Count last 24h
             const oneDayAgo = Date.now() - (24 * 60 * 60 * 1000);
             const recentCount = Object.values(violations).filter(v => v.timestamp > oneDayAgo).length;
-            
+
             document.getElementById('ac-violations').textContent = violationCount;
             document.getElementById('ac-punishments').textContent = punishmentCount;
             document.getElementById('ac-cheaters').textContent = cheaters.size;
             document.getElementById('ac-recent').textContent = recentCount;
-            
-        } catch(e) {
+
+        } catch (e) {
             console.error('Failed to load anticheat stats:', e);
         }
     }
-    
+
     async loadViolations() {
         const listEl = document.getElementById('ac-violations-list');
         if (!listEl) return;
-        
+
         try {
             const snap = await this.db.ref('anticheat/violations').orderByChild('timestamp').limitToLast(50).once('value');
-            
+
             if (!snap.exists()) {
                 listEl.innerHTML = '<div class="text-center text-slate-500 text-sm py-8">🎉 No violations detected!</div>';
                 return;
             }
-            
+
             const violations = [];
             snap.forEach(child => {
                 violations.push({ id: child.key, ...child.val() });
             });
             violations.reverse();
-            
+
             const typeColors = {
                 'CASH_MANIPULATION': 'text-red-400 bg-red-500/10',
                 'DIAMOND_MANIPULATION': 'text-purple-400 bg-purple-500/10',
@@ -3704,18 +3704,18 @@ class AdminDashboard {
                 'NAN_VALUES': 'text-red-400 bg-red-500/10',
                 'LEVEL_XP_MISMATCH': 'text-yellow-400 bg-yellow-500/10'
             };
-            
+
             listEl.innerHTML = violations.map(v => {
                 const time = v.timestamp ? new Date(v.timestamp).toLocaleString() : 'Unknown';
                 const colors = typeColors[v.type] || 'text-slate-400 bg-slate-500/10';
                 const ipSafe = (v.ipAddress || 'Unknown').replace(/\./g, '_');
                 const fpSafe = (v.deviceFingerprint || '').replace(/[.#$\/\[\]]/g, '_');
-                
+
                 // Extract game state and activity
                 const gs = v.gameState || {};
                 const act = v.activity || {};
                 const sess = v.session || {};
-                
+
                 return `
                     <div class="p-3 rounded-lg bg-slate-800/50 border border-white/5 hover:border-red-500/30 transition-all">
                         <div class="flex items-start gap-3">
@@ -3875,31 +3875,31 @@ class AdminDashboard {
                     </div>
                 `;
             }).join('');
-            
-        } catch(e) {
+
+        } catch (e) {
             console.error('Failed to load violations:', e);
             listEl.innerHTML = '<div class="text-center text-red-400 text-sm py-4">Failed to load violations</div>';
         }
     }
-    
+
     async loadPunishments() {
         const listEl = document.getElementById('ac-punishments-list');
         if (!listEl) return;
-        
+
         try {
             const snap = await this.db.ref('anticheat/punishments').orderByChild('timestamp').limitToLast(10).once('value');
-            
+
             if (!snap.exists()) {
                 listEl.innerHTML = '<div class="text-center text-slate-500 text-sm py-4">No punishments yet</div>';
                 return;
             }
-            
+
             const punishments = [];
             snap.forEach(child => {
                 punishments.push({ id: child.key, ...child.val() });
             });
             punishments.reverse();
-            
+
             listEl.innerHTML = punishments.map(p => {
                 const time = p.timestamp ? new Date(p.timestamp).toLocaleString() : 'Unknown';
                 return `
@@ -3912,24 +3912,24 @@ class AdminDashboard {
                     </div>
                 `;
             }).join('');
-            
-        } catch(e) {
+
+        } catch (e) {
             console.error('Failed to load punishments:', e);
         }
     }
-    
+
     async loadTopOffenders() {
         const listEl = document.getElementById('ac-offenders-list');
         if (!listEl) return;
-        
+
         try {
             const snap = await this.db.ref('anticheat/violations').once('value');
-            
+
             if (!snap.exists()) {
                 listEl.innerHTML = '<div class="text-center text-slate-500 text-sm py-4">No offenders</div>';
                 return;
             }
-            
+
             // Count violations per user
             const offenderCounts = {};
             snap.forEach(child => {
@@ -3940,17 +3940,17 @@ class AdminDashboard {
                 }
                 offenderCounts[key].count++;
             });
-            
+
             // Sort by count
             const sorted = Object.entries(offenderCounts)
                 .sort((a, b) => b[1].count - a[1].count)
                 .slice(0, 5);
-            
+
             if (sorted.length === 0) {
                 listEl.innerHTML = '<div class="text-center text-slate-500 text-sm py-4">No offenders</div>';
                 return;
             }
-            
+
             listEl.innerHTML = sorted.map(([uid, data], i) => {
                 const medals = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣'];
                 return `
@@ -3966,23 +3966,23 @@ class AdminDashboard {
                     </div>
                 `;
             }).join('');
-            
-        } catch(e) {
+
+        } catch (e) {
             console.error('Failed to load top offenders:', e);
         }
     }
-    
+
     async deleteViolation(id) {
         try {
             await this.db.ref(`anticheat/violations/${id}`).remove();
             this.toast('Violation deleted', 'success');
             this.loadViolations();
             this.loadAnticheatStats();
-        } catch(e) {
+        } catch (e) {
             this.toast('Failed to delete violation', 'error');
         }
     }
-    
+
     async clearAllViolations() {
         const confirmed = await this.showConfirmModal({
             title: 'Clear All Violations',
@@ -3993,20 +3993,20 @@ class AdminDashboard {
             inputPlaceholder: 'Type CLEAR',
             inputMatch: 'CLEAR'
         });
-        
+
         if (!confirmed) return;
-        
+
         try {
             await this.db.ref('anticheat/violations').remove();
             this.toast('All violations cleared', 'success');
             this.loadViolations();
             this.loadAnticheatStats();
             this.loadTopOffenders();
-        } catch(e) {
+        } catch (e) {
             this.toast('Failed to clear violations', 'error');
         }
     }
-    
+
     async clearAllPunishments() {
         const confirmed = await this.showConfirmModal({
             title: 'Clear Punishment History',
@@ -4014,19 +4014,19 @@ class AdminDashboard {
             confirmText: 'Clear History',
             type: 'warning'
         });
-        
+
         if (!confirmed) return;
-        
+
         try {
             await this.db.ref('anticheat/punishments').remove();
             this.toast('Punishment history cleared', 'success');
             this.loadPunishments();
             this.loadAnticheatStats();
-        } catch(e) {
+        } catch (e) {
             this.toast('Failed to clear punishments', 'error');
         }
     }
-    
+
     async banUser(uid) {
         const confirmed = await this.showConfirmModal({
             title: 'Ban User Account',
@@ -4037,9 +4037,9 @@ class AdminDashboard {
             inputPlaceholder: 'Type BAN',
             inputMatch: 'BAN'
         });
-        
+
         if (!confirmed) return;
-        
+
         try {
             // Add to banned users list
             await this.db.ref(`banned/${uid}`).set({
@@ -4047,18 +4047,18 @@ class AdminDashboard {
                 bannedBy: this.user?.email || 'Admin',
                 reason: 'Anti-cheat violations'
             });
-            
+
             // Wipe their save
             await this.firestore.collection('saves').doc(uid).delete();
-            
+
             this.toast('User account banned and data wiped', 'success');
             this.loadTopOffenders();
             this.loadViolations();
-        } catch(e) {
+        } catch (e) {
             this.toast('Failed to ban user: ' + e.message, 'error');
         }
     }
-    
+
     async banByIP(ipKey, ipDisplay) {
         const confirmed = await this.showConfirmModal({
             title: '🌐 Ban IP Address',
@@ -4069,9 +4069,9 @@ class AdminDashboard {
             inputPlaceholder: 'Type BANIP',
             inputMatch: 'BANIP'
         });
-        
+
         if (!confirmed) return;
-        
+
         try {
             await this.db.ref(`bans/ips/${ipKey}`).set({
                 ip: ipDisplay,
@@ -4079,14 +4079,14 @@ class AdminDashboard {
                 bannedBy: this.user?.email || 'Admin',
                 reason: 'Anti-cheat violations'
             });
-            
+
             this.toast(`🌐 IP ${ipDisplay} banned successfully`, 'success');
             this.loadViolations();
-        } catch(e) {
+        } catch (e) {
             this.toast('Failed to ban IP: ' + e.message, 'error');
         }
     }
-    
+
     async banByDevice(fpKey, fpDisplay) {
         const confirmed = await this.showConfirmModal({
             title: '🔐 Ban Device',
@@ -4097,9 +4097,9 @@ class AdminDashboard {
             inputPlaceholder: 'Type BANDEV',
             inputMatch: 'BANDEV'
         });
-        
+
         if (!confirmed) return;
-        
+
         try {
             await this.db.ref(`bans/devices/${fpKey}`).set({
                 fingerprint: fpDisplay,
@@ -4107,14 +4107,14 @@ class AdminDashboard {
                 bannedBy: this.user?.email || 'Admin',
                 reason: 'Anti-cheat violations'
             });
-            
+
             this.toast(`🔐 Device ${fpDisplay.substring(0, 15)}... banned successfully`, 'success');
             this.loadViolations();
-        } catch(e) {
+        } catch (e) {
             this.toast('Failed to ban device: ' + e.message, 'error');
         }
     }
-    
+
     // Nuclear option - Wipe ALL accounts (except admins)
     async wipeAllAccounts() {
         // First confirmation
@@ -4127,12 +4127,12 @@ class AdminDashboard {
             inputPlaceholder: 'Type NUCLEAR',
             inputMatch: 'NUCLEAR'
         });
-        
+
         if (!confirmed1) {
             this.toast('Wipe cancelled', 'info');
             return;
         }
-        
+
         // Password confirmation with custom modal (verified against Firebase)
         const password = await this.showPasswordModal();
         const isValid = await this.verifyNuclearPassword(password);
@@ -4140,7 +4140,7 @@ class AdminDashboard {
             this.toast('❌ Incorrect password - Operation cancelled', 'error');
             return;
         }
-        
+
         // Final confirmation
         const confirmed2 = await this.showConfirmModal({
             title: '⚠️ FINAL WARNING',
@@ -4151,22 +4151,22 @@ class AdminDashboard {
             inputPlaceholder: 'Type DESTROY',
             inputMatch: 'DESTROY'
         });
-        
+
         if (!confirmed2) {
             this.toast('Wipe cancelled at final step', 'info');
             return;
         }
-        
+
         try {
             this.toast('☢️ Nuclear wipe in progress...', 'warning');
-            
+
             // Get all saves and users
             const savesSnap = await this.firestore.collection('saves').get();
             const usersSnap = await this.firestore.collection('users').get();
-            
+
             // Get admin emails to exclude
             const adminEmails = this.predefinedAdmins || ['test@test.com', 'admin@nightclub.com'];
-            
+
             // Build map of admin UIDs
             const adminUids = new Set();
             usersSnap.forEach(doc => {
@@ -4175,7 +4175,7 @@ class AdminDashboard {
                     adminUids.add(doc.id);
                 }
             });
-            
+
             // Default fresh save data
             const freshSaveData = {
                 cash: 1000,
@@ -4212,7 +4212,7 @@ class AdminDashboard {
                 wipedAt: firebase.firestore.FieldValue.serverTimestamp(),
                 wipedBy: this.user?.email || 'Admin'
             };
-            
+
             // Fresh user profile data (preserves email and basic auth info)
             const freshUserData = {
                 friends: [],
@@ -4227,11 +4227,11 @@ class AdminDashboard {
                 lastOnline: firebase.firestore.FieldValue.serverTimestamp(),
                 wipedAt: firebase.firestore.FieldValue.serverTimestamp()
             };
-            
+
             // Wipe all non-admin saves
             const savesBatch = this.firestore.batch();
             let wipedSavesCount = 0;
-            
+
             savesSnap.forEach(doc => {
                 if (adminUids.has(doc.id)) {
                     console.log('Skipping admin save:', doc.id);
@@ -4240,15 +4240,15 @@ class AdminDashboard {
                     wipedSavesCount++;
                 }
             });
-            
+
             await savesBatch.commit();
             console.log(`Wiped ${wipedSavesCount} game saves`);
-            
+
             // Wipe all non-admin user profiles (friends, etc.)
             const usersBatch = this.firestore.batch();
             let wipedUsersCount = 0;
             let skippedCount = 0;
-            
+
             usersSnap.forEach(doc => {
                 if (adminUids.has(doc.id)) {
                     skippedCount++;
@@ -4265,14 +4265,14 @@ class AdminDashboard {
                     wipedUsersCount++;
                 }
             });
-            
+
             await usersBatch.commit();
             console.log(`Wiped ${wipedUsersCount} user profiles`);
-            
+
             // Wipe global chat messages (Realtime Database)
             await this.db.ref('globalChat').remove();
             console.log('Wiped global chat');
-            
+
             // Wipe private messages for non-admin users
             const messagesRef = this.db.ref('messages');
             const messagesSnap = await messagesRef.once('value');
@@ -4292,11 +4292,11 @@ class AdminDashboard {
                     console.log(`Wiped ${Object.keys(updates).length} private conversations`);
                 }
             }
-            
+
             // Wipe friend requests in Realtime Database
             await this.db.ref('friendRequests').remove();
             console.log('Wiped friend requests');
-            
+
             // Wipe notifications
             const notificationsRef = this.db.ref('notifications');
             const notifSnap = await notificationsRef.once('value');
@@ -4312,29 +4312,29 @@ class AdminDashboard {
                     console.log(`Wiped notifications for ${Object.keys(updates).length} users`);
                 }
             }
-            
+
             // Trigger force reload on all clients
             await this.db.ref('economy/forceReload').set(Date.now());
-            
+
             // Log the nuclear action
             await this.logTransaction('nuclear', `☢️ NUCLEAR WIPE: Reset ${wipedSavesCount} saves, ${wipedUsersCount} users, cleared chat & friends (${skippedCount} admins preserved)`);
-            
+
             this.toast(`☢️ NUCLEAR WIPE COMPLETE: ${wipedSavesCount} saves, ${wipedUsersCount} users reset, all messages & friends cleared`, 'success');
             this.loadEconomyStats();
             this.loadTopEarners();
-            
-        } catch(e) {
+
+        } catch (e) {
             console.error('Nuclear wipe failed:', e);
             this.toast('Nuclear wipe failed: ' + e.message, 'error');
         }
     }
-    
+
     // Verify nuclear password against Firebase
     async verifyNuclearPassword(password) {
         try {
             const snap = await this.db.ref('admin/nuclearPasswordHash').once('value');
             const storedHash = snap.val();
-            
+
             // If no hash stored yet, set it up (first time setup)
             if (!storedHash) {
                 console.log('Setting up nuclear password in Firebase...');
@@ -4342,7 +4342,7 @@ class AdminDashboard {
                 await this.db.ref('admin/nuclearPasswordHash').set(hash);
                 return true;
             }
-            
+
             // Verify against stored hash
             const inputHash = btoa(password.split('').reverse().join('') + '_NIGHTCLUB_SECURE_2024');
             return storedHash === inputHash;
@@ -4351,14 +4351,14 @@ class AdminDashboard {
             return false;
         }
     }
-    
+
     // Password modal for nuclear wipe
     showPasswordModal() {
         return new Promise((resolve) => {
             const overlay = document.createElement('div');
             overlay.className = 'fixed inset-0 z-[100] bg-slate-900/90 backdrop-blur-sm flex items-center justify-center p-4';
             overlay.style.animation = 'fadeIn 0.2s ease';
-            
+
             overlay.innerHTML = `
                 <div class="glass rounded-2xl border border-red-500/50 w-full max-w-md overflow-hidden" style="animation: scaleIn 0.2s ease">
                     <div class="p-6">
@@ -4386,23 +4386,23 @@ class AdminDashboard {
                     </div>
                 </div>
             `;
-            
+
             document.body.appendChild(overlay);
-            
+
             const input = overlay.querySelector('#nuclear-password');
             const cancelBtn = overlay.querySelector('#pass-cancel');
             const okBtn = overlay.querySelector('#pass-ok');
-            
+
             input.focus();
-            
+
             const cleanup = () => {
                 overlay.style.animation = 'fadeOut 0.2s ease forwards';
                 setTimeout(() => overlay.remove(), 200);
             };
-            
+
             cancelBtn.onclick = () => { cleanup(); resolve(null); };
             overlay.onclick = (e) => { if (e.target === overlay) { cleanup(); resolve(null); } };
-            
+
             okBtn.onclick = () => { cleanup(); resolve(input.value); };
             input.onkeydown = (e) => {
                 if (e.key === 'Enter') { cleanup(); resolve(input.value); }
@@ -4413,7 +4413,7 @@ class AdminDashboard {
 
     esc(str) { return str ? str.toString().replace(/</g, "&lt;") : ''; }
     log(t, m) { console.log(t, m); }
-    
+
     formatDuration(seconds) {
         if (!seconds || seconds < 0) return '0s';
         if (seconds < 60) return `${seconds}s`;
@@ -4422,11 +4422,11 @@ class AdminDashboard {
         const mins = Math.floor((seconds % 3600) / 60);
         return `${hours}h ${mins}m`;
     }
-    
+
     // ==========================================
     // SHOP MANAGER
     // ==========================================
-    
+
     // Default furniture catalog (fallback)
     getDefaultCatalog() {
         return {
@@ -4458,7 +4458,7 @@ class AdminDashboard {
             helicopter: { name: 'Helipad', icon: '🚁', cost: 15, currency: 'diamonds', category: 'premium', desc: 'Rooftop helipad!', premium: true, enabled: true },
         };
     }
-    
+
     async renderShopManager(content) {
         content.innerHTML = `
             <div class="flex items-center justify-between mb-6">
@@ -4538,55 +4538,55 @@ class AdminDashboard {
                 </div>
             </div>
         `;
-        
+
         this.currentShopFilter = 'all';
         this.shopSearchQuery = '';
         await this.loadShopItems();
     }
-    
+
     async loadShopItems() {
         try {
             // Try to load from Firebase first
             const snapshot = await this.db.ref('shop/catalog').once('value');
             let catalog = snapshot.val();
-            
+
             // If no catalog in Firebase, use default
             if (!catalog) {
                 catalog = this.getDefaultCatalog();
                 // Save default to Firebase
                 await this.db.ref('shop/catalog').set(catalog);
             }
-            
+
             this.shopCatalog = catalog;
             this.renderShopItems();
             this.updateShopStats();
-            
-        } catch(e) {
+
+        } catch (e) {
             console.error('Failed to load shop items:', e);
             this.shopCatalog = this.getDefaultCatalog();
             this.renderShopItems();
         }
     }
-    
+
     updateShopStats() {
         const items = Object.values(this.shopCatalog || {});
         const total = items.length;
         const enabled = items.filter(i => i.enabled !== false).length;
         const disabled = items.filter(i => i.enabled === false).length;
         const premium = items.filter(i => i.premium === true).length;
-        
+
         document.getElementById('shop-total-items').textContent = total;
         document.getElementById('shop-enabled-items').textContent = enabled;
         document.getElementById('shop-disabled-items').textContent = disabled;
         document.getElementById('shop-premium-items').textContent = premium;
     }
-    
+
     renderShopItems() {
         const listEl = document.getElementById('shop-items-list');
         if (!listEl || !this.shopCatalog) return;
-        
+
         let items = Object.entries(this.shopCatalog);
-        
+
         // Apply category filter
         if (this.currentShopFilter !== 'all') {
             if (this.currentShopFilter === 'premium') {
@@ -4595,22 +4595,22 @@ class AdminDashboard {
                 items = items.filter(([k, v]) => v.category === this.currentShopFilter);
             }
         }
-        
+
         // Apply search filter
         if (this.shopSearchQuery) {
             const query = this.shopSearchQuery.toLowerCase();
-            items = items.filter(([k, v]) => 
-                v.name.toLowerCase().includes(query) || 
+            items = items.filter(([k, v]) =>
+                v.name.toLowerCase().includes(query) ||
                 k.toLowerCase().includes(query) ||
                 (v.desc && v.desc.toLowerCase().includes(query))
             );
         }
-        
+
         if (items.length === 0) {
             listEl.innerHTML = '<div class="p-8 text-center text-slate-500">No items found</div>';
             return;
         }
-        
+
         listEl.innerHTML = items.map(([key, item]) => {
             const isEnabled = item.enabled !== false;
             const currencyIcon = item.currency === 'diamonds' ? '💎' : '💵';
@@ -4624,7 +4624,7 @@ class AdminDashboard {
                 'premium': 'bg-purple-500/20 text-purple-400'
             };
             const catColor = categoryColors[item.category] || 'bg-slate-500/20 text-slate-400';
-            
+
             return `
                 <div class="p-4 hover:bg-white/5 transition-all ${!isEnabled ? 'opacity-50' : ''}">
                     <div class="flex items-center gap-4">
@@ -4674,10 +4674,10 @@ class AdminDashboard {
             `;
         }).join('');
     }
-    
+
     filterShopItems(filter) {
         this.currentShopFilter = filter;
-        
+
         // Update active button styling
         document.querySelectorAll('.shop-filter-btn').forEach(btn => {
             if (btn.dataset.filter === filter) {
@@ -4688,35 +4688,35 @@ class AdminDashboard {
                 btn.classList.add('bg-white/5', 'text-slate-400');
             }
         });
-        
+
         this.renderShopItems();
     }
-    
+
     searchShopItems(query) {
         this.shopSearchQuery = query;
         this.renderShopItems();
     }
-    
+
     async toggleItemEnabled(itemKey) {
         if (!this.shopCatalog[itemKey]) return;
-        
+
         const currentState = this.shopCatalog[itemKey].enabled !== false;
         this.shopCatalog[itemKey].enabled = !currentState;
-        
+
         try {
             await this.db.ref(`shop/catalog/${itemKey}/enabled`).set(!currentState);
             this.renderShopItems();
             this.updateShopStats();
             this.toast(`${this.shopCatalog[itemKey].name} ${!currentState ? 'enabled' : 'disabled'}`, 'success');
-        } catch(e) {
+        } catch (e) {
             this.toast('Failed to update item: ' + e.message, 'error');
         }
     }
-    
+
     async editShopItem(itemKey) {
         const item = this.shopCatalog[itemKey];
         if (!item) return;
-        
+
         const html = `
             <div class="space-y-4">
                 <div class="grid grid-cols-2 gap-4">
@@ -4779,16 +4779,16 @@ class AdminDashboard {
                 </div>
             </div>
         `;
-        
+
         const confirmed = await this.showFormModal({
             title: `Edit: ${item.name}`,
             html: html,
             confirmText: 'Save Changes',
             type: 'info'
         });
-        
+
         if (!confirmed) return;
-        
+
         // Get values
         const updatedItem = {
             name: document.getElementById('edit-name').value.trim(),
@@ -4801,20 +4801,20 @@ class AdminDashboard {
             enabled: document.getElementById('edit-enabled').checked,
             unlockLevel: parseInt(document.getElementById('edit-level').value) || 0
         };
-        
+
         if (updatedItem.unlockLevel === 0) delete updatedItem.unlockLevel;
-        
+
         try {
             await this.db.ref(`shop/catalog/${itemKey}`).set(updatedItem);
             this.shopCatalog[itemKey] = updatedItem;
             this.renderShopItems();
             this.updateShopStats();
             this.toast('Item updated successfully!', 'success');
-        } catch(e) {
+        } catch (e) {
             this.toast('Failed to update: ' + e.message, 'error');
         }
     }
-    
+
     async addNewItem() {
         const html = `
             <div class="space-y-4">
@@ -4882,27 +4882,27 @@ class AdminDashboard {
                 </div>
             </div>
         `;
-        
+
         const confirmed = await this.showFormModal({
             title: 'Add New Shop Item',
             html: html,
             confirmText: 'Add Item',
             type: 'success'
         });
-        
+
         if (!confirmed) return;
-        
+
         const itemId = document.getElementById('new-id').value.trim().toLowerCase().replace(/\s+/g, '_');
         if (!itemId) {
             this.toast('Item ID is required', 'error');
             return;
         }
-        
+
         if (this.shopCatalog[itemId]) {
             this.toast('Item ID already exists', 'error');
             return;
         }
-        
+
         const newItem = {
             name: document.getElementById('new-name').value.trim() || 'New Item',
             icon: document.getElementById('new-icon').value.trim() || '📦',
@@ -4914,44 +4914,44 @@ class AdminDashboard {
             enabled: true,
             unlockLevel: parseInt(document.getElementById('new-level').value) || 0
         };
-        
+
         if (newItem.unlockLevel === 0) delete newItem.unlockLevel;
-        
+
         try {
             await this.db.ref(`shop/catalog/${itemId}`).set(newItem);
             this.shopCatalog[itemId] = newItem;
             this.renderShopItems();
             this.updateShopStats();
             this.toast('Item added successfully!', 'success');
-        } catch(e) {
+        } catch (e) {
             this.toast('Failed to add item: ' + e.message, 'error');
         }
     }
-    
+
     async deleteShopItem(itemKey) {
         const item = this.shopCatalog[itemKey];
         if (!item) return;
-        
+
         const confirmed = await this.showConfirmModal({
             title: 'Delete Item',
             message: `Are you sure you want to delete "${item.name}"? This cannot be undone.`,
             confirmText: 'Delete',
             type: 'danger'
         });
-        
+
         if (!confirmed) return;
-        
+
         try {
             await this.db.ref(`shop/catalog/${itemKey}`).remove();
             delete this.shopCatalog[itemKey];
             this.renderShopItems();
             this.updateShopStats();
             this.toast('Item deleted', 'success');
-        } catch(e) {
+        } catch (e) {
             this.toast('Failed to delete: ' + e.message, 'error');
         }
     }
-    
+
     async syncCatalogToFirebase() {
         const confirmed = await this.showConfirmModal({
             title: 'Sync Catalog',
@@ -4959,18 +4959,18 @@ class AdminDashboard {
             confirmText: 'Sync Now',
             type: 'info'
         });
-        
+
         if (!confirmed) return;
-        
+
         try {
             await this.db.ref('shop/catalog').set(this.shopCatalog);
             await this.db.ref('shop/lastUpdated').set(firebase.database.ServerValue.TIMESTAMP);
             this.toast('Catalog synced to cloud!', 'success');
-        } catch(e) {
+        } catch (e) {
             this.toast('Sync failed: ' + e.message, 'error');
         }
     }
-    
+
     // Form modal for editing
     showFormModal({ title, html, confirmText = 'Confirm', type = 'info' }) {
         return new Promise(resolve => {
@@ -4979,7 +4979,7 @@ class AdminDashboard {
                 success: 'bg-emerald-500',
                 danger: 'bg-red-500'
             };
-            
+
             const overlay = document.createElement('div');
             overlay.className = 'fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50';
             overlay.style.animation = 'fadeIn 0.2s ease';
@@ -4996,12 +4996,12 @@ class AdminDashboard {
                 </div>
             `;
             document.body.appendChild(overlay);
-            
+
             const cleanup = () => {
                 overlay.style.animation = 'fadeOut 0.2s ease forwards';
                 setTimeout(() => overlay.remove(), 200);
             };
-            
+
             overlay.querySelector('#form-cancel').onclick = () => { cleanup(); resolve(false); };
             overlay.querySelector('#form-confirm').onclick = () => { cleanup(); resolve(true); };
             overlay.onclick = (e) => { if (e.target === overlay) { cleanup(); resolve(false); } };
@@ -5010,7 +5010,7 @@ class AdminDashboard {
     // ============================
     // GAME REPORTS MODULE
     // ============================
-    
+
     async renderReports(el) {
         this.reports = [];
         el.innerHTML = `
@@ -5079,51 +5079,51 @@ class AdminDashboard {
         `;
         this.loadReports();
     }
-    
+
     async loadReports() {
         try {
             const snapshot = await this.db.ref('gameReports').orderByChild('timestamp').once('value');
             const data = snapshot.val() || {};
-            
+
             this.reports = Object.entries(data).map(([id, r]) => ({ id, ...r })).reverse();
-            
+
             // Update stats
             const pending = this.reports.filter(r => r.status === 'pending').length;
             const reviewed = this.reports.filter(r => r.status === 'reviewed').length;
             const resolved = this.reports.filter(r => r.status === 'resolved').length;
-            
+
             document.getElementById('reports-total').textContent = this.reports.length;
             document.getElementById('reports-pending').textContent = pending;
             document.getElementById('reports-reviewed').textContent = reviewed;
             document.getElementById('reports-resolved').textContent = resolved;
-            
+
             this.filterReports();
-        } catch(e) { 
-            console.error('Failed to load reports:', e); 
+        } catch (e) {
+            console.error('Failed to load reports:', e);
             document.getElementById('reports-list').innerHTML = '<div class="p-8 text-center text-red-400">Failed to load reports</div>';
         }
     }
-    
+
     filterReports() {
         const typeFilter = document.getElementById('reports-filter-type')?.value || 'all';
         const statusFilter = document.getElementById('reports-filter-status')?.value || 'all';
-        
+
         let filtered = this.reports;
         if (typeFilter !== 'all') filtered = filtered.filter(r => r.type === typeFilter);
         if (statusFilter !== 'all') filtered = filtered.filter(r => r.status === statusFilter);
-        
+
         this.renderReportsList(filtered);
     }
-    
+
     renderReportsList(reports) {
         const el = document.getElementById('reports-list');
         if (!el) return;
-        
+
         if (reports.length === 0) {
             el.innerHTML = '<div class="p-8 text-center text-slate-500">No reports found</div>';
             return;
         }
-        
+
         const typeIcons = {
             bug: '🐛',
             feature: '💡',
@@ -5131,13 +5131,13 @@ class AdminDashboard {
             player: '🚫',
             other: '📝'
         };
-        
+
         const statusColors = {
             pending: 'bg-yellow-500/20 text-yellow-400',
             reviewed: 'bg-blue-500/20 text-blue-400',
             resolved: 'bg-green-500/20 text-green-400'
         };
-        
+
         el.innerHTML = reports.map(r => `
             <div class="p-4 hover:bg-white/5 transition-colors">
                 <div class="flex items-start gap-4">
@@ -5171,11 +5171,11 @@ class AdminDashboard {
             </div>
         `).join('');
     }
-    
+
     async viewReport(id) {
         const report = this.reports.find(r => r.id === id);
         if (!report) return;
-        
+
         const typeLabels = {
             bug: '🐛 Bug Report',
             feature: '💡 Feature Request',
@@ -5183,7 +5183,7 @@ class AdminDashboard {
             player: '🚫 Player Report',
             other: '📝 Other'
         };
-        
+
         const html = `
             <div class="space-y-4">
                 <div class="grid grid-cols-2 gap-4 text-sm">
@@ -5212,14 +5212,14 @@ class AdminDashboard {
                 ` : ''}
             </div>
         `;
-        
+
         await this.showFormModal('Report Details', html, 'Close', 'info');
     }
-    
+
     async updateReportStatus(id) {
         const report = this.reports.find(r => r.id === id);
         if (!report) return;
-        
+
         const html = `
             <div class="space-y-4">
                 <div>
@@ -5236,40 +5236,40 @@ class AdminDashboard {
                 </div>
             </div>
         `;
-        
+
         const confirmed = await this.showFormModal('Update Report', html, 'Save', 'primary');
         if (!confirmed) return;
-        
+
         const newStatus = document.getElementById('report-new-status').value;
         const adminNotes = document.getElementById('report-admin-notes').value.trim();
-        
+
         try {
             await this.db.ref(`gameReports/${id}`).update({
                 status: newStatus,
                 adminNotes: adminNotes || null,
                 updatedAt: firebase.database.ServerValue.TIMESTAMP
             });
-            
+
             this.showToast('Report updated', 'success');
             this.loadReports();
-        } catch(e) {
+        } catch (e) {
             console.error('Failed to update report:', e);
             this.showToast('Failed to update report', 'error');
         }
     }
-    
+
     async deleteReport(id) {
-        const confirmed = await this.showFormModal('Delete Report', 
+        const confirmed = await this.showFormModal('Delete Report',
             '<p class="text-slate-400">Are you sure you want to delete this report? This cannot be undone.</p>',
             'Delete', 'danger');
-        
+
         if (!confirmed) return;
-        
+
         try {
             await this.db.ref(`gameReports/${id}`).remove();
             this.showToast('Report deleted', 'success');
             this.loadReports();
-        } catch(e) {
+        } catch (e) {
             console.error('Failed to delete report:', e);
             this.showToast('Failed to delete report', 'error');
         }
