@@ -122,17 +122,20 @@ class SessionManager {
         const db = firebase.database();
         const sessionsRef = db.ref(`activeSessions/${this.userId}`);
 
-        // Listen for new sessions being added
-        this.sessionListener = sessionsRef.on('child_added', (snapshot) => {
-            const sessionData = snapshot.val();
-            const otherSessionId = snapshot.key;
+        // Use 'child_added' but only after we've set up our session
+        // Add a small delay to prevent detecting our own session
+        setTimeout(() => {
+            this.sessionListener = sessionsRef.on('child_added', (snapshot) => {
+                const sessionData = snapshot.val();
+                const otherSessionId = snapshot.key;
 
-            // If it's not our session and it's newer, we got kicked out
-            if (otherSessionId !== this.sessionId && this.isActive) {
-                console.warn('⚠️ Another session detected - you have been logged out');
-                this.handleKickedOut(sessionData);
-            }
-        });
+                // If it's not our session and we're still active, we got kicked out
+                if (otherSessionId !== this.sessionId && this.isActive) {
+                    console.warn('⚠️ Another session detected - you have been logged out');
+                    this.handleKickedOut(sessionData);
+                }
+            });
+        }, 1000); // Wait 1 second after our session is created
     }
 
     /**
