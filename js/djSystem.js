@@ -174,38 +174,39 @@ class DJSystem {
         this.lastBeat = 0;
         this.beatCallback = null;
         this.visualizerData = [];
-        
+
         // YouTube player
         this.ytPlayer = null;
         this.ytReady = false;
         this.currentYTVideo = null;
         this.ytVolume = 50;
-        
+
         // Background music player (default club music)
         this.bgMusic = null;
         this.bgMusicVolume = 0.5;
         this.bgMusicPlaying = false;
         this.currentBgTrackIndex = -1;
     }
-    
+
     // Get queue limit based on VIP status
     getQueueLimit() {
         // isVIP is a property, not a function
         const isVIP = window.premiumSystem?.isVIP || false;
         return isVIP ? QUEUE_LIMITS.VIP : QUEUE_LIMITS.FREE;
     }
-    
+
     // Initialize background music (default club music)
     initBackgroundMusic() {
         if (!this.bgMusic) {
             this.bgMusic = new Audio();
             this.bgMusic.volume = this.bgMusicVolume;
-            
+            this.bgMusic.loop = false; // We'll handle looping manually
+
             // When track ends, play next random track
             this.bgMusic.addEventListener('ended', () => {
                 this.playRandomBgTrack();
             });
-            
+
             // Error handling
             this.bgMusic.addEventListener('error', (e) => {
                 console.warn('Background music error:', e);
@@ -213,44 +214,60 @@ class DJSystem {
                 setTimeout(() => this.playRandomBgTrack(), 1000);
             });
         }
-        
-        // Show ready message - user clicks a track to start (avoids autoplay issues)
-        this.updateTrackDisplay('🎵 Select a Mix to play');
-        console.log('🎵 Club music ready - click a track to play');
+
+        // Auto-start music immediately (with fallback)
+        console.log('🎵 Starting club music...');
+        this.autoStartMusic();
     }
-    
+
+    // Auto-start music with browser compatibility
+    autoStartMusic() {
+        // Try to start music immediately
+        this.playRandomBgTrack();
+
+        // If autoplay fails, setup retry on any user interaction
+        if (!this.bgMusicPlaying) {
+            this.setupAutoPlayOnInteraction();
+        }
+    }
+
     // Play random background track
     playRandomBgTrack() {
         // Don't play if YouTube is active
         if (this.isPlaying && this.currentYTVideo) {
             return;
         }
-        
+
         // Pick random track (different from current)
         let newIndex;
         do {
             newIndex = Math.floor(Math.random() * BACKGROUND_TRACKS.length);
         } while (newIndex === this.currentBgTrackIndex && BACKGROUND_TRACKS.length > 1);
-        
+
         this.currentBgTrackIndex = newIndex;
         const track = BACKGROUND_TRACKS[newIndex];
         const trackName = `Club Mix ${newIndex + 1}`;
-        
+
         this.bgMusic.src = track;
-        this.bgMusic.play().then(() => {
-            this.bgMusicPlaying = true;
-            console.log('🎵 Playing background music:', track);
-            // Update DJ deck display
-            this.updateTrackDisplay(`🎶 ${trackName}`);
-            this.updateBgMusicUI(trackName);
-        }).catch(err => {
-            // Auto-play blocked - wait for user interaction
-            console.log('Background music waiting for user interaction');
-            this.updateTrackDisplay('🔇 Click to start music');
-            this.setupAutoPlayOnInteraction();
-        });
+
+        // Try to play with promise handling for all browsers
+        const playPromise = this.bgMusic.play();
+
+        if (playPromise !== undefined) {
+            playPromise.then(() => {
+                this.bgMusicPlaying = true;
+                console.log('🎵 Auto-playing:', trackName);
+                this.updateTrackDisplay(`🎶 ${trackName}`);
+                this.updateBgMusicUI(trackName);
+            }).catch(err => {
+                // Autoplay blocked - wait for user interaction
+                console.log('🔇 Autoplay blocked, waiting for interaction...');
+                this.updateTrackDisplay('🎵 Click anywhere to start music');
+                this.setupAutoPlayOnInteraction();
+            });
+        }
     }
-    
+
     // Update UI to show background music is playing
     updateBgMusicUI(trackName) {
         const nowPlaying = document.getElementById('youtube-now-playing');
@@ -262,49 +279,62 @@ class DJSystem {
             `;
         }
     }
-    
+
     // Setup auto-play after user interacts with page
     setupAutoPlayOnInteraction() {
         const startMusic = () => {
-            if (!this.bgMusicPlaying && this.bgMusic) {
-                this.bgMusic.play().then(() => {
-                    this.bgMusicPlaying = true;
-                    const trackName = `Club Mix ${this.currentBgTrackIndex + 1}`;
-                    console.log('🎵 Background music started after interaction');
-                    this.updateTrackDisplay(`🎶 ${trackName}`);
-                    this.updateBgMusicUI(trackName);
-                }).catch(() => {});
+            if (!this.bgMusicPlaying && this.bgMusic && this.bgMusic.src) {
+                const playPromise = this.bgMusic.play();
+                if (playPromise !== undefined) {
+                    playPromise.then(() => {
+                        this.bgMusicPlaying = true;
+                        const trackName = `Club Mix ${this.currentBgTrackIndex + 1}`;
+                        console.log('🎵 Music started after user interaction');
+                        this.updateTrackDisplay(`🎶 ${trackName}`);
+                        this.updateBgMusicUI(trackName);
+                    }).catch(() => {
+                        console.log('🔇 Still blocked, will retry');
+                    });
+                }
             }
-            document.removeEventListener('click', startMusic);
-            document.removeEventListener('keydown', startMusic);
+            // Remove listeners after first successful play
+            if (this.bgMusicPlaying) {
+                document.removeEventListener('click', startMusic);
+                document.removeEventListener('keydown', startMusic);
+                document.removeEventListener('touchstart', startMusic);
+                document.removeEventListener('scroll', startMusic);
+            }
         };
-        
-        document.addEventListener('click', startMusic, { once: true });
-        document.addEventListener('keydown', startMusic, { once: true });
+
+        // Listen for any user interaction
+        document.addEventListener('click', startMusic, { once: false });
+        document.addEventListener('keydown', startMusic, { once: false });
+        document.addEventListener('touchstart', startMusic, { once: false });
+        document.addEventListener('scroll', startMusic, { once: false });
     }
-    
+
     // Play specific background track by index
     playBgTrack(index) {
         console.log('🎵 playBgTrack called with index:', index);
-        
+
         if (index < 0 || index >= BACKGROUND_TRACKS.length) {
             console.error('Invalid track index:', index);
             return;
         }
-        
+
         // Stop YouTube if playing
         if (this.ytPlayer && this.isPlaying) {
             this.ytPlayer.pauseVideo();
             this.isPlaying = false;
             this.currentYTVideo = null;
         }
-        
+
         this.currentBgTrackIndex = index;
         const track = BACKGROUND_TRACKS[index];
         const trackName = `Club Mix ${index + 1}`;
-        
+
         console.log('🎵 Loading track:', track);
-        
+
         if (!this.bgMusic) {
             this.bgMusic = new Audio();
             this.bgMusic.volume = this.bgMusicVolume;
@@ -316,10 +346,10 @@ class DJSystem {
                 console.error('🔇 Audio error:', e.target.error);
             });
         }
-        
+
         this.bgMusic.src = track;
         this.bgMusic.load();
-        
+
         const playPromise = this.bgMusic.play();
         if (playPromise !== undefined) {
             playPromise.then(() => {
@@ -335,7 +365,7 @@ class DJSystem {
             });
         }
     }
-    
+
     // Stop background music
     stopBackgroundMusic() {
         if (this.bgMusic) {
@@ -345,17 +375,17 @@ class DJSystem {
             console.log('🔇 Background music stopped');
         }
     }
-    
+
     // Resume background music (if no YouTube playing)
     resumeBackgroundMusic() {
         if (this.bgMusic && !this.bgMusicPlaying && !this.isPlaying) {
             this.bgMusic.play().then(() => {
                 this.bgMusicPlaying = true;
                 console.log('🎵 Background music resumed');
-            }).catch(() => {});
+            }).catch(() => { });
         }
     }
-    
+
     // Set background music volume
     setBgMusicVolume(volume) {
         this.bgMusicVolume = volume;
@@ -363,7 +393,7 @@ class DJSystem {
             this.bgMusic.volume = volume;
         }
     }
-    
+
     // Initialize YouTube player
     initYouTube() {
         // Load YouTube IFrame API
@@ -372,7 +402,7 @@ class DJSystem {
             tag.src = 'https://www.youtube.com/iframe_api';
             const firstScript = document.getElementsByTagName('script')[0];
             firstScript.parentNode.insertBefore(tag, firstScript);
-            
+
             window.onYouTubeIframeAPIReady = () => {
                 this.createYTPlayer();
             };
@@ -380,7 +410,7 @@ class DJSystem {
             this.createYTPlayer();
         }
     }
-    
+
     // Create YouTube player
     createYTPlayer() {
         // Create hidden container for YouTube player
@@ -390,12 +420,12 @@ class DJSystem {
             container.id = 'yt-player-container';
             container.style.cssText = 'position:fixed;bottom:10px;right:10px;width:320px;height:180px;z-index:1000;border-radius:10px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.5);display:none;';
             document.body.appendChild(container);
-            
+
             const playerDiv = document.createElement('div');
             playerDiv.id = 'yt-player';
             container.appendChild(playerDiv);
         }
-        
+
         // Create player without auto-playing (user adds their own tracks)
         this.ytPlayer = new YT.Player('yt-player', {
             height: '180',
@@ -413,12 +443,12 @@ class DJSystem {
             }
         });
     }
-    
+
     // YouTube player ready
     onYTReady(event) {
         this.ytReady = true;
         this.ytPlayer.setVolume(this.ytVolume);
-        
+
         // Try to restore previous music state
         const savedState = this.loadMusicState();
         if (savedState && savedState.currentVideo) {
@@ -434,7 +464,7 @@ class DJSystem {
         }
         this.updateYouTubeUI();
     }
-    
+
     // YouTube state changed
     onYTStateChange(event) {
         if (event.data === YT.PlayerState.ENDED) {
@@ -456,7 +486,7 @@ class DJSystem {
             this.saveMusicState();
         }
     }
-    
+
     // YouTube error - don't spam, just skip quietly
     onYTError(event) {
         console.warn('YouTube Error:', event.data);
@@ -468,12 +498,12 @@ class DJSystem {
             this.updateTrackDisplay('Add a track to play');
         }
     }
-    
+
     // Update track display
     updateTrackDisplay(text) {
         const titleEl = document.getElementById('current-track-title');
         if (titleEl) titleEl.textContent = text;
-        
+
         // Update Top Right UI Widget
         const uiTrackEl = document.getElementById('ui-track-name');
         if (uiTrackEl) {
@@ -481,7 +511,7 @@ class DJSystem {
             const cleanText = text.replace(/^[🎵🎶]\s*/, '');
             uiTrackEl.textContent = cleanText;
         }
-        
+
         // Show/Hide Widget
         const widget = document.getElementById('now-playing-widget');
         if (widget) {
@@ -492,7 +522,7 @@ class DJSystem {
             }
         }
     }
-    
+
     // Add YouTube video to queue
     addYouTubeToQueue(url) {
         const videoId = this.extractYouTubeId(url);
@@ -500,7 +530,7 @@ class DJSystem {
             ui.notify('❌ Invalid YouTube URL', 'error');
             return false;
         }
-        
+
         const limit = this.getQueueLimit();
         if (this.youtubeQueue.length >= limit) {
             const isVIP = window.premiumSystem?.isVIP || false;
@@ -511,7 +541,7 @@ class DJSystem {
             }
             return false;
         }
-        
+
         // Add to queue
         const track = {
             videoId: videoId,
@@ -519,7 +549,7 @@ class DJSystem {
             thumbnail: `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`,
             addedBy: 'Player'
         };
-        
+
         // If nothing is playing, play immediately
         if (!this.isPlaying) {
             this.playYouTube(track.videoId);
@@ -531,47 +561,47 @@ class DJSystem {
             this.youtubeQueue.push(track);
             ui.notify(`🎵 Added to queue (${this.youtubeQueue.length}/${limit})`, 'success');
         }
-        
+
         this.updateYouTubeUI();
         this.saveMusicState(); // Save queue state
         return true;
     }
-    
+
     // Extract video ID from YouTube URL
     extractYouTubeId(url) {
         const patterns = [
             /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
             /^([a-zA-Z0-9_-]{11})$/ // Direct video ID
         ];
-        
+
         for (const pattern of patterns) {
             const match = url.match(pattern);
             if (match) return match[1];
         }
         return null;
     }
-    
+
     // Play specific YouTube video
     playYouTube(videoId) {
         if (!this.ytReady || !this.ytPlayer) {
             ui.notify('YouTube player not ready', 'error');
             return;
         }
-        
+
         // Stop background music when YouTube plays
         this.stopBackgroundMusic();
-        
+
         this.ytPlayer.loadVideoById(videoId);
         this.currentYTVideo = { videoId };
         this.isPlaying = true;
         this.updateTrackDisplay('Loading...');
         this.updateYouTubeUI();
-        
+
         // Show player
         const container = document.getElementById('yt-player-container');
         if (container) container.style.display = 'block';
     }
-    
+
     // Play next in YouTube queue
     playNextYouTube() {
         if (this.youtubeQueue.length > 0) {
@@ -585,21 +615,21 @@ class DJSystem {
             this.isPlaying = false;
             this.currentYTVideo = null;
             this.updateTrackDisplay('Playing club music...');
-            
+
             // Resume background music
             this.playRandomBgTrack();
         }
         this.updateYouTubeUI();
         this.saveMusicState(); // Save after queue change
     }
-    
+
     // Skip current YouTube track
     skipYouTube() {
         ui.notify('⏭️ Skipping...', 'info');
         this.crowdMood = Math.max(0, this.crowdMood - 5);
         this.playNextYouTube();
     }
-    
+
     // Remove from YouTube queue
     removeFromYouTubeQueue(index) {
         if (index >= 0 && index < this.youtubeQueue.length) {
@@ -609,7 +639,7 @@ class DJSystem {
             this.saveMusicState(); // Save after queue change
         }
     }
-    
+
     // Set YouTube volume
     setYouTubeVolume(volume) {
         this.ytVolume = volume;
@@ -618,7 +648,7 @@ class DJSystem {
         }
         this.saveMusicState(); // Save volume preference
     }
-    
+
     // Toggle YouTube player visibility
     toggleYouTubePlayer() {
         const container = document.getElementById('yt-player-container');
@@ -626,14 +656,14 @@ class DJSystem {
             container.style.display = container.style.display === 'none' ? 'block' : 'none';
         }
     }
-    
+
     // Update YouTube queue UI
     updateYouTubeUI() {
         const queueContainer = document.getElementById('youtube-queue');
         const nowPlaying = document.getElementById('youtube-now-playing');
         const limit = this.getQueueLimit();
         const isVIP = window.premiumSystem?.isVIP || false;
-        
+
         // Update now playing
         if (nowPlaying && this.currentYTVideo) {
             nowPlaying.innerHTML = `
@@ -649,7 +679,7 @@ class DJSystem {
                 </div>
             `;
         }
-        
+
         // Update queue
         if (queueContainer) {
             const vipBadge = isVIP ? '<span class="vip-badge">⭐ VIP</span>' : '';
@@ -658,7 +688,7 @@ class DJSystem {
                     <span>Queue (${this.youtubeQueue.length}/${limit}) ${vipBadge}</span>
                     ${!isVIP ? '<small class="vip-hint">Upgrade to VIP for 13 slots!</small>' : ''}
                 </div>
-                ${this.youtubeQueue.length === 0 ? 
+                ${this.youtubeQueue.length === 0 ?
                     '<div class="empty-queue">No tracks queued</div>' :
                     this.youtubeQueue.map((track, i) => `
                         <div class="queue-item">
@@ -677,13 +707,13 @@ class DJSystem {
         if (window.audioManager && window.audioManager.stopMusic) {
             window.audioManager.stopMusic();
         }
-        
+
         // Initialize background music (plays by default)
         this.initBackgroundMusic();
-        
+
         // Initialize YouTube player
         this.initYouTube();
-        
+
         // Also keep the genre system for mood effects
         const genres = Object.keys(MUSIC_GENRES);
         const randomGenre = genres[Math.floor(Math.random() * genres.length)];
@@ -739,7 +769,7 @@ class DJSystem {
     playGenre(genre) {
         const genreInfo = MUSIC_GENRES[genre];
         const tracks = TRACKS[genre];
-        
+
         if (!genreInfo || !tracks) return;
 
         const randomTrack = tracks[Math.floor(Math.random() * tracks.length)];
@@ -802,7 +832,7 @@ class DJSystem {
         if (this.currentGenre) {
             const bpm = MUSIC_GENRES[this.currentGenre].bpm;
             const beatInterval = 60 / bpm;
-            
+
             if (this.trackProgress - this.lastBeat >= beatInterval) {
                 this.lastBeat = this.trackProgress;
                 this.onBeat();
@@ -837,7 +867,7 @@ class DJSystem {
         if (this.beatCallback) {
             this.beatCallback(this.currentGenre, MUSIC_GENRES[this.currentGenre]);
         }
-        
+
         // Trigger dance floor pulse
         if (window.pulseDanceFloor) {
             window.pulseDanceFloor(MUSIC_GENRES[this.currentGenre]?.color || '#ffffff');
@@ -858,9 +888,9 @@ class DJSystem {
     // Get crowd reaction text
     getCrowdReaction() {
         if (!this.currentGenre) return 'waiting';
-        
+
         const genreInfo = MUSIC_GENRES[this.currentGenre];
-        
+
         if (this.crowdMood >= 80) {
             return `🔥 The crowd is ${genreInfo.crowdReaction}!`;
         } else if (this.crowdMood >= 60) {
@@ -937,9 +967,9 @@ class DJSystem {
         this.djSkillBonus += 0.1;
         ui.notify(`DJ Skill upgraded! Bonus: ${Math.round(this.djSkillBonus * 100)}%`, 'success');
     }
-    
+
     // ========== PERSISTENCE ==========
-    
+
     // Save music state to localStorage
     saveMusicState() {
         const state = {
@@ -951,7 +981,7 @@ class DJSystem {
         };
         localStorage.setItem('nightclub_music_state', JSON.stringify(state));
     }
-    
+
     // Load music state from localStorage
     loadMusicState() {
         try {
@@ -964,17 +994,17 @@ class DJSystem {
         }
         return null;
     }
-    
+
     // Restore music on page load (called when YT player is ready)
     restoreMusicState() {
         const state = this.loadMusicState();
         if (!state) return;
-        
+
         // Restore queue
         if (state.queue && state.queue.length > 0) {
             this.youtubeQueue = state.queue;
         }
-        
+
         // Restore volume
         if (state.volume !== undefined) {
             this.ytVolume = state.volume;
@@ -982,11 +1012,11 @@ class DJSystem {
                 this.ytPlayer.setVolume(this.ytVolume);
             }
         }
-        
+
         // Restore currently playing track
         if (state.currentVideo && state.currentVideo.videoId) {
             this.currentYTVideo = state.currentVideo;
-            
+
             // Resume playback
             if (this.ytPlayer && this.ytReady) {
                 // Load video and seek to saved position
@@ -996,13 +1026,13 @@ class DJSystem {
                 });
                 this.isPlaying = true;
                 this.updateTrackDisplay(state.currentVideo.title || 'Resuming...');
-                
+
                 // Show player
                 const container = document.getElementById('yt-player-container');
                 if (container) container.style.display = 'block';
             }
         }
-        
+
         this.updateYouTubeUI();
     }
 }
