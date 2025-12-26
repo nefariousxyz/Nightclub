@@ -708,7 +708,7 @@ class DJSystem {
             window.audioManager.stopMusic();
         }
 
-        // Initialize background music (plays by default)
+        // Initialize background music player (but don't auto-play yet)
         this.initBackgroundMusic();
 
         // Initialize YouTube player
@@ -718,6 +718,16 @@ class DJSystem {
         const genres = Object.keys(MUSIC_GENRES);
         const randomGenre = genres[Math.floor(Math.random() * genres.length)];
         this.currentGenre = randomGenre;
+
+        console.log('🎵 DJ System initialized - music ready');
+    }
+
+    // Start music (called separately after DJ system is ready)
+    startBackgroundMusic() {
+        if (!this.bgMusicPlaying) {
+            console.log('🎵 Starting background music after login...');
+            this.autoStartMusic();
+        }
     }
 
     // Get all available tracks

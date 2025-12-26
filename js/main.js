@@ -57,6 +57,16 @@ async function initializeGame() {
     }
     populateAchievementsModal();
 
+    // Initialize DJ system (music starts here)
+    initDJModal();
+
+    // Start background music after login
+    if (window.djSystem && window.djSystem.startBackgroundMusic) {
+        setTimeout(() => {
+            window.djSystem.startBackgroundMusic();
+        }, 500); // Small delay to ensure DJ system is fully initialized
+    }
+
     // Initialize Three.js scene
     initScene();
 
@@ -1757,10 +1767,7 @@ window.openDJBooth = function () {
     updatePlaylistCount();
 };
 
-// Call initDJModal after game starts
-setTimeout(() => {
-    initDJModal();
-}, 2000);
+// DJ system now initializes in initializeGame() after login
 
 // ==========================================
 // BADGE SHOP SYSTEM
