@@ -27,7 +27,7 @@ import chatSystem from './chat.js';
 import adminPanel from './admin.js';
 
 // Global error handler
-window.onerror = function(msg, url, line) {
+window.onerror = function (msg, url, line) {
     const errorLog = document.getElementById('error-log');
     if (errorLog) {
         errorLog.style.display = 'block';
@@ -43,10 +43,10 @@ let gameInitialized = false;
 async function initializeGame() {
     if (gameInitialized) return;
     gameInitialized = true;
-    
+
     // Initialize game (loads save if exists)
     await game.init();
-    
+
     // Populate all dynamic content
     populateShop();
     populateStaffModal();
@@ -56,17 +56,17 @@ async function initializeGame() {
         console.warn('Friends modal population skipped:', e.message);
     }
     populateAchievementsModal();
-    
+
     // Initialize Three.js scene
     initScene();
-    
+
     // Initialize chat system (wait longer for Firebase)
     setTimeout(() => {
         chatSystem.init();
     }, 3000);
-    
+
     // Initialize friends system (auto-initializes on import)
-    
+
     // Show tutorial for new players
     if (!game.tutorialComplete && !storage.hasSave()) {
         setTimeout(() => {
@@ -82,14 +82,14 @@ async function initializeGame() {
 function hideSessionLoader(showLoginGate = true) {
     const sessionLoader = document.getElementById('session-loader');
     const loginGate = document.getElementById('login-gate');
-    
+
     if (sessionLoader) {
         sessionLoader.style.opacity = '0';
         setTimeout(() => {
             sessionLoader.style.display = 'none';
         }, 500);
     }
-    
+
     if (showLoginGate && loginGate) {
         loginGate.classList.remove('hidden');
         loginGate.style.display = 'flex';
@@ -100,32 +100,32 @@ function hideSessionLoader(showLoginGate = true) {
 document.addEventListener('DOMContentLoaded', async () => {
     const loginGate = document.getElementById('login-gate');
     const sessionLoader = document.getElementById('session-loader');
-    
+
     // Keep login gate hidden initially - session loader is visible
     if (loginGate) {
         loginGate.classList.add('hidden');
         loginGate.style.display = 'none';
     }
-    
+
     // Safety timeout - never stay on session loader for more than 8 seconds
     const safetyTimeout = setTimeout(() => {
         console.warn('Session check timeout - forcing show login');
         hideSessionLoader(true);
     }, 8000);
-    
+
     try {
         // Initialize Firebase Auth
         await authSystem.init();
-        
+
         // Initialize Premium system (non-blocking)
         premiumSystem.init().catch(err => console.warn('Premium init failed:', err));
-        
+
         // Initialize Cloud Save
         cloudSave.init();
-        
+
         // Clear safety timeout since init succeeded
         clearTimeout(safetyTimeout);
-        
+
         // Check if already logged in
         if (authSystem.user) {
             console.log('User already logged in:', authSystem.user.email);
@@ -137,7 +137,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Not logged in - show login gate
             hideSessionLoader(true);
         }
-        
+
         // Listen for auth changes
         authSystem.onAuthChange(async (user) => {
             if (user && !gameInitialized) {
@@ -146,14 +146,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (isNewAccount) {
                     console.log('New account detected in auth callback - will start fresh');
                 }
-                
+
                 await initializeGame();
-                
+
                 // Remove flag AFTER game.init() has read it
                 if (isNewAccount) {
                     localStorage.removeItem('nightclub_new_account');
                 }
-                
+
                 startGameAfterLogin(!!isNewAccount);
             }
             updateAccountUI();
@@ -191,7 +191,7 @@ setTimeout(() => {
             if (window.game) window.game.openModal('profile');
         });
     }
-    
+
     const partyBtn = document.getElementById('btn-event');
     if (partyBtn) {
         partyBtn.addEventListener('click', (e) => {
@@ -200,7 +200,7 @@ setTimeout(() => {
             if (window.game && !partyBtn.disabled) window.game.planEvent();
         });
     }
-    
+
     // Click outside modal to close
     document.querySelectorAll('.modal-overlay').forEach(modal => {
         modal.addEventListener('click', (e) => {
@@ -217,7 +217,7 @@ let currentFurnitureTab = 'floors';
 function populateShop(category = 'floors') {
     const shopGrid = document.getElementById('shop-grid');
     if (!shopGrid) return;
-    
+
     // Update currency display
     const cashDisplay = document.getElementById('shop-cash');
     const diamondDisplay = document.getElementById('shop-diamonds');
@@ -226,7 +226,7 @@ function populateShop(category = 'floors') {
 
     shopGrid.innerHTML = '';
     currentFurnitureTab = category;
-    
+
     // Filter items by category
     const items = Object.entries(FURNITURE_CATALOG).filter(([key, item]) => {
         if (category === 'premium') {
@@ -234,23 +234,23 @@ function populateShop(category = 'floors') {
         }
         return item.category === category;
     });
-    
+
     if (items.length === 0) {
         shopGrid.innerHTML = '<div class="shop-empty">No items in this category</div>';
         return;
     }
-    
+
     items.forEach(([type, item]) => {
         const locked = item.unlockLevel && game.level < item.unlockLevel;
         const isDiamond = item.currency === 'diamonds';
-        
+
         // Apply sale discount for cash items
         const isSaleActive = game.isSaleActive && game.isSaleActive();
         const originalCost = item.cost;
         const finalCost = (!isDiamond && isSaleActive) ? game.getSalePrice(originalCost) : originalCost;
-        
+
         const canAfford = isDiamond ? game.diamonds >= finalCost : game.cash >= finalCost;
-        
+
         const itemEl = document.createElement('div');
         itemEl.className = `shop-item ${locked ? 'locked' : ''} ${isDiamond ? 'premium' : ''} ${!canAfford && !locked ? 'unaffordable' : ''} ${isSaleActive && !isDiamond ? 'on-sale' : ''}`;
         itemEl.onclick = () => {
@@ -261,7 +261,7 @@ function populateShop(category = 'floors') {
             game.buyFromCatalog(type);
             populateShop(currentFurnitureTab); // Refresh display
         };
-        
+
         // Show sale price with strikethrough original
         let costDisplay;
         if (locked) {
@@ -273,16 +273,16 @@ function populateShop(category = 'floors') {
         } else {
             costDisplay = `$${finalCost.toLocaleString()}`;
         }
-        
+
         const saleBadge = (isSaleActive && !isDiamond && !locked) ? '<span class="sale-badge">50% OFF</span>' : '';
-        
+
         itemEl.innerHTML = `
             <div class="item-icon">${item.icon}</div>
             <div class="item-name">${item.name}${saleBadge}</div>
             <div class="item-cost ${isDiamond ? 'diamond' : 'cash'}">${costDisplay}</div>
             <div class="item-desc">${item.desc}</div>
         `;
-        
+
         shopGrid.appendChild(itemEl);
     });
 }
@@ -291,7 +291,7 @@ function populateShop(category = 'floors') {
 window.populateShop = populateShop;
 
 // Switch furniture shop tab
-window.switchFurnitureTab = function(category) {
+window.switchFurnitureTab = function (category) {
     // Update active tab styling
     const tabs = document.querySelectorAll('#furniture-tabs .shop-tab');
     tabs.forEach(tab => {
@@ -302,16 +302,16 @@ window.switchFurnitureTab = function(category) {
             tab.classList.add('active');
         }
     });
-    
+
     populateShop(category);
 };
 
 function populateStaffModal() {
     const staffList = document.getElementById('staff-list');
     if (!staffList) return;
-    
+
     staffList.innerHTML = '';
-    
+
     Object.entries(STAFF_TYPES).forEach(([type, data]) => {
         const row = document.createElement('div');
         row.className = 'staff-row';
@@ -335,17 +335,17 @@ function populateStaffModal() {
 function populateFriendsModal() {
     const friendsList = document.getElementById('friends-list');
     if (!friendsList) return;
-    
+
     friendsList.innerHTML = '';
-    
+
     // Check if method exists
     if (!friendsSystem || typeof friendsSystem.getAvailableClubs !== 'function') {
         console.log('Friends system not ready yet');
         return;
     }
-    
+
     const clubs = friendsSystem.getAvailableClubs();
-    
+
     clubs.forEach(club => {
         const row = document.createElement('div');
         row.className = `friend-row ${club.visited ? 'visited' : ''}`;
@@ -363,7 +363,7 @@ function populateFriendsModal() {
         `;
         friendsList.appendChild(row);
     });
-    
+
     // Add invite button
     const inviteRow = document.createElement('div');
     inviteRow.className = 'friend-row invite-row';
@@ -381,12 +381,12 @@ function populateFriendsModal() {
 function populateAchievementsModal() {
     const achievementsList = document.getElementById('achievements-list');
     if (!achievementsList) return;
-    
+
     achievementsList.innerHTML = '';
-    
+
     const allAchievements = achievementSystem.getAllAchievements();
     const progress = achievementSystem.getProgress();
-    
+
     // Progress header
     const header = document.createElement('div');
     header.className = 'achievements-header';
@@ -399,7 +399,7 @@ function populateAchievementsModal() {
         </div>
     `;
     achievementsList.appendChild(header);
-    
+
     allAchievements.forEach(achievement => {
         const row = document.createElement('div');
         row.className = `achievement-row ${achievement.unlocked ? 'unlocked' : 'locked'}`;
@@ -419,16 +419,16 @@ function populateAchievementsModal() {
 function populateChallengesModal() {
     const challengesList = document.getElementById('challenges-list');
     if (!challengesList) return;
-    
+
     challengesList.innerHTML = '';
-    
+
     const challenges = challengeSystem.getChallenges();
-    
+
     if (challenges.length === 0) {
         challengesList.innerHTML = '<div style="text-align:center;color:#888;padding:20px;">No challenges available</div>';
         return;
     }
-    
+
     challenges.forEach(challenge => {
         const progressPercent = Math.min(100, (challenge.progress / challenge.target) * 100);
         const row = document.createElement('div');
@@ -452,7 +452,7 @@ function populateChallengesModal() {
 function populateStatsModal() {
     const statsContent = document.getElementById('stats-content');
     if (!statsContent) return;
-    
+
     statsContent.innerHTML = statisticsSystem.renderStatsModal(game);
 }
 
@@ -471,16 +471,16 @@ window.refreshStats = populateStatsModal;
 // Update account UI elements
 async function updateAccountUI() {
     const user = authSystem.user;
-    
+
     // Update coins display
     const coinsDisplay = document.getElementById('coins-display');
     const shopCoinsDisplay = document.getElementById('shop-coins-display');
     const accountCoins = document.getElementById('account-coins');
-    
+
     if (coinsDisplay) coinsDisplay.textContent = premiumSystem.coins.toLocaleString();
     if (shopCoinsDisplay) shopCoinsDisplay.textContent = premiumSystem.coins.toLocaleString();
     if (accountCoins) accountCoins.textContent = premiumSystem.coins.toLocaleString();
-    
+
     // Update account modal
     if (user) {
         const avatar = document.getElementById('account-avatar');
@@ -489,18 +489,18 @@ async function updateAccountUI() {
         const level = document.getElementById('account-level');
         const hype = document.getElementById('account-hype');
         const cash = document.getElementById('account-cash');
-        
+
         // Load avatar from localStorage or use default
         const savedAvatar = localStorage.getItem('nc_avatar');
         const defaultAvatar = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="%23667eea"/><text x="50" y="65" text-anchor="middle" fill="white" font-size="50">' + (user.displayName?.[0] || '?') + '</text></svg>';
         if (avatar) avatar.src = savedAvatar || defaultAvatar;
-        
+
         if (name) name.textContent = user.displayName || 'Player';
         if (email) email.textContent = user.email;
         if (level) level.textContent = game.level;
         if (hype) hype.textContent = Math.floor(game.hype || 0);
         if (cash) cash.textContent = '$' + (game.cash || 0).toLocaleString();
-        
+
         // Load Cover Photo from localStorage
         const cover = document.getElementById('profile-cover');
         const savedCover = localStorage.getItem('nc_cover');
@@ -508,9 +508,9 @@ async function updateAccountUI() {
             cover.style.backgroundImage = `url('${savedCover}')`;
         }
     }
-    
+
     premiumSystem.updateUI();
-    
+
     // Update Facebook-style profile modal
     if (typeof updateFBProfileModal === 'function') {
         updateFBProfileModal();
@@ -520,7 +520,7 @@ async function updateAccountUI() {
 // ========== PROFILE FUNCTIONS ==========
 
 // Update profile modal (Redesigned)
-window.updateProfileModal = function() {
+window.updateProfileModal = function () {
     updateFBProfileModal();
 };
 
@@ -531,7 +531,7 @@ let currentAvatarPath = null;
 let currentCoverPath = null;
 
 // Trigger avatar file upload
-window.triggerAvatarUpload = function() {
+window.triggerAvatarUpload = function () {
     const input = document.getElementById('avatar-upload-input') || document.getElementById('avatar-file-input');
     if (input) {
         input.click();
@@ -549,7 +549,7 @@ window.triggerAvatarUpload = function() {
 };
 
 // Trigger cover file upload
-window.triggerCoverUpload = function() {
+window.triggerCoverUpload = function () {
     const input = document.getElementById('cover-upload-input') || document.getElementById('cover-file-input');
     if (input) {
         input.click();
@@ -701,7 +701,7 @@ async function handleCoverUpload(event) {
 */
 
 // Legacy functions (fallback to URL if needed)
-window.editProfileAvatar = async function() {
+window.editProfileAvatar = async function () {
     const url = prompt('Enter URL for new profile picture:', authSystem.user?.photoURL || '');
     if (url && url.startsWith('http')) {
         try {
@@ -714,7 +714,7 @@ window.editProfileAvatar = async function() {
     }
 };
 
-window.editProfileCover = async function() {
+window.editProfileCover = async function () {
     const currentData = await authSystem.getUserData();
     const url = prompt('Enter URL for cover photo:', currentData?.coverURL || '');
     if (url && url.startsWith('http')) {
@@ -729,7 +729,7 @@ window.editProfileCover = async function() {
     }
 };
 
-window.editProfileName = async function() {
+window.editProfileName = async function () {
     const name = prompt('Enter new display name:', authSystem.user?.displayName || '');
     if (name && name.length > 0) {
         try {
@@ -749,32 +749,32 @@ window.editProfileName = async function() {
 let profilePosts = [];
 
 // Switch profile tabs
-window.switchProfileTab = function(tab) {
+window.switchProfileTab = function (tab) {
     const tabs = document.querySelectorAll('.fb-tab');
     const postsTab = document.getElementById('profile-posts-tab');
     const aboutTab = document.getElementById('profile-about-tab');
     const achievementsTab = document.getElementById('profile-achievements-tab');
-    
+
     tabs.forEach(t => t.classList.remove('active'));
     event.target.classList.add('active');
-    
+
     postsTab.style.display = tab === 'posts' ? 'block' : 'none';
     aboutTab.style.display = tab === 'about' ? 'block' : 'none';
     achievementsTab.style.display = tab === 'achievements' ? 'block' : 'none';
-    
+
     if (tab === 'achievements') loadProfileAchievements();
 };
 
 // Create a profile post
-window.createProfilePost = function() {
+window.createProfilePost = function () {
     const input = document.getElementById('new-post-input');
     const content = input.value.trim();
-    
+
     if (!content) {
         ui.notify('Write something first!', 'error');
         return;
     }
-    
+
     const post = {
         id: Date.now(),
         content: content,
@@ -784,7 +784,7 @@ window.createProfilePost = function() {
         likes: 0,
         liked: false
     };
-    
+
     profilePosts.unshift(post);
     input.value = '';
     renderProfilePosts();
@@ -792,7 +792,7 @@ window.createProfilePost = function() {
 };
 
 // Toggle post like
-window.togglePostLike = function(postId) {
+window.togglePostLike = function (postId) {
     const post = profilePosts.find(p => p.id === postId);
     if (post) {
         post.liked = !post.liked;
@@ -805,7 +805,7 @@ window.togglePostLike = function(postId) {
 function renderProfilePosts() {
     const feed = document.getElementById('profile-posts-feed');
     if (!feed) return;
-    
+
     if (profilePosts.length === 0) {
         feed.innerHTML = `
             <div class="fb-empty-state">
@@ -815,7 +815,7 @@ function renderProfilePosts() {
         `;
         return;
     }
-    
+
     feed.innerHTML = profilePosts.map(post => {
         const timeAgo = getTimeAgo(post.time);
         return `
@@ -853,7 +853,7 @@ function getTimeAgo(date) {
 function loadProfileAchievements() {
     const grid = document.getElementById('fb-achievements-list');
     if (!grid) return;
-    
+
     const achievements = [
         { icon: '🎉', name: 'First Night', desc: 'Open your club', unlocked: true },
         { icon: '💰', name: 'Big Spender', desc: 'Earn $10,000', unlocked: (game.totalEarnings || 0) >= 10000 },
@@ -868,7 +868,7 @@ function loadProfileAchievements() {
         { icon: '💎', name: 'Rich', desc: 'Earn $100,000', unlocked: (game.totalEarnings || 0) >= 100000 },
         { icon: '🎵', name: 'DJ Master', desc: 'Play 50 tracks', unlocked: false }
     ];
-    
+
     grid.innerHTML = achievements.map(a => `
         <div class="fb-achievement ${a.unlocked ? 'unlocked' : 'locked'}">
             <span class="fb-achievement-icon">${a.icon}</span>
@@ -879,21 +879,21 @@ function loadProfileAchievements() {
 }
 
 // Update Facebook-style profile modal
-window.updateFBProfileModal = function() {
+window.updateFBProfileModal = function () {
     const user = authSystem.user;
-    
+
     // Avatar
     const avatar = document.getElementById('account-avatar');
     const postAvatar = document.getElementById('create-post-avatar');
     if (avatar) avatar.src = user?.photoURL || '';
     if (postAvatar) postAvatar.src = user?.photoURL || '';
-    
+
     // Name and email
     const name = document.getElementById('account-name');
     const email = document.getElementById('account-email');
     if (name) name.textContent = user?.displayName || game.ownerName || 'Player';
     if (email) email.textContent = user?.email || '';
-    
+
     // VIP Status
     const vipBadge = document.getElementById('vip-status');
     if (vipBadge) {
@@ -905,21 +905,21 @@ window.updateFBProfileModal = function() {
             vipBadge.className = 'fb-vip-badge inactive';
         }
     }
-    
+
     // Joined date
     const joined = document.getElementById('profile-joined');
     if (joined && user?.metadata?.creationTime) {
         const date = new Date(user.metadata.creationTime);
         joined.textContent = 'Joined ' + date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
     }
-    
+
     // Stats bar
     document.getElementById('fb-level')?.textContent && (document.getElementById('fb-level').textContent = game.level || 1);
     document.getElementById('fb-cash')?.textContent && (document.getElementById('fb-cash').textContent = '$' + (game.cash || 0).toLocaleString());
     document.getElementById('fb-coins')?.textContent && (document.getElementById('fb-coins').textContent = (premiumSystem?.coins || 0).toLocaleString());
     document.getElementById('fb-hype')?.textContent && (document.getElementById('fb-hype').textContent = Math.floor(game.hype || 0));
     document.getElementById('fb-visitors')?.textContent && (document.getElementById('fb-visitors').textContent = game.visitors?.length || 0);
-    
+
     // About tab - Club info
     const clubName = document.getElementById('fb-club-name');
     const clubTier = document.getElementById('fb-club-tier');
@@ -930,38 +930,38 @@ window.updateFBProfileModal = function() {
         clubTier.textContent = tierInfo?.name || 'Tiny Bar';
         if (capacity) capacity.textContent = (tierInfo?.maxVisitors || 8) + ' visitors';
     }
-    
+
     // About tab - Lifetime stats
     document.getElementById('fb-total-earnings')?.textContent && (document.getElementById('fb-total-earnings').textContent = '$' + (game.totalEarnings || 0).toLocaleString());
     document.getElementById('fb-total-visitors')?.textContent && (document.getElementById('fb-total-visitors').textContent = (game.totalVisitors || 0).toLocaleString());
     document.getElementById('fb-drinks-served')?.textContent && (document.getElementById('fb-drinks-served').textContent = (game.totalDrinksServed || 0).toLocaleString());
     document.getElementById('fb-events-hosted')?.textContent && (document.getElementById('fb-events-hosted').textContent = (game.eventsHosted || 0).toLocaleString());
-    
+
     // Play time
     document.getElementById('fb-days-played')?.textContent && (document.getElementById('fb-days-played').textContent = game.totalDaysPlayed || 1);
     document.getElementById('fb-current-day')?.textContent && (document.getElementById('fb-current-day').textContent = 'Day ' + (game.day || 1));
-    
+
     // Load cover photo
     authSystem.getUserData?.().then(data => {
         if (data?.coverURL) {
             const cover = document.getElementById('profile-cover');
             if (cover) cover.style.backgroundImage = `url('${data.coverURL}')`;
         }
-    }).catch(() => {});
-    
+    }).catch(() => { });
+
     // Render posts
     renderProfilePosts();
 };
 
 // Login tab switching
-window.switchLoginTab = function(tab) {
+window.switchLoginTab = function (tab) {
     const loginForm = document.getElementById('login-form');
     const registerForm = document.getElementById('register-form');
     const tabs = document.querySelectorAll('.login-tab');
-    
+
     tabs.forEach(t => t.classList.remove('active'));
     event.target.classList.add('active');
-    
+
     if (tab === 'login') {
         loginForm.style.display = 'flex';
         registerForm.style.display = 'none';
@@ -972,20 +972,20 @@ window.switchLoginTab = function(tab) {
 };
 
 // Handle login
-window.handleLogin = async function() {
+window.handleLogin = async function () {
     const email = document.getElementById('login-email').value;
     const password = document.getElementById('login-password').value;
     const btn = event.currentTarget || event.target;
-    
+
     if (!email || !password) {
         ui.notify('Please fill in all fields', 'error');
         return;
     }
-    
+
     const originalText = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = '<i class="ph-fill ph-circle-notch" style="animation:spin 1s linear infinite"></i> Logging in...';
-    
+
     try {
         const result = await authSystem.login(email, password);
         if (result.success) {
@@ -994,7 +994,7 @@ window.handleLogin = async function() {
                 game.closeModals();
             }
             document.getElementById('login-modal').classList.add('hidden');
-            
+
             // Start game if on landing page
             startGameAfterLogin();
         } else {
@@ -1009,26 +1009,26 @@ window.handleLogin = async function() {
 };
 
 // Handle register
-window.handleRegister = async function() {
+window.handleRegister = async function () {
     const name = document.getElementById('register-name').value;
     const email = document.getElementById('register-email').value;
     const password = document.getElementById('register-password').value;
     const clubName = document.getElementById('register-club-name')?.value || name + "'s Club";
-    
+
     if (!name || !email || !password) {
         alert('Please fill in all fields');
         return;
     }
-    
+
     // Set flag BEFORE registration so after reload it starts fresh with club name
     localStorage.setItem('nightclub_new_account', JSON.stringify({ clubName, ownerName: name }));
-    
+
     const result = await authSystem.register(email, password, name);
     if (result.success) {
         // BLOCK saves to prevent old data going to new account
         if (window.cloudSave) {
             window.cloudSave.blockSaves = true;
-            
+
             // DELETE any cloud data that might have been auto-saved
             try {
                 await window.cloudSave.deleteSave();
@@ -1037,9 +1037,9 @@ window.handleRegister = async function() {
                 console.warn('Could not clear cloud:', e);
             }
         }
-        
+
         console.log('New account created - reloading');
-        
+
         // Reload - new account has no cloud data so will start fresh
         location.reload();
         return;
@@ -1050,7 +1050,7 @@ window.handleRegister = async function() {
 };
 
 // Handle Google login
-window.handleGoogleLogin = async function() {
+window.handleGoogleLogin = async function () {
     const result = await authSystem.loginWithGoogle();
     if (result.success) {
         game.closeModals();
@@ -1058,7 +1058,7 @@ window.handleGoogleLogin = async function() {
 };
 
 // Handle forgot password
-window.handleForgotPassword = async function() {
+window.handleForgotPassword = async function () {
     const email = document.getElementById('login-email').value;
     if (!email) {
         alert('Enter your email first');
@@ -1068,7 +1068,7 @@ window.handleForgotPassword = async function() {
 };
 
 // Handle logout
-window.handleLogout = async function() {
+window.handleLogout = async function () {
     if (confirm('Are you sure you want to logout?')) {
         await authSystem.logout();
         game.closeModals();
@@ -1080,17 +1080,17 @@ window.handleLogout = async function() {
 };
 
 // RESET GAME - Force fresh start
-window.resetGame = async function() {
+window.resetGame = async function () {
     if (!confirm('Are you sure you want to RESET your game? This will delete ALL your progress!')) {
         return;
     }
-    
+
     console.log('=== RESETTING GAME ===');
-    
+
     // Block saves
     if (window.cloudSave) {
         window.cloudSave.blockSaves = true;
-        
+
         // Delete cloud save
         try {
             await window.cloudSave.deleteSave();
@@ -1099,11 +1099,11 @@ window.resetGame = async function() {
             console.error('Failed to delete cloud save:', e);
         }
     }
-    
+
     // Clear ALL localStorage
     localStorage.clear();
     console.log('localStorage cleared');
-    
+
     // Clear IndexedDB (Firebase cache)
     try {
         const databases = await indexedDB.databases();
@@ -1114,32 +1114,32 @@ window.resetGame = async function() {
     } catch (e) {
         console.warn('Could not clear IndexedDB:', e);
     }
-    
+
     // Set fresh start flag
     localStorage.setItem('nightclub_new_account', JSON.stringify({ reset: true }));
-    
+
     alert('Game reset! Page will reload.');
     location.reload();
 };
 
 // Cloud save now
-window.cloudSaveNow = async function() {
+window.cloudSaveNow = async function () {
     await cloudSave.saveNow();
 };
 
 // ========== YOUTUBE DJ FUNCTIONS ==========
 
 // Add YouTube track to queue
-window.addYouTubeTrack = function() {
+window.addYouTubeTrack = function () {
     const input = document.getElementById('youtube-url-input');
     if (!input) return;
-    
+
     const url = input.value.trim();
     if (!url) {
         ui.notify('Please enter a YouTube URL', 'warning');
         return;
     }
-    
+
     if (djSystem.addYouTubeToQueue(url)) {
         input.value = ''; // Clear input on success
     }
@@ -1148,23 +1148,23 @@ window.addYouTubeTrack = function() {
 // ========== SHOP FUNCTIONS ==========
 
 // Shop tab switching
-window.switchShopTab = function(tab) {
+window.switchShopTab = function (tab) {
     const tabs = document.querySelectorAll('.shop-tab');
     const sections = document.querySelectorAll('.shop-section');
-    
+
     tabs.forEach(t => t.classList.remove('active'));
     event.target.classList.add('active');
-    
+
     sections.forEach(s => s.style.display = 'none');
     document.getElementById(`shop-${tab}`).style.display = 'block';
-    
+
     // Update coins display
     const shopCoins = document.getElementById('shop-coins-display');
     if (shopCoins) shopCoins.textContent = premiumSystem.coins.toLocaleString();
 };
 
 // Purchase VIP
-window.purchaseVIP = async function(productId) {
+window.purchaseVIP = async function (productId) {
     if (!authSystem.isLoggedIn) {
         alert('Please login first to make purchases');
         game.openModal('login');
@@ -1175,7 +1175,7 @@ window.purchaseVIP = async function(productId) {
 };
 
 // Purchase coins
-window.purchaseCoins = async function(productId) {
+window.purchaseCoins = async function (productId) {
     if (!authSystem.isLoggedIn) {
         alert('Please login first to make purchases');
         game.openModal('login');
@@ -1186,7 +1186,7 @@ window.purchaseCoins = async function(productId) {
 };
 
 // Purchase item with coins
-window.purchaseItem = async function(itemId) {
+window.purchaseItem = async function (itemId) {
     if (!authSystem.isLoggedIn) {
         alert('Please login first');
         game.openModal('login');
@@ -1210,25 +1210,25 @@ let gameStarted = false;
 async function loadGateStats() {
     // Check if Firebase is initialized
     if (typeof firebase === 'undefined' || !firebase.apps || firebase.apps.length === 0) {
-        console.warn('Firebase not ready for gate stats');
-        return;
+        return; // Silently skip if Firebase not ready
     }
-    
+
     const db = firebase.database();
-    
+
     try {
-        // Load top players
-        const usersSnap = await db.ref('userProfiles').orderByChild('level').limitToLast(5).once('value');
-        const leaderboardEl = document.getElementById('gate-leaderboard');
-        if (leaderboardEl && usersSnap.exists()) {
-            const users = [];
-            usersSnap.forEach(c => users.push({ uid: c.key, ...c.val() }));
-            users.reverse();
-            
-            leaderboardEl.innerHTML = users.map((u, i) => {
-                const rankColors = ['linear-gradient(135deg,#ffd700,#ffaa00)', 'linear-gradient(135deg,#c0c0c0,#a0a0a0)', 'linear-gradient(135deg,#cd7f32,#b5651d)', 'rgba(255,255,255,0.1)', 'rgba(255,255,255,0.1)'];
-                const textColor = i < 2 ? '#000' : '#fff';
-                return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(255,255,255,0.03);border-radius:10px;">
+        // Load top players (with error handling)
+        try {
+            const usersSnap = await db.ref('userProfiles').orderByChild('level').limitToLast(5).once('value');
+            const leaderboardEl = document.getElementById('gate-leaderboard');
+            if (leaderboardEl && usersSnap.exists()) {
+                const users = [];
+                usersSnap.forEach(c => users.push({ uid: c.key, ...c.val() }));
+                users.reverse();
+
+                leaderboardEl.innerHTML = users.map((u, i) => {
+                    const rankColors = ['linear-gradient(135deg,#ffd700,#ffaa00)', 'linear-gradient(135deg,#c0c0c0,#a0a0a0)', 'linear-gradient(135deg,#cd7f32,#b5651d)', 'rgba(255,255,255,0.1)', 'rgba(255,255,255,0.1)'];
+                    const textColor = i < 2 ? '#000' : '#fff';
+                    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(255,255,255,0.03);border-radius:10px;">
                     <div style="width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;background:${rankColors[i]};color:${textColor};">${i + 1}</div>
                     <div style="font-size:22px;">${u.avatar || '👤'}</div>
                     <div style="flex:1;">
@@ -1237,20 +1237,24 @@ async function loadGateStats() {
                     </div>
                     <div style="background:linear-gradient(135deg,#8b5cf6,#6366f1);color:white;padding:4px 10px;border-radius:20px;font-size:10px;font-weight:700;">Lv ${u.level || 1}</div>
                 </div>`;
-            }).join('');
-        } else if (leaderboardEl) {
-            leaderboardEl.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,0.4);padding:20px;font-size:12px;">No players yet</div>';
+                }).join('');
+            } else if (leaderboardEl) {
+                leaderboardEl.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,0.4);padding:20px;font-size:12px;">No players yet</div>';
+            }
+        } catch (err) {
+            // Silently fail for leaderboard
         }
-        
-        // Load top clubs
-        const clubsSnap = await db.ref('clubs').orderByChild('likes').limitToLast(4).once('value');
-        const clubsEl = document.getElementById('gate-top-clubs');
-        if (clubsEl && clubsSnap.exists()) {
-            const clubs = [];
-            clubsSnap.forEach(c => clubs.push({ uid: c.key, ...c.val() }));
-            clubs.reverse();
-            
-            clubsEl.innerHTML = clubs.map(c => `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(255,255,255,0.03);border-radius:10px;">
+
+        // Load top clubs (with error handling)
+        try {
+            const clubsSnap = await db.ref('clubs').orderByChild('likes').limitToLast(4).once('value');
+            const clubsEl = document.getElementById('gate-top-clubs');
+            if (clubsEl && clubsSnap.exists()) {
+                const clubs = [];
+                clubsSnap.forEach(c => clubs.push({ uid: c.key, ...c.val() }));
+                clubs.reverse();
+
+                clubsEl.innerHTML = clubs.map(c => `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(255,255,255,0.03);border-radius:10px;">
                 <div style="width:32px;height:32px;background:linear-gradient(135deg,#ff0066,#ff6b6b);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;">🏢</div>
                 <div style="flex:1;">
                     <div style="font-size:12px;font-weight:600;color:white;">${escapeHtml(c.name || 'Unnamed Club')}</div>
@@ -1258,29 +1262,36 @@ async function loadGateStats() {
                 </div>
                 <div style="display:flex;align-items:center;gap:4px;color:#ff0066;font-size:11px;font-weight:600;">❤️ ${c.likes || 0}</div>
             </div>`).join('');
-        } else if (clubsEl) {
-            clubsEl.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,0.4);padding:20px;font-size:12px;">No clubs yet</div>';
+            } else if (clubsEl) {
+                clubsEl.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,0.4);padding:20px;font-size:12px;">No clubs yet</div>';
+            }
+        } catch (err) {
+            // Silently fail for clubs
         }
-        
-        // Load live stats
-        const [onlineSnap, totalClubsSnap, msgsSnap] = await Promise.all([
-            db.ref('onlineUsers').once('value'),
-            db.ref('clubs').once('value'),
-            db.ref('globalChat').once('value')
-        ]);
-        
-        const onlineEl = document.getElementById('gate-online-count');
-        const clubsCountEl = document.getElementById('gate-total-clubs');
-        const msgsCountEl = document.getElementById('gate-total-msgs');
-        
-        if (onlineEl) onlineEl.textContent = onlineSnap.exists() ? Object.keys(onlineSnap.val()).length : 0;
-        if (clubsCountEl) clubsCountEl.textContent = totalClubsSnap.exists() ? Object.keys(totalClubsSnap.val()).length : 0;
-        if (msgsCountEl) {
-            const msgCount = msgsSnap.exists() ? Object.keys(msgsSnap.val()).length : 0;
-            msgsCountEl.textContent = msgCount > 1000 ? (msgCount / 1000).toFixed(1) + 'K' : msgCount;
+
+        // Load live stats (with error handling)
+        try {
+            const [onlineSnap, totalClubsSnap, msgsSnap] = await Promise.all([
+                db.ref('onlineUsers').once('value'),
+                db.ref('clubs').once('value'),
+                db.ref('globalChat').once('value')
+            ]);
+
+            const onlineEl = document.getElementById('gate-online-count');
+            const clubsCountEl = document.getElementById('gate-total-clubs');
+            const msgsCountEl = document.getElementById('gate-total-msgs');
+
+            if (onlineEl) onlineEl.textContent = onlineSnap.exists() ? Object.keys(onlineSnap.val()).length : 0;
+            if (clubsCountEl) clubsCountEl.textContent = totalClubsSnap.exists() ? Object.keys(totalClubsSnap.val()).length : 0;
+            if (msgsCountEl) {
+                const msgCount = msgsSnap.exists() ? Object.keys(msgsSnap.val()).length : 0;
+                msgsCountEl.textContent = msgCount > 1000 ? (msgCount / 1000).toFixed(1) + 'K' : msgCount;
+            }
+        } catch (err) {
+            // Silently fail for stats - not critical
         }
     } catch (err) {
-        console.warn('Failed to load gate stats:', err);
+        // Silently handle any unexpected errors
     }
 }
 
@@ -1297,14 +1308,14 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Switch gate tabs
-window.switchGateTab = function(tab) {
+window.switchGateTab = function (tab) {
     const loginForm = document.getElementById('gate-login-form');
     const registerForm = document.getElementById('gate-register-form');
     const tabs = document.querySelectorAll('.gate-tab');
-    
+
     tabs.forEach(t => t.classList.remove('active'));
     event.target.classList.add('active');
-    
+
     if (tab === 'login') {
         loginForm.style.display = 'flex';
         registerForm.style.display = 'none';
@@ -1315,21 +1326,21 @@ window.switchGateTab = function(tab) {
 };
 
 // Gate login
-window.gateLogin = async function() {
+window.gateLogin = async function () {
     const email = document.getElementById('gate-login-email').value;
     const password = document.getElementById('gate-login-password').value;
-    
+
     if (!email || !password) {
         alert('Please enter email and password');
         return;
     }
-    
+
     const btn = event.target;
     btn.disabled = true;
     btn.innerHTML = '<i class="ph-fill ph-circle-notch" style="animation:spin 1s linear infinite"></i> Logging in...';
-    
+
     const result = await authSystem.login(email, password);
-    
+
     if (result.success) {
         startGameAfterLogin();
     } else {
@@ -1339,37 +1350,37 @@ window.gateLogin = async function() {
 };
 
 // Gate register
-window.gateRegister = async function() {
+window.gateRegister = async function () {
     const name = document.getElementById('gate-register-name')?.value?.trim();
     const clubName = document.getElementById('gate-register-club')?.value?.trim();
     const email = document.getElementById('gate-register-email')?.value?.trim();
     const password = document.getElementById('gate-register-password')?.value;
-    
+
     if (!name || !clubName || !email || !password) {
         alert('Please fill in all fields');
         return;
     }
-    
+
     if (password.length < 6) {
         alert('Password must be at least 6 characters');
         return;
     }
-    
+
     if (!authSystem?.auth) {
         alert('Firebase not ready. Please wait and try again.');
         return;
     }
-    
+
     const btn = event.target;
     btn.disabled = true;
     btn.innerHTML = '<i class="ph-fill ph-circle-notch" style="animation:spin 1s linear infinite"></i> Creating...';
-    
+
     // Set flag BEFORE registration so auth callback knows this is a new account
     localStorage.setItem('nightclub_new_account', JSON.stringify({ clubName, ownerName: name }));
-    
+
     try {
         const result = await authSystem.register(email, password, name);
-        
+
         if (result.success) {
             // Game init will detect the new account flag and start fresh
             // Set initial club data after game is initialized
@@ -1379,7 +1390,7 @@ window.gateRegister = async function() {
                 game.clubTier = 1;
                 game.autoSave();
             }
-            
+
             // If game already started via auth callback, just update display
             if (gameStarted) {
                 game.clubName = clubName;
@@ -1406,13 +1417,13 @@ window.gateRegister = async function() {
 };
 
 // Gate Google login
-window.gateGoogleLogin = async function() {
+window.gateGoogleLogin = async function () {
     const btn = event.target;
     btn.disabled = true;
     btn.innerHTML = '<img src="https://www.google.com/favicon.ico" alt="G"> Signing in...';
-    
+
     const result = await authSystem.loginWithGoogle();
-    
+
     if (result.success) {
         startGameAfterLogin();
     } else {
@@ -1422,7 +1433,7 @@ window.gateGoogleLogin = async function() {
 };
 
 // Gate forgot password
-window.gateForgotPassword = async function() {
+window.gateForgotPassword = async function () {
     const email = document.getElementById('gate-login-email').value;
     if (!email) {
         alert('Please enter your email first');
@@ -1435,7 +1446,7 @@ window.gateForgotPassword = async function() {
 async function startGameAfterLogin(isNewUser = false) {
     if (gameStarted) return;
     gameStarted = true;
-    
+
     // Explicitly close login modal
     const loginModal = document.getElementById('login-modal');
     if (loginModal) {
@@ -1445,30 +1456,30 @@ async function startGameAfterLogin(isNewUser = false) {
     if (typeof game !== 'undefined' && game.closeModals) {
         game.closeModals();
     }
-    
+
     // Initialize game if not done yet
     if (!gameInitialized) {
         await initializeGame();
     }
-    
+
     // Hide login gate with animation
     const loginGate = document.getElementById('login-gate');
     if (loginGate) {
         loginGate.style.transition = 'opacity 0.5s ease';
         loginGate.style.opacity = '0';
-        
+
         setTimeout(async () => {
             loginGate.classList.add('hidden');
             loginGate.style.display = 'none';
-            
+
             // Load cloud save if exists (only for returning users)
             if (!isNewUser) {
                 await loadCloudSaveOnStart();
             }
-            
+
             // Update UI with club name
             updateClubDisplay();
-            
+
             // Start tutorial for new users
             if (isNewUser && window.tutorialSystem) {
                 setTimeout(() => {
@@ -1489,7 +1500,7 @@ function updateClubDisplay() {
     if (clubNameEl) {
         clubNameEl.textContent = game.clubName || 'My Club';
     }
-    
+
     const clubTierEl = document.getElementById('club-tier-display');
     if (clubTierEl && game.getClubTierInfo) {
         const tierInfo = game.getClubTierInfo();
@@ -1514,80 +1525,80 @@ async function loadCloudSaveOnStart() {
 // ========== PROFILE FUNCTIONS ==========
 
 // Update profile modal
-window.updateProfileModal = function() {
+window.updateProfileModal = function () {
     // Owner info
     const ownerName = document.getElementById('profile-owner-name');
     const profileEmail = document.getElementById('profile-email');
     const ownerDisplay = document.getElementById('owner-name-display');
-    
+
     if (ownerName) ownerName.textContent = game.ownerName || 'Player';
     if (ownerDisplay) ownerDisplay.textContent = game.ownerName || 'Player';
     if (profileEmail && authSystem.user) {
         profileEmail.textContent = authSystem.user.email || '';
     }
-    
+
     // VIP status
     const vipStatus = document.getElementById('profile-vip-status');
     if (vipStatus) {
         vipStatus.textContent = premiumSystem?.isVIP ? '👑 VIP Member' : '';
     }
-    
+
     // Club info
     const clubName = document.getElementById('profile-club-name');
     const clubTier = document.getElementById('profile-club-tier');
     const profileLevel = document.getElementById('profile-level');
-    
+
     if (clubName) clubName.textContent = game.clubName || 'My Club';
     if (clubTier && game.getClubTierInfo) {
         const tierInfo = game.getClubTierInfo();
         clubTier.textContent = tierInfo?.name || 'Tiny Bar';
     }
     if (profileLevel) profileLevel.textContent = game.level;
-    
+
     // Stats
     const totalEarnings = document.getElementById('profile-total-earnings');
     const totalVisitors = document.getElementById('profile-total-visitors');
     const drinksServed = document.getElementById('profile-drinks-served');
     const eventsHosted = document.getElementById('profile-events-hosted');
-    
+
     if (totalEarnings) totalEarnings.textContent = '$' + (game.totalEarnings || 0).toLocaleString();
     if (totalVisitors) totalVisitors.textContent = (game.totalVisitors || 0).toLocaleString();
     if (drinksServed) drinksServed.textContent = (game.totalDrinksServed || 0).toLocaleString();
     if (eventsHosted) eventsHosted.textContent = (game.eventsHosted || 0).toLocaleString();
-    
+
     // Update HUD displays
     updateClubDisplay();
 };
 
 // Open club upgrade modal
-window.openClubUpgrade = function() {
+window.openClubUpgrade = function () {
     game.closeModals();
-    
+
     const currentTier = game.getClubTierInfo();
     const nextTier = game.getNextClubTier();
-    
+
     // Update current tier display
     document.getElementById('upgrade-current-tier').textContent = currentTier?.name || 'Tiny Bar';
     document.getElementById('upgrade-current-capacity').textContent = currentTier?.maxVisitors || 8;
-    
+
     const nextSection = document.getElementById('next-tier-section');
     const maxMessage = document.getElementById('max-tier-message');
     const upgradeBtn = document.getElementById('do-upgrade-btn');
-    
+
     if (nextTier) {
         nextSection.style.display = 'block';
         maxMessage.style.display = 'none';
-        
+
         document.getElementById('upgrade-next-tier').textContent = nextTier.name;
         document.getElementById('upgrade-next-capacity').textContent = nextTier.maxVisitors;
         document.getElementById('upgrade-required-level').textContent = nextTier.unlockLevel;
         document.getElementById('upgrade-cost').textContent = nextTier.cost.toLocaleString();
-        
+
         // Check if can upgrade
         const canUpgrade = game.level >= nextTier.unlockLevel && game.cash >= nextTier.cost;
         upgradeBtn.disabled = !canUpgrade;
         upgradeBtn.style.display = 'block';
-        
+
         if (game.level < nextTier.unlockLevel) {
             upgradeBtn.textContent = `🔒 Reach Level ${nextTier.unlockLevel}`;
         } else if (game.cash < nextTier.cost) {
@@ -1600,12 +1611,12 @@ window.openClubUpgrade = function() {
         maxMessage.style.display = 'block';
         upgradeBtn.style.display = 'none';
     }
-    
+
     document.getElementById('club-upgrade-modal').classList.add('active');
 };
 
 // Do club upgrade
-window.doClubUpgrade = function() {
+window.doClubUpgrade = function () {
     if (game.upgradeClub()) {
         game.closeModals();
         updateProfileModal();
@@ -1616,10 +1627,10 @@ window.doClubUpgrade = function() {
 };
 
 // Open rename club dialog
-window.openRenameClub = function() {
+window.openRenameClub = function () {
     const currentName = game.clubName || 'My Club';
     const newName = prompt('Enter new club name:', currentName);
-    
+
     if (newName && newName !== currentName) {
         if (game.renameClub(newName)) {
             // Save to cloud after rename
@@ -1630,7 +1641,7 @@ window.openRenameClub = function() {
 
 // Extend updateAccountUI to include profile
 const originalUpdateAccountUI = window.updateAccountUI;
-window.updateAccountUI = function() {
+window.updateAccountUI = function () {
     if (originalUpdateAccountUI) originalUpdateAccountUI();
     updateProfileModal();
     updateClubDisplay();
@@ -1650,7 +1661,7 @@ function initDJModal() {
             </button>
         `).join('');
     }
-    
+
     // Populate library tabs
     const libraryTabs = document.getElementById('library-tabs');
     if (libraryTabs) {
@@ -1662,29 +1673,29 @@ function initDJModal() {
             </button>
         `).join('');
     }
-    
+
     // Show first genre's tracks
     showLibraryGenre('edm');
-    
+
     // Initialize DJ system
     djSystem.init();
 }
 
 // Play a genre immediately
-window.playGenre = function(genre) {
+window.playGenre = function (genre) {
     djSystem.playGenre(genre);
 };
 
 // Show tracks from a genre
-window.showLibraryGenre = function(genre) {
+window.showLibraryGenre = function (genre) {
     // Update active tab
     document.querySelectorAll('.library-tab').forEach(tab => {
         tab.classList.toggle('active', tab.dataset.genre === genre);
     });
-    
+
     const trackList = document.getElementById('track-library');
     if (!trackList) return;
-    
+
     const genreInfo = MUSIC_GENRES[genre];
     const tracks = [
         { name: 'Neon Surge', duration: 180, popularity: 90 },
@@ -1692,7 +1703,7 @@ window.showLibraryGenre = function(genre) {
         { name: 'Electric Dreams', duration: 195, popularity: 85 },
         { name: 'Cyber Pulse', duration: 200, popularity: 88 }
     ];
-    
+
     // Different tracks per genre for variety
     const genreTracks = {
         edm: [{ name: 'Neon Surge', duration: 180, popularity: 90 }, { name: 'Bass Drop Galaxy', duration: 210, popularity: 95 }, { name: 'Electric Dreams', duration: 195, popularity: 85 }],
@@ -1704,9 +1715,9 @@ window.showLibraryGenre = function(genre) {
         chill: [{ name: 'Moonlight Lounge', duration: 240, popularity: 75 }, { name: 'Ocean Breeze', duration: 220, popularity: 70 }, { name: 'Starlit Cafe', duration: 230, popularity: 72 }],
         throwback: [{ name: '80s Rewind', duration: 200, popularity: 88 }, { name: 'Disco Fever', duration: 210, popularity: 85 }, { name: 'Retro Wave', duration: 195, popularity: 82 }]
     };
-    
+
     const displayTracks = genreTracks[genre] || tracks;
-    
+
     trackList.innerHTML = displayTracks.map((track, index) => `
         <div class="track-item">
             <div class="track-item-info">
@@ -1725,7 +1736,7 @@ window.showLibraryGenre = function(genre) {
 };
 
 // Add track to playlist
-window.addTrackToPlaylist = function(genre, trackIndex) {
+window.addTrackToPlaylist = function (genre, trackIndex) {
     djSystem.addToPlaylist(genre, trackIndex);
     updatePlaylistCount();
 };
@@ -1739,7 +1750,7 @@ function updatePlaylistCount() {
 }
 
 // Open DJ modal from DJ booth
-window.openDJBooth = function() {
+window.openDJBooth = function () {
     game.openModal('dj');
     djSystem.updateNowPlayingUI();
     djSystem.updatePlaylistUI();
@@ -1782,14 +1793,14 @@ const BADGE_SHOP = [
 let ownedBadges = JSON.parse(localStorage.getItem('ownedBadges')) || ['default'];
 let activeBadge = localStorage.getItem('activeBadge') || 'default';
 
-window.initBadgeShop = function() {
+window.initBadgeShop = function () {
     const list = document.getElementById('badge-list');
     if (!list) return;
-    
+
     list.innerHTML = BADGE_SHOP.map(badge => {
         const isOwned = ownedBadges.includes(badge.id);
         const isActive = activeBadge === badge.id;
-        
+
         return `
             <div class="badge-item p-4 bg-white/5 rounded-xl border border-white/10 ${isActive ? 'active' : ''} ${isOwned ? 'owned' : ''}" onclick="previewBadge('${badge.id}')">
                 <div class="flex justify-center mb-3">
@@ -1801,31 +1812,31 @@ window.initBadgeShop = function() {
                 <div class="text-center">
                     <div class="font-bold text-white text-sm">${badge.name}</div>
                     <div class="text-[10px] text-gray-400 mb-2">${badge.desc}</div>
-                    ${isActive ? 
-                        `<button class="w-full py-1.5 bg-green-500/20 text-green-400 text-xs font-bold rounded-lg border border-green-500/50 cursor-default">EQUIPPED</button>` :
-                        (isOwned ? 
-                            `<button class="w-full py-1.5 bg-white/10 text-white text-xs font-bold rounded-lg hover:bg-white/20" onclick="equipBadge('${badge.id}')">EQUIP</button>` :
-                            `<button class="w-full py-1.5 bg-purple-500 text-white text-xs font-bold rounded-lg hover:bg-purple-600 flex items-center justify-center gap-1" onclick="buyBadge('${badge.id}', ${badge.price})">
+                    ${isActive ?
+                `<button class="w-full py-1.5 bg-green-500/20 text-green-400 text-xs font-bold rounded-lg border border-green-500/50 cursor-default">EQUIPPED</button>` :
+                (isOwned ?
+                    `<button class="w-full py-1.5 bg-white/10 text-white text-xs font-bold rounded-lg hover:bg-white/20" onclick="equipBadge('${badge.id}')">EQUIP</button>` :
+                    `<button class="w-full py-1.5 bg-purple-500 text-white text-xs font-bold rounded-lg hover:bg-purple-600 flex items-center justify-center gap-1" onclick="buyBadge('${badge.id}', ${badge.price})">
                                 <i class="ph-fill ph-diamond"></i> ${badge.price}
                              </button>`
-                        )
-                    }
+                )
+            }
                 </div>
             </div>
         `;
     }).join('');
 };
 
-window.buyBadge = function(id, price) {
+window.buyBadge = function (id, price) {
     event.stopPropagation();
     if (game.diamonds >= price) {
         game.diamonds -= price;
         ownedBadges.push(id);
         localStorage.setItem('ownedBadges', JSON.stringify(ownedBadges));
-        
+
         // Equip automatically
         equipBadge(id);
-        
+
         // Update UI
         if (game.updateUI) game.updateUI();
         if (typeof ui !== 'undefined' && ui.notify) {
@@ -1843,33 +1854,33 @@ window.buyBadge = function(id, price) {
     }
 };
 
-window.equipBadge = function(id) {
+window.equipBadge = function (id) {
     if (event) event.stopPropagation();
     if (!ownedBadges.includes(id)) return;
-    
+
     activeBadge = id;
     localStorage.setItem('activeBadge', activeBadge);
-    
+
     // Update Main UI Badge
     updateClubBadgeDisplay();
-    
+
     if (typeof ui !== 'undefined' && ui.notify) {
         ui.notify("Badge Equipped!", "success");
     }
     initBadgeShop();
 };
 
-window.previewBadge = function(id) {
+window.previewBadge = function (id) {
     // Optional: Preview logic if needed
 };
 
-window.updateClubBadgeDisplay = function() {
+window.updateClubBadgeDisplay = function () {
     const badgeEl = document.getElementById('club-badge');
     if (!badgeEl) return;
-    
+
     // Remove all badge classes
     BADGE_SHOP.forEach(b => badgeEl.classList.remove(b.style));
-    
+
     // Add active badge class
     const badge = BADGE_SHOP.find(b => b.id === activeBadge) || BADGE_SHOP[0];
     badgeEl.classList.add(badge.style);
@@ -1880,11 +1891,11 @@ window.addEventListener('DOMContentLoaded', () => {
     // Wait a bit for game to be ready
     setTimeout(() => {
         updateClubBadgeDisplay();
-        
+
         // Hook into openModal to refresh shop if game exists
         if (window.game && game.openModal) {
             const originalOpenModal = game.openModal;
-            game.openModal = function(type) {
+            game.openModal = function (type) {
                 originalOpenModal.call(game, type);
                 if (type === 'badge-shop') {
                     initBadgeShop();
