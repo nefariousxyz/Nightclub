@@ -81,9 +81,16 @@ class ServerAPI {
                     ui.notify('⏱️ Please slow down!', 'warning');
                 } else if (data.error === 'INSUFFICIENT_FUNDS') {
                     ui.notify(`💰 Not enough ${data.message}`, 'error');
+                } else if (data.error === 'LEVEL_LOCKED') {
+                    ui.notify(`🔒 Requires Level ${data.required} (You: Lv ${data.current})`, 'error');
+                } else if (data.error === 'INVALID_ITEM') {
+                    ui.notify('❌ Item not found', 'error');
+                } else if (data.error === 'MAX_REACHED') {
+                    ui.notify(`❌ ${data.message}`, 'error');
                 } else if (data.error === 'UNAUTHORIZED') {
                     ui.notify('🔒 Please log in again', 'error');
-                    // Could trigger re-login here
+                } else if (data.message) {
+                    ui.notify(`❌ ${data.message}`, 'error');
                 }
 
                 throw new Error(data.message || 'Request failed');
